@@ -9,12 +9,13 @@ import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import Activities from "./pages/Activities";
 import BOQItems from "./pages/BOQItems";
+import SettingsPage from "./components/SettingsPage";
 import {
   InventoryPage, ManpowerPage, EquipmentPage, SafetyPage, DelaysPage,
   PurchaseOrdersPage, DailyQuantityPage, BillsPage, StaffPage, FuelLogPage,
   QualityPage, ConcreteLogPage, WeldingPage, ToolsPage, SubcontractorsPage,
   PhotosPage, ChangeOrdersPage, DocumentsPage, ReportsPage, BackupPage,
-  HelpPage, SettingsPage
+  HelpPage
 } from "./pages/modules";
 
 const queryClient = new QueryClient();
