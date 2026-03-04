@@ -552,7 +552,4 @@ export const HelpPage = () => (
   </div>
 );
 
-export const SettingsPage = () => <GenericModule title="Settings" description="Company details, project info, preferences" fields={[
-  { key: 'key', label: 'Setting' }, { key: 'value', label: 'Value' }, { key: 'category', label: 'Category' },
-  { key: 'description', label: 'Description' },
-]} />;
+// Settings page moved to src/components/SettingsPage.tsx

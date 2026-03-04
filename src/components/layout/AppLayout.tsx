@@ -5,9 +5,11 @@ import {
   Receipt, Users, UserCog, Truck, Droplets, ShieldCheck, AlertTriangle, 
   HardHat, Flame, Wrench, Building2, Camera, Clock, Settings, Database, 
   BarChart3, HelpCircle, FileText, FileDiff, ChevronDown, ChevronRight,
-  Construction
+  Construction, FileSpreadsheet, Bot
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import SampleTemplates from '@/components/SampleTemplates';
+import AIAssistant from '@/components/AIAssistant';
 
 interface NavGroup {
   label: string;
@@ -85,6 +87,8 @@ const navGroups: NavGroup[] = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [templatesOpen, setTemplatesOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
 
   const toggleGroup = (label: string) => {
     setCollapsed(prev => ({ ...prev, [label]: !prev[label] }));
@@ -105,11 +109,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
 
+        {/* Quick Actions */}
+        <div className="px-3 py-2 border-b border-sidebar-border flex gap-1.5">
+          <button
+            onClick={() => setAiOpen(true)}
+            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] font-medium bg-sidebar-primary/20 text-sidebar-primary hover:bg-sidebar-primary/30 transition-colors"
+          >
+            <Bot size={13} /> AI Assist
+          </button>
+          <button
+            onClick={() => setTemplatesOpen(true)}
+            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] font-medium bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-accent/80 transition-colors"
+          >
+            <FileSpreadsheet size={13} /> Templates
+          </button>
+        </div>
+
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-1">
           {navGroups.map((group) => {
             const isCollapsed = collapsed[group.label];
-            const isActive = group.items.some(item => location.pathname === item.path);
 
             return (
               <div key={group.label}>
@@ -152,6 +171,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {children}
         </div>
       </main>
+
+      {/* Global Dialogs */}
+      <SampleTemplates open={templatesOpen} onOpenChange={setTemplatesOpen} />
+      <AIAssistant open={aiOpen} onOpenChange={setAiOpen} />
     </div>
   );
 }

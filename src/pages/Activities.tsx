@@ -4,8 +4,9 @@ import { Activity } from '@/types/construction';
 import GanttChart from '@/components/GanttChart';
 import ActivityDialog from '@/components/ActivityDialog';
 import ExcelImportExport from '@/components/ExcelImportExport';
+import AIAssistant from '@/components/AIAssistant';
 import { Button } from '@/components/ui/button';
-import { Plus, BarChart3, Table2, Pencil, Trash2 } from 'lucide-react';
+import { Plus, BarChart3, Table2, Pencil, Trash2, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const statusBadge = (status: string, critical: boolean) => {
@@ -21,6 +22,7 @@ export default function Activities() {
   const [view, setView] = useState<'gantt' | 'table'>('gantt');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
+  const [aiOpen, setAiOpen] = useState(false);
 
   const handleSave = (activity: Activity) => {
     setActivities(prev => {
@@ -43,12 +45,29 @@ export default function Activities() {
       plannedEnd: row.plannedEnd || row['Planned End'] || '',
       actualStart: row.actualStart || row['Actual Start'] || undefined,
       actualEnd: row.actualEnd || row['Actual End'] || undefined,
-      percentComplete: Number(row.percentComplete || row.Progress || row['%'] || 0),
-      critical: row.critical === true || row.Critical === 'Yes',
+      percentComplete: Number(row.percentComplete || row.Progress || row['Progress %'] || row['%'] || 0),
+      critical: row.critical === true || row.Critical === 'Yes' || row['Critical (Yes/No)'] === 'Yes',
       predecessors: row.predecessors || row.Predecessors || undefined,
       status: (row.status || row.Status || 'not-started') as Activity['status'],
     }));
     setActivities(prev => [...prev, ...imported]);
+  };
+
+  const handleApplyCriticalPath = (criticalIds: string[]) => {
+    setActivities(prev => prev.map(a => ({
+      ...a,
+      critical: criticalIds.includes(a.id) || criticalIds.includes(a.wbs),
+    })));
+  };
+
+  const handleApplyDependencies = (deps: { from: string; to: string; type: string }[]) => {
+    setActivities(prev => prev.map(a => {
+      const dep = deps.find(d => d.to === a.wbs);
+      if (dep && !a.predecessors) {
+        return { ...a, predecessors: dep.from };
+      }
+      return a;
+    }));
   };
 
   const openEdit = (a: Activity) => { setEditingActivity(a); setDialogOpen(true); };
@@ -77,6 +96,9 @@ export default function Activities() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={() => setAiOpen(true)} className="border-primary/30 text-primary hover:bg-primary/5">
+            <Bot size={14} className="mr-1" /> AI Assist
+          </Button>
           <ExcelImportExport data={activities} columns={excelColumns} fileName="Activities_CPM" onImport={handleImport} />
           <div className="flex items-center border rounded-lg overflow-hidden">
             <Button variant="ghost" size="sm" onClick={() => setView('gantt')} className={cn("rounded-none", view === 'gantt' && 'bg-muted')}>
@@ -155,6 +177,14 @@ export default function Activities() {
         activity={editingActivity}
         onSave={handleSave}
         onDelete={handleDelete}
+      />
+
+      <AIAssistant
+        open={aiOpen}
+        onOpenChange={setAiOpen}
+        activities={activities}
+        onApplyCriticalPath={handleApplyCriticalPath}
+        onApplyDependencies={handleApplyDependencies}
       />
     </div>
   );
