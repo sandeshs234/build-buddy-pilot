@@ -68,8 +68,10 @@ export interface EquipmentEntry {
   id: string;
   date: string;
   eqId: string;
+  equipmentName: string;
   description: string;
   operator: string;
+  ownership: 'owned' | 'leased' | 'rented';
   hours: number;
   fuel: number;
   activity: string;
