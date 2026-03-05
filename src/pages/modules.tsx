@@ -1,22 +1,29 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import ModulePage from '@/components/ModulePage';
-import { sampleInventory, sampleManpower, sampleEquipment, sampleSafety, sampleDelays, samplePOs } from '@/data/sampleData';
+import { sampleInventory, sampleManpower, sampleEquipment, sampleSafety, sampleDelays, samplePOs, sampleBOQ } from '@/data/sampleData';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
+import { Undo2, Trash2 } from 'lucide-react';
+import { EquipmentEntry, BOQItem } from '@/types/construction';
 
-// ─── Generic CRUD wrapper ───
+// ─── Generic CRUD wrapper with undo ───
 function useCrudState<T extends { id: string }>(initial: T[]) {
   const [data, setData] = useState<T[]>(initial);
+  const [history, setHistory] = useState<T[][]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<T | null>(null);
 
+  const pushHistory = (current: T[]) => setHistory(prev => [...prev.slice(-20), current]);
+
   const openAdd = () => { setEditing(null); setDialogOpen(true); };
   const openEdit = (item: T) => { setEditing(item); setDialogOpen(true); };
-  const handleDelete = (item: T) => setData(prev => prev.filter(i => i.id !== item.id));
+  const handleDelete = (item: T) => { pushHistory(data); setData(prev => prev.filter(i => i.id !== item.id)); };
   const save = (item: T) => {
+    pushHistory(data);
     setData(prev => {
       const idx = prev.findIndex(i => i.id === item.id);
       if (idx >= 0) { const copy = [...prev]; copy[idx] = item; return copy; }
@@ -25,11 +32,38 @@ function useCrudState<T extends { id: string }>(initial: T[]) {
     setDialogOpen(false);
   };
   const handleImport = (rows: Record<string, any>[], mapper: (row: Record<string, any>) => T) => {
+    pushHistory(data);
     const mapped = rows.map(mapper);
     setData(prev => [...prev, ...mapped]);
   };
+  const undo = () => {
+    if (history.length === 0) return;
+    setData(history[history.length - 1]);
+    setHistory(prev => prev.slice(0, -1));
+    toast({ title: 'Undone', description: 'Last action reverted' });
+  };
+  const clearAll = () => {
+    if (data.length === 0) return;
+    pushHistory(data);
+    setData([]);
+    toast({ title: 'Cleared', description: 'All data cleared. Use Undo to restore.' });
+  };
 
-  return { data, dialogOpen, setDialogOpen, editing, openAdd, openEdit, handleDelete, save, handleImport };
+  return { data, dialogOpen, setDialogOpen, editing, openAdd, openEdit, handleDelete, save, handleImport, undo, clearAll, canUndo: history.length > 0 };
+}
+
+// ─── Shared toolbar buttons ───
+function CrudToolbar({ canUndo, onUndo, onClear, dataLength }: { canUndo: boolean; onUndo: () => void; onClear: () => void; dataLength: number }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <Button variant="ghost" size="sm" onClick={onUndo} disabled={!canUndo} title="Undo last action">
+        <Undo2 size={14} className="mr-1" /> Undo
+      </Button>
+      <Button variant="ghost" size="sm" onClick={onClear} disabled={dataLength === 0} className="text-destructive" title="Clear all data">
+        <Trash2 size={14} className="mr-1" /> Clear All
+      </Button>
+    </div>
+  );
 }
 
 // ─── Inventory ───
@@ -70,6 +104,7 @@ export function InventoryPage() {
           minLevel: Number(r['Min Level'] || r.minLevel || 0), location: r.Location || r.location || '',
         }))}
         fileName="Inventory"
+        extraToolbar={<CrudToolbar canUndo={crud.canUndo} onUndo={crud.undo} onClear={crud.clearAll} dataLength={crud.data.length} />}
       />
       <Dialog open={crud.dialogOpen} onOpenChange={crud.setDialogOpen}>
         <DialogContent className="max-w-lg">
@@ -129,6 +164,7 @@ export function ManpowerPage() {
           skilled: +r.Skilled || 0, unskilled: +r.Unskilled || 0, supervisor: r.Supervisor || r.supervisor || '',
         }))}
         fileName="Manpower"
+        extraToolbar={<CrudToolbar canUndo={crud.canUndo} onUndo={crud.undo} onClear={crud.clearAll} dataLength={crud.data.length} />}
       />
       <Dialog open={crud.dialogOpen} onOpenChange={crud.setDialogOpen}>
         <DialogContent className="max-w-lg">
@@ -153,7 +189,7 @@ export function ManpowerPage() {
   );
 }
 
-// ─── Equipment ───
+// ─── Equipment (enhanced with ownership, equipment name) ───
 export function EquipmentPage() {
   const crud = useCrudState(sampleEquipment);
   const [form, setForm] = useState<any>({});
@@ -167,23 +203,32 @@ export function EquipmentPage() {
         columns={[
           { key: 'date', label: 'Date' },
           { key: 'eqId', label: 'Eq. ID', render: i => <span className="font-mono text-xs font-medium">{i.eqId}</span> },
-          { key: 'description', label: 'Equipment', render: i => <span className="font-medium">{i.description}</span> },
+          { key: 'equipmentName', label: 'Equipment Name', render: i => <span className="font-medium">{i.equipmentName}</span> },
+          { key: 'description', label: 'Description' },
           { key: 'operator', label: 'Operator' },
+          { key: 'ownership', label: 'Ownership', render: (i: EquipmentEntry) => (
+            i.ownership === 'owned' ? <span className="badge-success">Owned</span> :
+            i.ownership === 'leased' ? <span className="badge-info">Leased</span> :
+            <span className="badge-warning">Rented</span>
+          )},
           { key: 'hours', label: 'Hours', render: i => <span className="font-mono">{i.hours}</span> },
           { key: 'fuel', label: 'Fuel (L)', render: i => <span className="font-mono">{i.fuel}</span> },
           { key: 'activity', label: 'Activity' },
           { key: 'issues', label: 'Issues', render: i => i.issues ? <span className="badge-warning">{i.issues}</span> : <span className="text-muted-foreground">—</span> },
         ]}
         data={crud.data}
-        onAdd={() => { setForm({ id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0], eqId: '', description: '', operator: '', hours: 0, fuel: 0, activity: '', issues: '' }); crud.openAdd(); }}
+        onAdd={() => { setForm({ id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0], eqId: '', equipmentName: '', description: '', operator: '', ownership: 'owned', hours: 0, fuel: 0, activity: '', issues: '' }); crud.openAdd(); }}
         onEdit={item => { setForm(item); crud.openEdit(item); }}
         onDelete={crud.handleDelete}
         onImport={rows => crud.handleImport(rows, r => ({
-          id: crypto.randomUUID(), date: r.Date || '', eqId: r['Eq. ID'] || '', description: r.Equipment || r.description || '',
-          operator: r.Operator || '', hours: +r.Hours || 0, fuel: +r['Fuel (L)'] || +r.fuel || 0,
+          id: crypto.randomUUID(), date: r.Date || '', eqId: r['Eq. ID'] || '', equipmentName: r['Equipment Name'] || r.equipmentName || '',
+          description: r.Description || r.description || '',
+          operator: r.Operator || '', ownership: (r.Ownership || 'owned').toLowerCase() as 'owned' | 'leased' | 'rented',
+          hours: +r.Hours || 0, fuel: +r['Fuel (L)'] || +r.fuel || 0,
           activity: r.Activity || '', issues: r.Issues || '',
         }))}
         fileName="Equipment"
+        extraToolbar={<CrudToolbar canUndo={crud.canUndo} onUndo={crud.undo} onClear={crud.clearAll} dataLength={crud.data.length} />}
       />
       <Dialog open={crud.dialogOpen} onOpenChange={crud.setDialogOpen}>
         <DialogContent className="max-w-lg">
@@ -191,6 +236,18 @@ export function EquipmentPage() {
           <div className="grid grid-cols-2 gap-4 py-4">
             <div className="space-y-1.5"><Label>Date</Label><Input type="date" value={form.date || ''} onChange={e => u('date', e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Equipment ID</Label><Input value={form.eqId || ''} onChange={e => u('eqId', e.target.value)} /></div>
+            <div className="space-y-1.5"><Label>Equipment Name</Label><Input value={form.equipmentName || ''} onChange={e => u('equipmentName', e.target.value)} placeholder="e.g. CAT 320 Excavator" /></div>
+            <div className="space-y-1.5">
+              <Label>Ownership</Label>
+              <Select value={form.ownership || 'owned'} onValueChange={v => u('ownership', v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="owned">Owned</SelectItem>
+                  <SelectItem value="leased">Leased</SelectItem>
+                  <SelectItem value="rented">Rented</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="col-span-2 space-y-1.5"><Label>Description</Label><Input value={form.description || ''} onChange={e => u('description', e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Operator</Label><Input value={form.operator || ''} onChange={e => u('operator', e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Hours</Label><Input type="number" step="0.5" value={form.hours || 0} onChange={e => u('hours', +e.target.value)} /></div>
@@ -243,13 +300,24 @@ export function SafetyPage() {
           reporter: r.Reporter || '',
         }))}
         fileName="Safety"
+        extraToolbar={<CrudToolbar canUndo={crud.canUndo} onUndo={crud.undo} onClear={crud.clearAll} dataLength={crud.data.length} />}
       />
       <Dialog open={crud.dialogOpen} onOpenChange={crud.setDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>{crud.editing ? 'Edit' : 'Add'} Safety Record</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-4">
             <div className="space-y-1.5"><Label>Date</Label><Input type="date" value={form.date || ''} onChange={e => u('date', e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Type</Label><Input value={form.type || ''} onChange={e => u('type', e.target.value)} placeholder="incident / near-miss / observation" /></div>
+            <div className="space-y-1.5">
+              <Label>Type</Label>
+              <Select value={form.type || 'observation'} onValueChange={v => u('type', v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="incident">Incident</SelectItem>
+                  <SelectItem value="near-miss">Near Miss</SelectItem>
+                  <SelectItem value="observation">Observation</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-1.5"><Label>Location</Label><Input value={form.location || ''} onChange={e => u('location', e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Reporter</Label><Input value={form.reporter || ''} onChange={e => u('reporter', e.target.value)} /></div>
             <div className="col-span-2 space-y-1.5"><Label>Description</Label><Input value={form.description || ''} onChange={e => u('description', e.target.value)} /></div>
@@ -301,6 +369,7 @@ export function DelaysPage() {
           recovery: r['Recovery Action'] || r.recovery || '', status: (r.Status || 'open').toLowerCase(),
         }))}
         fileName="Delays"
+        extraToolbar={<CrudToolbar canUndo={crud.canUndo} onUndo={crud.undo} onClear={crud.clearAll} dataLength={crud.data.length} />}
       />
       <Dialog open={crud.dialogOpen} onOpenChange={crud.setDialogOpen}>
         <DialogContent className="max-w-lg">
@@ -313,7 +382,17 @@ export function DelaysPage() {
             <div className="space-y-1.5"><Label>Duration (days)</Label><Input type="number" value={form.duration || 0} onChange={e => u('duration', +e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Impact</Label><Input value={form.impact || ''} onChange={e => u('impact', e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Recovery</Label><Input value={form.recovery || ''} onChange={e => u('recovery', e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Status</Label><Input value={form.status || ''} onChange={e => u('status', e.target.value)} placeholder="open / mitigated / closed" /></div>
+            <div className="space-y-1.5">
+              <Label>Status</Label>
+              <Select value={form.status || 'open'} onValueChange={v => u('status', v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="open">Open</SelectItem>
+                  <SelectItem value="mitigated">Mitigated</SelectItem>
+                  <SelectItem value="closed">Closed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => crud.setDialogOpen(false)}>Cancel</Button>
@@ -325,7 +404,7 @@ export function DelaysPage() {
   );
 }
 
-// ─── Purchase Orders ───
+// ─── Purchase Orders (with BOQ item dropdown) ───
 export function PurchaseOrdersPage() {
   const crud = useCrudState(samplePOs);
   const [form, setForm] = useState<any>({});
@@ -361,6 +440,7 @@ export function PurchaseOrdersPage() {
           status: (r.Status || 'draft').toLowerCase(), remarks: r.Remarks || '',
         }))}
         fileName="PurchaseOrders"
+        extraToolbar={<CrudToolbar canUndo={crud.canUndo} onUndo={crud.undo} onClear={crud.clearAll} dataLength={crud.data.length} />}
       />
       <Dialog open={crud.dialogOpen} onOpenChange={crud.setDialogOpen}>
         <DialogContent className="max-w-lg">
@@ -369,10 +449,31 @@ export function PurchaseOrdersPage() {
             <div className="space-y-1.5"><Label>PO Number</Label><Input value={form.poNo || ''} onChange={e => u('poNo', e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Date</Label><Input type="date" value={form.date || ''} onChange={e => u('date', e.target.value)} /></div>
             <div className="col-span-2 space-y-1.5"><Label>Supplier</Label><Input value={form.supplier || ''} onChange={e => u('supplier', e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Item Code</Label><Input value={form.itemCode || ''} onChange={e => u('itemCode', e.target.value)} /></div>
+            <div className="space-y-1.5">
+              <Label>BOQ Item Code</Label>
+              <Select value={form.itemCode || ''} onValueChange={v => u('itemCode', v)}>
+                <SelectTrigger><SelectValue placeholder="Select BOQ item" /></SelectTrigger>
+                <SelectContent>
+                  {sampleBOQ.map(b => (
+                    <SelectItem key={b.id} value={b.code}>{b.code} – {b.description}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-1.5"><Label>Quantity</Label><Input type="number" value={form.qty || 0} onChange={e => u('qty', +e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Price</Label><Input type="number" value={form.price || 0} onChange={e => u('price', +e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Status</Label><Input value={form.status || ''} onChange={e => u('status', e.target.value)} placeholder="draft / issued / delivered / closed" /></div>
+            <div className="space-y-1.5">
+              <Label>Status</Label>
+              <Select value={form.status || 'draft'} onValueChange={v => u('status', v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="issued">Issued</SelectItem>
+                  <SelectItem value="delivered">Delivered</SelectItem>
+                  <SelectItem value="closed">Closed</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div className="col-span-2 space-y-1.5"><Label>Remarks</Label><Input value={form.remarks || ''} onChange={e => u('remarks', e.target.value)} /></div>
           </div>
           <DialogFooter>
@@ -386,12 +487,15 @@ export function PurchaseOrdersPage() {
 }
 
 // ─── Remaining modules with Add/Edit/Export ───
-function GenericModule({ title, description, fields }: { title: string; description: string; fields: { key: string; label: string }[] }) {
+function GenericModule({ title, description, fields, extraToolbar }: { title: string; description: string; fields: { key: string; label: string; type?: string; options?: { value: string; label: string }[] }[]; extraToolbar?: React.ReactNode }) {
   const [data, setData] = useState<Record<string, any>[]>([]);
+  const [history, setHistory] = useState<Record<string, any>[][]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Record<string, any> | null>(null);
   const [form, setForm] = useState<Record<string, any>>({});
   const u = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }));
+
+  const pushHistory = (current: Record<string, any>[]) => setHistory(prev => [...prev.slice(-20), current]);
 
   const openAdd = () => {
     setEditing(null);
@@ -402,12 +506,27 @@ function GenericModule({ title, description, fields }: { title: string; descript
   const openEdit = (item: Record<string, any>) => { setEditing(item); setForm(item); setDialogOpen(true); };
 
   const save = () => {
+    pushHistory(data);
     setData(prev => {
       const idx = prev.findIndex(i => i.id === form.id);
       if (idx >= 0) { const copy = [...prev]; copy[idx] = form; return copy; }
       return [...prev, form];
     });
     setDialogOpen(false);
+  };
+
+  const undo = () => {
+    if (history.length === 0) return;
+    setData(history[history.length - 1]);
+    setHistory(prev => prev.slice(0, -1));
+    toast({ title: 'Undone', description: 'Last action reverted' });
+  };
+
+  const clearAll = () => {
+    if (data.length === 0) return;
+    pushHistory(data);
+    setData([]);
+    toast({ title: 'Cleared', description: 'All data cleared. Use Undo to restore.' });
   };
 
   return (
@@ -419,12 +538,14 @@ function GenericModule({ title, description, fields }: { title: string; descript
         data={data as { id: string }[]}
         onAdd={openAdd}
         onEdit={openEdit}
-        onDelete={item => setData(prev => prev.filter(i => i.id !== item.id))}
+        onDelete={item => { pushHistory(data); setData(prev => prev.filter(i => i.id !== item.id)); }}
         onImport={rows => {
+          pushHistory(data);
           const mapped = rows.map(r => ({ id: crypto.randomUUID(), ...r }));
           setData(prev => [...prev, ...mapped]);
         }}
         fileName={title.replace(/\s+/g, '_')}
+        extraToolbar={<CrudToolbar canUndo={history.length > 0} onUndo={undo} onClear={clearAll} dataLength={data.length} />}
       />
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg">
@@ -433,7 +554,16 @@ function GenericModule({ title, description, fields }: { title: string; descript
             {fields.map(f => (
               <div key={f.key} className="space-y-1.5">
                 <Label>{f.label}</Label>
-                <Input value={form[f.key] || ''} onChange={e => u(f.key, e.target.value)} />
+                {f.options ? (
+                  <Select value={form[f.key] || ''} onValueChange={v => u(f.key, v)}>
+                    <SelectTrigger><SelectValue placeholder={`Select ${f.label}`} /></SelectTrigger>
+                    <SelectContent>
+                      {f.options.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input type={f.type || 'text'} value={form[f.key] || ''} onChange={e => u(f.key, e.target.value)} />
+                )}
               </div>
             ))}
           </div>
@@ -447,80 +577,109 @@ function GenericModule({ title, description, fields }: { title: string; descript
   );
 }
 
+// Equipment options for fuel log dropdown
+const equipmentOptions = sampleEquipment.map(e => ({ value: `${e.eqId} - ${e.equipmentName}`, label: `${e.eqId} - ${e.equipmentName}` }));
+
 export const DailyQuantityPage = () => <GenericModule title="Daily Quantity" description="Enter executed quantities per BOQ item" fields={[
-  { key: 'date', label: 'Date' }, { key: 'boqCode', label: 'BOQ Code' }, { key: 'description', label: 'Description' },
-  { key: 'quantity', label: 'Quantity' }, { key: 'unit', label: 'Unit' }, { key: 'location', label: 'Location' }, { key: 'remarks', label: 'Remarks' },
+  { key: 'date', label: 'Date', type: 'date' },
+  { key: 'boqCode', label: 'BOQ Code', options: sampleBOQ.map(b => ({ value: b.code, label: `${b.code} – ${b.description}` })) },
+  { key: 'description', label: 'Description' },
+  { key: 'quantity', label: 'Quantity', type: 'number' },
+  { key: 'unit', label: 'Unit' },
+  { key: 'location', label: 'Location' },
+  { key: 'remarks', label: 'Remarks' },
 ]} />;
 
 export const BillsPage = () => <GenericModule title="Bills" description="Record supplier bills with payment status" fields={[
-  { key: 'billNo', label: 'Bill No.' }, { key: 'date', label: 'Date' }, { key: 'supplier', label: 'Supplier' },
-  { key: 'poRef', label: 'PO Ref' }, { key: 'amount', label: 'Amount' }, { key: 'status', label: 'Status' }, { key: 'remarks', label: 'Remarks' },
+  { key: 'billNo', label: 'Bill No.' }, { key: 'date', label: 'Date', type: 'date' }, { key: 'supplier', label: 'Supplier' },
+  { key: 'poRef', label: 'PO Ref' }, { key: 'amount', label: 'Amount', type: 'number' },
+  { key: 'status', label: 'Status', options: [{ value: 'pending', label: 'Pending' }, { value: 'approved', label: 'Approved' }, { value: 'paid', label: 'Paid' }, { value: 'rejected', label: 'Rejected' }] },
+  { key: 'remarks', label: 'Remarks' },
 ]} />;
 
 export const StaffPage = () => <GenericModule title="Key Staff" description="Project personnel – engineers, managers, accountants" fields={[
   { key: 'name', label: 'Name' }, { key: 'role', label: 'Role' }, { key: 'contact', label: 'Contact' },
-  { key: 'department', label: 'Department' }, { key: 'responsibility', label: 'Responsibility' }, { key: 'joinDate', label: 'Join Date' },
+  { key: 'department', label: 'Department' }, { key: 'responsibility', label: 'Responsibility' }, { key: 'joinDate', label: 'Join Date', type: 'date' },
 ]} />;
 
 export const FuelLogPage = () => <GenericModule title="Fuel Log" description="Track fuel receipts, issues, and balance" fields={[
-  { key: 'date', label: 'Date' }, { key: 'type', label: 'Fuel Type' }, { key: 'receipt', label: 'Receipt (L)' },
-  { key: 'issued', label: 'Issued (L)' }, { key: 'issuedTo', label: 'Issued To' }, { key: 'balance', label: 'Balance' }, { key: 'remarks', label: 'Remarks' },
+  { key: 'date', label: 'Date', type: 'date' },
+  { key: 'type', label: 'Fuel Type', options: [{ value: 'diesel', label: 'Diesel' }, { value: 'petrol', label: 'Petrol' }, { value: 'lpg', label: 'LPG' }] },
+  { key: 'receipt', label: 'Receipt (L)', type: 'number' },
+  { key: 'issued', label: 'Issued (L)', type: 'number' },
+  { key: 'issuedTo', label: 'Issued To (Equipment)', options: equipmentOptions },
+  { key: 'balance', label: 'Balance', type: 'number' },
+  { key: 'remarks', label: 'Remarks' },
 ]} />;
 
 export const QualityPage = () => <GenericModule title="Quality (ITP/NCR)" description="Inspection test plans and non-conformance reports" fields={[
-  { key: 'testId', label: 'Test ID' }, { key: 'date', label: 'Date' }, { key: 'location', label: 'Location' },
-  { key: 'type', label: 'Type' }, { key: 'spec', label: 'Specification' }, { key: 'result', label: 'Result' },
-  { key: 'status', label: 'Status' }, { key: 'testedBy', label: 'Tested By' },
+  { key: 'testId', label: 'Test ID' }, { key: 'date', label: 'Date', type: 'date' }, { key: 'location', label: 'Location' },
+  { key: 'type', label: 'Type', options: [{ value: 'ITP', label: 'ITP' }, { value: 'NCR', label: 'NCR' }, { value: 'MIR', label: 'MIR' }] },
+  { key: 'spec', label: 'Specification' },
+  { key: 'result', label: 'Result', options: [{ value: 'pass', label: 'Pass' }, { value: 'fail', label: 'Fail' }, { value: 'pending', label: 'Pending' }] },
+  { key: 'status', label: 'Status', options: [{ value: 'open', label: 'Open' }, { value: 'closed', label: 'Closed' }] },
+  { key: 'testedBy', label: 'Tested By' },
 ]} />;
 
 export const ConcreteLogPage = () => <GenericModule title="Concrete Pour" description="Daily pour cards with slump, cubes, weather" fields={[
-  { key: 'date', label: 'Date' }, { key: 'location', label: 'Location' }, { key: 'grade', label: 'Grade' },
-  { key: 'volume', label: 'Volume (m³)' }, { key: 'slump', label: 'Slump (mm)' }, { key: 'temp', label: 'Temp (°C)' },
-  { key: 'weather', label: 'Weather' }, { key: 'cubes', label: 'Cubes' }, { key: 'supervisor', label: 'Supervisor' },
+  { key: 'date', label: 'Date', type: 'date' }, { key: 'location', label: 'Location' },
+  { key: 'grade', label: 'Grade', options: [{ value: 'C20', label: 'C20' }, { value: 'C25', label: 'C25' }, { value: 'C30', label: 'C30' }, { value: 'C40', label: 'C40' }] },
+  { key: 'volume', label: 'Volume (m³)', type: 'number' }, { key: 'slump', label: 'Slump (mm)', type: 'number' }, { key: 'temp', label: 'Temp (°C)', type: 'number' },
+  { key: 'weather', label: 'Weather', options: [{ value: 'sunny', label: 'Sunny' }, { value: 'cloudy', label: 'Cloudy' }, { value: 'rainy', label: 'Rainy' }, { value: 'windy', label: 'Windy' }] },
+  { key: 'cubes', label: 'Cubes', type: 'number' }, { key: 'supervisor', label: 'Supervisor' },
 ]} />;
 
 export const WeldingPage = () => <GenericModule title="Welding Log" description="Daily welding reports with NDT results" fields={[
-  { key: 'date', label: 'Date' }, { key: 'location', label: 'Location' }, { key: 'welderName', label: 'Welder' },
-  { key: 'welderId', label: 'Welder ID' }, { key: 'joints', label: 'Joint Type' }, { key: 'numJoints', label: 'No. Joints' },
-  { key: 'ndtReq', label: 'NDT Required' }, { key: 'ndtRes', label: 'NDT Result' }, { key: 'inspector', label: 'Inspector' },
+  { key: 'date', label: 'Date', type: 'date' }, { key: 'location', label: 'Location' }, { key: 'welderName', label: 'Welder' },
+  { key: 'welderId', label: 'Welder ID' }, { key: 'joints', label: 'Joint Type' }, { key: 'numJoints', label: 'No. Joints', type: 'number' },
+  { key: 'ndtReq', label: 'NDT Required', options: [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }] },
+  { key: 'ndtRes', label: 'NDT Result', options: [{ value: 'pass', label: 'Pass' }, { value: 'fail', label: 'Fail' }, { value: 'pending', label: 'Pending' }] },
+  { key: 'inspector', label: 'Inspector' },
 ]} />;
 
 export const ToolsPage = () => <GenericModule title="Tools" description="Tool issuance, return tracking, and condition" fields={[
   { key: 'toolId', label: 'Tool ID' }, { key: 'description', label: 'Description' }, { key: 'issuedTo', label: 'Issued To' },
-  { key: 'dateIssued', label: 'Date Issued' }, { key: 'expReturn', label: 'Expected Return' }, { key: 'actReturn', label: 'Actual Return' },
-  { key: 'condition', label: 'Condition' },
+  { key: 'dateIssued', label: 'Date Issued', type: 'date' }, { key: 'expReturn', label: 'Expected Return', type: 'date' }, { key: 'actReturn', label: 'Actual Return', type: 'date' },
+  { key: 'condition', label: 'Condition', options: [{ value: 'good', label: 'Good' }, { value: 'fair', label: 'Fair' }, { value: 'poor', label: 'Poor' }, { value: 'damaged', label: 'Damaged' }] },
 ]} />;
 
 export const SubcontractorsPage = () => <GenericModule title="Subcontractors" description="Track daily progress and cumulative completion" fields={[
-  { key: 'name', label: 'Name' }, { key: 'scope', label: 'Scope' }, { key: 'contractValue', label: 'Contract Value' },
-  { key: 'date', label: 'Date' }, { key: 'manpower', label: 'Manpower' }, { key: 'progress', label: 'Daily Progress' },
-  { key: 'cumulative', label: 'Cumulative %' }, { key: 'supervisor', label: 'Supervisor' },
+  { key: 'name', label: 'Name' }, { key: 'scope', label: 'Scope' }, { key: 'contractValue', label: 'Contract Value', type: 'number' },
+  { key: 'date', label: 'Date', type: 'date' }, { key: 'manpower', label: 'Manpower', type: 'number' }, { key: 'progress', label: 'Daily Progress' },
+  { key: 'cumulative', label: 'Cumulative %', type: 'number' }, { key: 'supervisor', label: 'Supervisor' },
 ]} />;
 
 export const PhotosPage = () => <GenericModule title="Photos" description="Photo records with location and description" fields={[
-  { key: 'date', label: 'Date' }, { key: 'fileName', label: 'File Name' }, { key: 'location', label: 'Location' },
+  { key: 'date', label: 'Date', type: 'date' }, { key: 'fileName', label: 'File Name' }, { key: 'location', label: 'Location' },
   { key: 'description', label: 'Description' }, { key: 'takenBy', label: 'Taken By' },
 ]} />;
 
 export const ChangeOrdersPage = () => <GenericModule title="Change Orders" description="Track change requests with cost and schedule impact" fields={[
-  { key: 'coNo', label: 'CO No.' }, { key: 'date', label: 'Date' }, { key: 'description', label: 'Description' },
-  { key: 'costImpact', label: 'Cost Impact' }, { key: 'scheduleImpact', label: 'Schedule Impact' },
-  { key: 'status', label: 'Status' }, { key: 'approvedDate', label: 'Approved Date' },
+  { key: 'coNo', label: 'CO No.' }, { key: 'date', label: 'Date', type: 'date' }, { key: 'description', label: 'Description' },
+  { key: 'costImpact', label: 'Cost Impact', type: 'number' }, { key: 'scheduleImpact', label: 'Schedule Impact' },
+  { key: 'status', label: 'Status', options: [{ value: 'pending', label: 'Pending' }, { value: 'approved', label: 'Approved' }, { value: 'rejected', label: 'Rejected' }] },
+  { key: 'approvedDate', label: 'Approved Date', type: 'date' },
 ]} />;
 
 export const DocumentsPage = () => <GenericModule title="Documents" description="Upload and manage project documents" fields={[
-  { key: 'filename', label: 'Filename' }, { key: 'version', label: 'Version' }, { key: 'dateUploaded', label: 'Date Uploaded' },
-  { key: 'type', label: 'Type' }, { key: 'status', label: 'Status' }, { key: 'linkedTo', label: 'Linked To' },
+  { key: 'filename', label: 'Filename' }, { key: 'version', label: 'Version' }, { key: 'dateUploaded', label: 'Date Uploaded', type: 'date' },
+  { key: 'type', label: 'Type', options: [{ value: 'drawing', label: 'Drawing' }, { value: 'spec', label: 'Specification' }, { value: 'report', label: 'Report' }, { value: 'letter', label: 'Letter' }] },
+  { key: 'status', label: 'Status', options: [{ value: 'draft', label: 'Draft' }, { value: 'approved', label: 'Approved' }, { value: 'superseded', label: 'Superseded' }] },
+  { key: 'linkedTo', label: 'Linked To' },
 ]} />;
 
 export const ReportsPage = () => <GenericModule title="Reports" description="Generate printable reports for each module" fields={[
-  { key: 'reportName', label: 'Report Name' }, { key: 'date', label: 'Date' }, { key: 'module', label: 'Module' },
-  { key: 'generatedBy', label: 'Generated By' }, { key: 'status', label: 'Status' },
+  { key: 'reportName', label: 'Report Name' }, { key: 'date', label: 'Date', type: 'date' }, { key: 'module', label: 'Module' },
+  { key: 'generatedBy', label: 'Generated By' },
+  { key: 'status', label: 'Status', options: [{ value: 'draft', label: 'Draft' }, { value: 'final', label: 'Final' }] },
 ]} />;
 
 export const BackupPage = () => <GenericModule title="Backup / Restore" description="Export and import project data" fields={[
-  { key: 'date', label: 'Date' }, { key: 'type', label: 'Type' }, { key: 'size', label: 'Size' },
-  { key: 'status', label: 'Status' }, { key: 'notes', label: 'Notes' },
+  { key: 'date', label: 'Date', type: 'date' },
+  { key: 'type', label: 'Type', options: [{ value: 'full', label: 'Full Backup' }, { value: 'partial', label: 'Partial' }] },
+  { key: 'size', label: 'Size' },
+  { key: 'status', label: 'Status', options: [{ value: 'success', label: 'Success' }, { value: 'failed', label: 'Failed' }] },
+  { key: 'notes', label: 'Notes' },
 ]} />;
 
 export const HelpPage = () => (
@@ -537,16 +696,18 @@ export const HelpPage = () => (
       <div>
         <h2 className="text-lg font-semibold mb-2">Key Features</h2>
         <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-5">
-          <li><strong>Activities (CPM)</strong> – Gantt chart with critical path visualization, WBS breakdown, and timeline</li>
+          <li><strong>Activities (CPM)</strong> – Gantt chart + CPM network diagram with critical path, float, and warnings</li>
+          <li><strong>AI Assistant</strong> – Automated critical path analysis, schedule optimization</li>
           <li><strong>BOQ / Items</strong> – Bill of quantities with progress tracking and budget analysis</li>
+          <li><strong>Cross-module linking</strong> – BOQ items linked in POs, Daily Qty; Equipment linked in Fuel Log</li>
+          <li><strong>Undo / Clear</strong> – Every module has Undo and Clear All buttons</li>
           <li><strong>Excel Import/Export</strong> – Import data from .xlsx/.csv files and export to Excel</li>
-          <li><strong>All modules</strong> – Full CRUD (Add/Edit/Delete) with inline editing dialogs</li>
-          <li><strong>Dashboard</strong> – KPI overview with charts and project health indicators</li>
+          <li><strong>Equipment</strong> – Track ownership (owned/leased/rented), operator, and fuel</li>
         </ul>
       </div>
       <div>
         <h2 className="text-lg font-semibold mb-2">Import Instructions</h2>
-        <p className="text-sm text-muted-foreground">Click "Import XLS" on any module. Your spreadsheet headers should match the column names shown in the table. The system will attempt to map common header variations automatically.</p>
+        <p className="text-sm text-muted-foreground">Click "Import XLS" on any module. Your spreadsheet headers should match the column names shown in the table. Use the Templates button in the sidebar to download pre-formatted Excel templates.</p>
       </div>
     </div>
   </div>

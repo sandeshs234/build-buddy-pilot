@@ -25,7 +25,7 @@ interface ModulePageProps<T> {
 }
 
 export default function ModulePage<T extends { id: string }>({
-  title, description, columns, data, emptyMessage, onAdd, onEdit, onDelete, onImport, fileName,
+  title, description, columns, data, emptyMessage, onAdd, onEdit, onDelete, onImport, fileName, extraToolbar,
 }: ModulePageProps<T>) {
   const fileRef = useRef<HTMLInputElement>(null);
 
