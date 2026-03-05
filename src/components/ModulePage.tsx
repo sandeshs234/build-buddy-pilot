@@ -66,7 +66,8 @@ export default function ModulePage<T extends { id: string }>({
           <h1 className="text-2xl font-bold text-foreground">{title}</h1>
           <p className="text-sm text-muted-foreground mt-1">{description}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {extraToolbar}
           <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleImportFile} />
           {onImport && (
             <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
