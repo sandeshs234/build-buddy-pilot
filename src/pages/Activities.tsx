@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { sampleActivities } from '@/data/sampleData';
 import { Activity } from '@/types/construction';
 import GanttChart from '@/components/GanttChart';
+import CPMDiagram from '@/components/CPMDiagram';
 import ActivityDialog from '@/components/ActivityDialog';
 import ExcelImportExport from '@/components/ExcelImportExport';
 import AIAssistant from '@/components/AIAssistant';
 import { Button } from '@/components/ui/button';
-import { Plus, BarChart3, Table2, Pencil, Trash2, Bot } from 'lucide-react';
+import { Plus, BarChart3, Table2, Pencil, Trash2, Bot, Network, Undo2, Trash } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from '@/hooks/use-toast';
 
 const statusBadge = (status: string, critical: boolean) => {
   if (status === 'completed') return <span className="badge-success">Completed</span>;
@@ -19,12 +21,16 @@ const statusBadge = (status: string, critical: boolean) => {
 
 export default function Activities() {
   const [activities, setActivities] = useState<Activity[]>(sampleActivities);
-  const [view, setView] = useState<'gantt' | 'table'>('gantt');
+  const [history, setHistory] = useState<Activity[][]>([]);
+  const [view, setView] = useState<'gantt' | 'table' | 'cpm'>('gantt');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [aiOpen, setAiOpen] = useState(false);
 
+  const pushHistory = () => setHistory(prev => [...prev.slice(-20), activities]);
+
   const handleSave = (activity: Activity) => {
+    pushHistory();
     setActivities(prev => {
       const idx = prev.findIndex(a => a.id === activity.id);
       if (idx >= 0) { const copy = [...prev]; copy[idx] = activity; return copy; }
@@ -33,10 +39,26 @@ export default function Activities() {
   };
 
   const handleDelete = (id: string) => {
+    pushHistory();
     setActivities(prev => prev.filter(a => a.id !== id));
   };
 
+  const handleUndo = () => {
+    if (history.length === 0) return;
+    setActivities(history[history.length - 1]);
+    setHistory(prev => prev.slice(0, -1));
+    toast({ title: 'Undone', description: 'Last action reverted' });
+  };
+
+  const handleClearAll = () => {
+    if (activities.length === 0) return;
+    pushHistory();
+    setActivities([]);
+    toast({ title: 'Cleared', description: 'All activities cleared. Use Undo to restore.' });
+  };
+
   const handleImport = (data: Record<string, any>[]) => {
+    pushHistory();
     const imported: Activity[] = data.map((row, i) => ({
       id: crypto.randomUUID(),
       wbs: row.wbs || row.WBS || `IMP.${i + 1}`,
@@ -54,6 +76,7 @@ export default function Activities() {
   };
 
   const handleApplyCriticalPath = (criticalIds: string[]) => {
+    pushHistory();
     setActivities(prev => prev.map(a => ({
       ...a,
       critical: criticalIds.includes(a.id) || criticalIds.includes(a.wbs),
@@ -61,6 +84,7 @@ export default function Activities() {
   };
 
   const handleApplyDependencies = (deps: { from: string; to: string; type: string }[]) => {
+    pushHistory();
     setActivities(prev => prev.map(a => {
       const dep = deps.find(d => d.to === a.wbs);
       if (dep && !a.predecessors) {
@@ -96,6 +120,12 @@ export default function Activities() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="ghost" size="sm" onClick={handleUndo} disabled={history.length === 0} title="Undo">
+            <Undo2 size={14} className="mr-1" /> Undo
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleClearAll} disabled={activities.length === 0} className="text-destructive" title="Clear all">
+            <Trash size={14} className="mr-1" /> Clear
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setAiOpen(true)} className="border-primary/30 text-primary hover:bg-primary/5">
             <Bot size={14} className="mr-1" /> AI Assist
           </Button>
@@ -103,6 +133,9 @@ export default function Activities() {
           <div className="flex items-center border rounded-lg overflow-hidden">
             <Button variant="ghost" size="sm" onClick={() => setView('gantt')} className={cn("rounded-none", view === 'gantt' && 'bg-muted')}>
               <BarChart3 size={14} className="mr-1" /> Gantt
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setView('cpm')} className={cn("rounded-none", view === 'cpm' && 'bg-muted')}>
+              <Network size={14} className="mr-1" /> CPM
             </Button>
             <Button variant="ghost" size="sm" onClick={() => setView('table')} className={cn("rounded-none", view === 'table' && 'bg-muted')}>
               <Table2 size={14} className="mr-1" /> Table
@@ -116,6 +149,8 @@ export default function Activities() {
 
       {view === 'gantt' ? (
         <GanttChart activities={activities} onEditActivity={openEdit} />
+      ) : view === 'cpm' ? (
+        <CPMDiagram activities={activities} onEditActivity={openEdit} />
       ) : (
         <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
           <div className="overflow-x-auto">

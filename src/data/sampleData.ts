@@ -40,10 +40,10 @@ export const sampleManpower: ManpowerEntry[] = [
 ];
 
 export const sampleEquipment: EquipmentEntry[] = [
-  { id: '1', date: '2025-03-03', eqId: 'EQ-001', description: 'CAT 320 Excavator', operator: 'Singh R.', hours: 9.5, fuel: 180, activity: 'Excavation Zone B', issues: '' },
-  { id: '2', date: '2025-03-03', eqId: 'EQ-002', description: 'Liebherr Piling Rig', operator: 'Ahmed F.', hours: 8, fuel: 250, activity: 'Piling Zone A', issues: '' },
-  { id: '3', date: '2025-03-03', eqId: 'EQ-003', description: 'Mobile Crane 50T', operator: 'Wang L.', hours: 6, fuel: 120, activity: 'Rebar lifting', issues: 'Slewing ring noise' },
-  { id: '4', date: '2025-03-03', eqId: 'EQ-004', description: 'Concrete Pump Truck', operator: 'Kumar P.', hours: 4.5, fuel: 90, activity: 'Pile cap pour', issues: '' },
+  { id: '1', date: '2025-03-03', eqId: 'EQ-001', equipmentName: 'CAT 320 Excavator', description: 'Hydraulic excavator 20T', operator: 'Singh R.', ownership: 'owned', hours: 9.5, fuel: 180, activity: 'Excavation Zone B', issues: '' },
+  { id: '2', date: '2025-03-03', eqId: 'EQ-002', equipmentName: 'Liebherr Piling Rig', description: 'CFA piling rig', operator: 'Ahmed F.', ownership: 'leased', hours: 8, fuel: 250, activity: 'Piling Zone A', issues: '' },
+  { id: '3', date: '2025-03-03', eqId: 'EQ-003', equipmentName: 'Mobile Crane 50T', description: 'Telescopic crane', operator: 'Wang L.', ownership: 'rented', hours: 6, fuel: 120, activity: 'Rebar lifting', issues: 'Slewing ring noise' },
+  { id: '4', date: '2025-03-03', eqId: 'EQ-004', equipmentName: 'Concrete Pump Truck', description: 'Boom pump 36m', operator: 'Kumar P.', ownership: 'leased', hours: 4.5, fuel: 90, activity: 'Pile cap pour', issues: '' },
 ];
 
 export const sampleSafety: SafetyIncident[] = [
