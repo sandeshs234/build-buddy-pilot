@@ -21,6 +21,7 @@ interface ModulePageProps<T> {
   onDelete?: (item: T) => void;
   onImport?: (data: Record<string, any>[]) => void;
   fileName?: string;
+  extraToolbar?: React.ReactNode;
 }
 
 export default function ModulePage<T extends { id: string }>({
