@@ -1,14 +1,61 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import ModulePage from '@/components/ModulePage';
+import PrintableReport from '@/components/PrintableReport';
 import { sampleInventory, sampleManpower, sampleEquipment, sampleSafety, sampleDelays, samplePOs, sampleBOQ } from '@/data/sampleData';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
-import { Undo2, Trash2 } from 'lucide-react';
+import { Undo2, Trash2, Printer, ImagePlus, X } from 'lucide-react';
 import { EquipmentEntry, BOQItem } from '@/types/construction';
+
+// ─── Constants ───
+
+const MANPOWER_TRADES = [
+  'Mason', 'Carpenter', 'Steel Fixer / Rebar', 'Welder', 'Pipe Fitter', 'Electrician',
+  'Plumber', 'Painter', 'Plasterer', 'Tiler', 'Scaffolder', 'Rigger',
+  'Crane Operator', 'Excavator Operator', 'Loader Operator', 'Roller Operator',
+  'Concrete Pump Operator', 'Tower Crane Operator', 'Forklift Operator',
+  'Surveyor', 'Chainman', 'Rod Man',
+  'Insulator', 'Waterproofer', 'Roofer', 'Glazier', 'Curtain Wall Installer',
+  'HVAC Technician', 'Fire Fighting Technician', 'ELV Technician',
+  'Shuttering Carpenter', 'Form Worker', 'Concrete Finisher',
+  'Skilled Labour', 'Semi-Skilled Labour', 'Unskilled Labour / Helper',
+  'Flagman / Banksman', 'Store Keeper', 'Watchman / Security Guard',
+];
+
+const EQUIPMENT_TYPES = [
+  'Excavator', 'Backhoe Loader', 'Wheel Loader', 'Bulldozer', 'Motor Grader',
+  'Roller / Compactor', 'Dump Truck', 'Tipper Truck', 'Flatbed Truck', 'Water Tanker',
+  'Tower Crane', 'Mobile Crane (25T)', 'Mobile Crane (50T)', 'Mobile Crane (100T+)',
+  'Rough Terrain Crane', 'Crawler Crane',
+  'Concrete Mixer Truck', 'Concrete Pump (Boom)', 'Concrete Pump (Line)', 'Batching Plant',
+  'Piling Rig (CFA)', 'Piling Rig (Bored)', 'Sheet Piling Machine',
+  'Generator (Small)', 'Generator (Large)', 'Air Compressor',
+  'Welding Machine', 'Bar Bending Machine', 'Bar Cutting Machine',
+  'Forklift', 'Telehandler', 'Boom Lift', 'Scissor Lift', 'Man Lift',
+  'Concrete Vibrator', 'Plate Compactor', 'Jack Hammer / Breaker',
+  'Dewatering Pump', 'Submersible Pump',
+  'Asphalt Paver', 'Asphalt Distributor', 'Milling Machine',
+  'Surveying Equipment (Total Station)', 'Laser Level',
+  'Shotcrete Machine', 'Grouting Machine', 'Tunnel Boring Machine',
+];
+
+const CONCRETE_GRADES = [
+  'C7/8 (M10)', 'C10 (M10)', 'C12/15', 'C15 (M15)', 'C16/20',
+  'C20 (M20)', 'C20/25', 'C25 (M25)', 'C25/30',
+  'C28/35', 'C30 (M30)', 'C30/37', 'C32/40',
+  'C35 (M35)', 'C35/45', 'C40 (M40)', 'C40/50',
+  'C45 (M45)', 'C50 (M50)', 'C50/60',
+  'C55 (M55)', 'C60 (M60)', 'C60/75',
+  'C70 (M70)', 'C80 (M80)', 'C90 (M90)', 'C100 (M100)',
+  'Lean Concrete', 'Mass Concrete', 'Self-Compacting (SCC)',
+  'Fiber Reinforced', 'Shotcrete', 'Underwater Concrete',
+  'Flowable Fill', 'Grout',
+];
 
 // ─── Generic CRUD wrapper with undo ───
 function useCrudState<T extends { id: string }>(initial: T[]) {
@@ -16,6 +63,7 @@ function useCrudState<T extends { id: string }>(initial: T[]) {
   const [history, setHistory] = useState<T[][]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<T | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const pushHistory = (current: T[]) => setHistory(prev => [...prev.slice(-20), current]);
 
@@ -48,14 +96,37 @@ function useCrudState<T extends { id: string }>(initial: T[]) {
     setData([]);
     toast({ title: 'Cleared', description: 'All data cleared. Use Undo to restore.' });
   };
+  const toggleSelect = (id: string) => {
+    setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  };
+  const selectAll = () => {
+    if (selected.size === data.length) setSelected(new Set());
+    else setSelected(new Set(data.map(d => d.id)));
+  };
+  const deleteSelected = () => {
+    if (selected.size === 0) return;
+    pushHistory(data);
+    setData(prev => prev.filter(i => !selected.has(i.id)));
+    setSelected(new Set());
+    toast({ title: 'Deleted', description: `${selected.size} items removed` });
+  };
 
-  return { data, dialogOpen, setDialogOpen, editing, openAdd, openEdit, handleDelete, save, handleImport, undo, clearAll, canUndo: history.length > 0 };
+  return { data, dialogOpen, setDialogOpen, editing, openAdd, openEdit, handleDelete, save, handleImport, undo, clearAll, canUndo: history.length > 0, selected, toggleSelect, selectAll, deleteSelected };
 }
 
 // ─── Shared toolbar buttons ───
-function CrudToolbar({ canUndo, onUndo, onClear, dataLength }: { canUndo: boolean; onUndo: () => void; onClear: () => void; dataLength: number }) {
+function CrudToolbar({ canUndo, onUndo, onClear, dataLength, selectedCount, onDeleteSelected, printBtn }: {
+  canUndo: boolean; onUndo: () => void; onClear: () => void; dataLength: number;
+  selectedCount?: number; onDeleteSelected?: () => void; printBtn?: React.ReactNode;
+}) {
   return (
     <div className="flex items-center gap-1.5">
+      {printBtn}
+      {selectedCount && selectedCount > 0 && onDeleteSelected && (
+        <Button variant="outline" size="sm" onClick={onDeleteSelected} className="text-destructive border-destructive/30">
+          <Trash2 size={14} className="mr-1" /> Delete ({selectedCount})
+        </Button>
+      )}
       <Button variant="ghost" size="sm" onClick={onUndo} disabled={!canUndo} title="Undo last action">
         <Undo2 size={14} className="mr-1" /> Undo
       </Button>
@@ -104,7 +175,15 @@ export function InventoryPage() {
           minLevel: Number(r['Min Level'] || r.minLevel || 0), location: r.Location || r.location || '',
         }))}
         fileName="Inventory"
-        extraToolbar={<CrudToolbar canUndo={crud.canUndo} onUndo={crud.undo} onClear={crud.clearAll} dataLength={crud.data.length} />}
+        extraToolbar={
+          <CrudToolbar canUndo={crud.canUndo} onUndo={crud.undo} onClear={crud.clearAll} dataLength={crud.data.length}
+            printBtn={<PrintableReport title="Inventory" columns={[
+              { key: 'code', label: 'Code' }, { key: 'description', label: 'Description' }, { key: 'unit', label: 'Unit' },
+              { key: 'opening', label: 'Opening' }, { key: 'receipts', label: 'Receipts' }, { key: 'issues', label: 'Issues' },
+              { key: 'balance', label: 'Balance' }, { key: 'minLevel', label: 'Min Level' }, { key: 'location', label: 'Location' },
+            ]} data={crud.data} />}
+          />
+        }
       />
       <Dialog open={crud.dialogOpen} onOpenChange={crud.setDialogOpen}>
         <DialogContent className="max-w-lg">
@@ -129,11 +208,26 @@ export function InventoryPage() {
   );
 }
 
-// ─── Manpower ───
+// ─── Manpower (Enhanced with comprehensive trade dropdowns) ───
 export function ManpowerPage() {
-  const crud = useCrudState(sampleManpower);
+  const crud = useCrudState<any>([]);
   const [form, setForm] = useState<any>({});
   const u = (k: string, v: any) => setForm((p: any) => ({ ...p, [k]: v }));
+
+  const addTradeRow = () => {
+    const trades = form.trades || [];
+    u('trades', [...trades, { trade: '', count: 0 }]);
+  };
+  const updateTrade = (idx: number, field: string, val: any) => {
+    const trades = [...(form.trades || [])];
+    trades[idx] = { ...trades[idx], [field]: val };
+    u('trades', trades);
+  };
+  const removeTrade = (idx: number) => {
+    u('trades', (form.trades || []).filter((_: any, i: number) => i !== idx));
+  };
+
+  const totalWorkers = (item: any) => (item.trades || []).reduce((s: number, t: any) => s + (t.count || 0), 0);
 
   return (
     <>
@@ -143,40 +237,70 @@ export function ManpowerPage() {
         columns={[
           { key: 'date', label: 'Date' },
           { key: 'location', label: 'Location', render: i => <span className="font-medium">{i.location}</span> },
-          { key: 'mason', label: 'Mason', render: i => <span className="text-center block font-mono">{i.mason}</span> },
-          { key: 'carpenter', label: 'Carp.', render: i => <span className="text-center block font-mono">{i.carpenter}</span> },
-          { key: 'steel', label: 'Steel', render: i => <span className="text-center block font-mono">{i.steel}</span> },
-          { key: 'welder', label: 'Welder', render: i => <span className="text-center block font-mono">{i.welder}</span> },
-          { key: 'operator', label: 'Opr.', render: i => <span className="text-center block font-mono">{i.operator}</span> },
-          { key: 'skilled', label: 'Skilled', render: i => <span className="text-center block font-mono font-medium">{i.skilled}</span> },
-          { key: 'unskilled', label: 'Unskilled', render: i => <span className="text-center block font-mono font-medium">{i.unskilled}</span> },
-          { key: 'total', label: 'Total', render: i => <span className="text-center block font-mono font-bold">{i.skilled + i.unskilled}</span> },
+          { key: 'trades', label: 'Trades', render: i => (
+            <div className="space-y-0.5">
+              {(i.trades || []).slice(0, 3).map((t: any, idx: number) => (
+                <span key={idx} className="inline-block text-xs bg-muted px-1.5 py-0.5 rounded mr-1">{t.trade}: {t.count}</span>
+              ))}
+              {(i.trades || []).length > 3 && <span className="text-xs text-muted-foreground">+{(i.trades || []).length - 3} more</span>}
+            </div>
+          )},
+          { key: 'total', label: 'Total', render: i => <span className="font-mono font-bold">{totalWorkers(i)}</span> },
           { key: 'supervisor', label: 'Supervisor' },
         ]}
         data={crud.data}
-        onAdd={() => { setForm({ id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0], location: '', mason: 0, carpenter: 0, steel: 0, welder: 0, fitter: 0, electrician: 0, operator: 0, skilled: 0, unskilled: 0, supervisor: '' }); crud.openAdd(); }}
+        onAdd={() => { setForm({ id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0], location: '', trades: [{ trade: '', count: 0 }], supervisor: '' }); crud.openAdd(); }}
         onEdit={item => { setForm(item); crud.openEdit(item); }}
         onDelete={crud.handleDelete}
         onImport={rows => crud.handleImport(rows, r => ({
-          id: crypto.randomUUID(), date: r.Date || r.date || '', location: r.Location || r.location || '',
-          mason: +r.Mason || 0, carpenter: +r.Carpenter || 0, steel: +r.Steel || 0, welder: +r.Welder || 0,
-          fitter: +r.Fitter || 0, electrician: +r.Electrician || 0, operator: +r.Operator || 0,
-          skilled: +r.Skilled || 0, unskilled: +r.Unskilled || 0, supervisor: r.Supervisor || r.supervisor || '',
+          id: crypto.randomUUID(), date: r.Date || '', location: r.Location || '',
+          trades: MANPOWER_TRADES.filter(t => r[t] && +r[t] > 0).map(t => ({ trade: t, count: +r[t] })),
+          supervisor: r.Supervisor || '',
         }))}
         fileName="Manpower"
-        extraToolbar={<CrudToolbar canUndo={crud.canUndo} onUndo={crud.undo} onClear={crud.clearAll} dataLength={crud.data.length} />}
+        extraToolbar={
+          <CrudToolbar canUndo={crud.canUndo} onUndo={crud.undo} onClear={crud.clearAll} dataLength={crud.data.length}
+            selectedCount={crud.selected.size} onDeleteSelected={crud.deleteSelected}
+            printBtn={<PrintableReport title="Daily Manpower" columns={[
+              { key: 'date', label: 'Date' }, { key: 'location', label: 'Location' },
+              { key: 'tradesText', label: 'Trades & Count' }, { key: 'total', label: 'Total' }, { key: 'supervisor', label: 'Supervisor' },
+            ]} data={crud.data.map(i => ({
+              ...i, tradesText: (i.trades || []).map((t: any) => `${t.trade}: ${t.count}`).join(', '), total: totalWorkers(i),
+            }))} />}
+          />
+        }
       />
       <Dialog open={crud.dialogOpen} onOpenChange={crud.setDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{crud.editing ? 'Edit' : 'Add'} Manpower Entry</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-4">
             <div className="space-y-1.5"><Label>Date</Label><Input type="date" value={form.date || ''} onChange={e => u('date', e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Location</Label><Input value={form.location || ''} onChange={e => u('location', e.target.value)} /></div>
-            {['mason', 'carpenter', 'steel', 'welder', 'fitter', 'electrician', 'operator'].map(f => (
-              <div key={f} className="space-y-1.5"><Label className="capitalize">{f}</Label><Input type="number" value={form[f] || 0} onChange={e => u(f, +e.target.value)} /></div>
-            ))}
-            <div className="space-y-1.5"><Label>Skilled Total</Label><Input type="number" value={form.skilled || 0} onChange={e => u('skilled', +e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Unskilled Total</Label><Input type="number" value={form.unskilled || 0} onChange={e => u('unskilled', +e.target.value)} /></div>
+            <div className="col-span-2">
+              <div className="flex items-center justify-between mb-2">
+                <Label className="text-sm font-semibold">Trades</Label>
+                <Button variant="outline" size="sm" onClick={addTradeRow}><span className="mr-1">+</span> Add Trade</Button>
+              </div>
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {(form.trades || []).map((t: any, idx: number) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <Select value={t.trade} onValueChange={v => updateTrade(idx, 'trade', v)}>
+                      <SelectTrigger className="flex-1"><SelectValue placeholder="Select trade" /></SelectTrigger>
+                      <SelectContent>
+                        {MANPOWER_TRADES.map(tr => <SelectItem key={tr} value={tr}>{tr}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Input type="number" className="w-20" value={t.count || 0} onChange={e => updateTrade(idx, 'count', +e.target.value)} placeholder="Count" />
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => removeTrade(idx)}>
+                      <X size={14} />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-2 text-sm font-medium text-muted-foreground">
+                Total: <span className="text-foreground font-bold">{totalWorkers(form)}</span> workers
+              </div>
+            </div>
             <div className="col-span-2 space-y-1.5"><Label>Supervisor</Label><Input value={form.supervisor || ''} onChange={e => u('supervisor', e.target.value)} /></div>
           </div>
           <DialogFooter>
@@ -189,11 +313,19 @@ export function ManpowerPage() {
   );
 }
 
-// ─── Equipment (enhanced with ownership, equipment name) ───
+// ─── Equipment (Enhanced with type dropdown, billing basis, rate) ───
 export function EquipmentPage() {
   const crud = useCrudState(sampleEquipment);
   const [form, setForm] = useState<any>({});
   const u = (k: string, v: any) => setForm((p: any) => ({ ...p, [k]: v }));
+
+  const totalCost = (i: any) => {
+    const rate = i.rate || 0;
+    const hrs = i.hours || 0;
+    if (i.billingBasis === 'daily') return rate;
+    if (i.billingBasis === 'monthly') return rate;
+    return rate * hrs; // hourly
+  };
 
   return (
     <>
@@ -203,40 +335,61 @@ export function EquipmentPage() {
         columns={[
           { key: 'date', label: 'Date' },
           { key: 'eqId', label: 'Eq. ID', render: i => <span className="font-mono text-xs font-medium">{i.eqId}</span> },
-          { key: 'equipmentName', label: 'Equipment Name', render: i => <span className="font-medium">{i.equipmentName}</span> },
-          { key: 'description', label: 'Description' },
+          { key: 'equipmentName', label: 'Equipment', render: i => <span className="font-medium">{i.equipmentName}</span> },
           { key: 'operator', label: 'Operator' },
           { key: 'ownership', label: 'Ownership', render: (i: EquipmentEntry) => (
             i.ownership === 'owned' ? <span className="badge-success">Owned</span> :
             i.ownership === 'leased' ? <span className="badge-info">Leased</span> :
             <span className="badge-warning">Rented</span>
           )},
+          { key: 'billingBasis', label: 'Billing', render: (i: any) => <span className="text-xs uppercase">{i.billingBasis || 'hourly'}</span> },
+          { key: 'rate', label: 'Rate', render: (i: any) => <span className="font-mono">{(i.rate || 0).toLocaleString()}</span> },
           { key: 'hours', label: 'Hours', render: i => <span className="font-mono">{i.hours}</span> },
           { key: 'fuel', label: 'Fuel (L)', render: i => <span className="font-mono">{i.fuel}</span> },
+          { key: 'cost', label: 'Cost', render: (i: any) => <span className="font-mono font-medium">{totalCost(i).toLocaleString()}</span> },
           { key: 'activity', label: 'Activity' },
           { key: 'issues', label: 'Issues', render: i => i.issues ? <span className="badge-warning">{i.issues}</span> : <span className="text-muted-foreground">—</span> },
         ]}
         data={crud.data}
-        onAdd={() => { setForm({ id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0], eqId: '', equipmentName: '', description: '', operator: '', ownership: 'owned', hours: 0, fuel: 0, activity: '', issues: '' }); crud.openAdd(); }}
+        onAdd={() => { setForm({ id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0], eqId: '', equipmentName: '', description: '', operator: '', ownership: 'owned', billingBasis: 'hourly', rate: 0, hours: 0, fuel: 0, activity: '', issues: '' }); crud.openAdd(); }}
         onEdit={item => { setForm(item); crud.openEdit(item); }}
         onDelete={crud.handleDelete}
         onImport={rows => crud.handleImport(rows, r => ({
-          id: crypto.randomUUID(), date: r.Date || '', eqId: r['Eq. ID'] || '', equipmentName: r['Equipment Name'] || r.equipmentName || '',
+          id: crypto.randomUUID(), date: r.Date || '', eqId: r['Eq. ID'] || '', equipmentName: r.Equipment || r.equipmentName || '',
           description: r.Description || r.description || '',
           operator: r.Operator || '', ownership: (r.Ownership || 'owned').toLowerCase() as 'owned' | 'leased' | 'rented',
+          billingBasis: r.Billing || 'hourly', rate: +r.Rate || 0,
           hours: +r.Hours || 0, fuel: +r['Fuel (L)'] || +r.fuel || 0,
           activity: r.Activity || '', issues: r.Issues || '',
         }))}
         fileName="Equipment"
-        extraToolbar={<CrudToolbar canUndo={crud.canUndo} onUndo={crud.undo} onClear={crud.clearAll} dataLength={crud.data.length} />}
+        extraToolbar={
+          <CrudToolbar canUndo={crud.canUndo} onUndo={crud.undo} onClear={crud.clearAll} dataLength={crud.data.length}
+            selectedCount={crud.selected.size} onDeleteSelected={crud.deleteSelected}
+            printBtn={<PrintableReport title="Equipment Log" columns={[
+              { key: 'date', label: 'Date' }, { key: 'eqId', label: 'Eq ID' }, { key: 'equipmentName', label: 'Equipment' },
+              { key: 'operator', label: 'Operator' }, { key: 'ownership', label: 'Ownership' },
+              { key: 'billingBasis', label: 'Billing' }, { key: 'rate', label: 'Rate' },
+              { key: 'hours', label: 'Hours' }, { key: 'fuel', label: 'Fuel (L)' }, { key: 'activity', label: 'Activity' },
+            ]} data={crud.data} />}
+          />
+        }
       />
       <Dialog open={crud.dialogOpen} onOpenChange={crud.setDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{crud.editing ? 'Edit' : 'Add'} Equipment Entry</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-4">
             <div className="space-y-1.5"><Label>Date</Label><Input type="date" value={form.date || ''} onChange={e => u('date', e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Equipment ID</Label><Input value={form.eqId || ''} onChange={e => u('eqId', e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Equipment Name</Label><Input value={form.equipmentName || ''} onChange={e => u('equipmentName', e.target.value)} placeholder="e.g. CAT 320 Excavator" /></div>
+            <div className="space-y-1.5"><Label>Equipment ID</Label><Input value={form.eqId || ''} onChange={e => u('eqId', e.target.value)} placeholder="e.g. EQ-005" /></div>
+            <div className="col-span-2 space-y-1.5">
+              <Label>Equipment Type</Label>
+              <Select value={form.equipmentName || ''} onValueChange={v => u('equipmentName', v)}>
+                <SelectTrigger><SelectValue placeholder="Select equipment type" /></SelectTrigger>
+                <SelectContent className="max-h-60">
+                  {EQUIPMENT_TYPES.map(eq => <SelectItem key={eq} value={eq}>{eq}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-1.5">
               <Label>Ownership</Label>
               <Select value={form.ownership || 'owned'} onValueChange={v => u('ownership', v)}>
@@ -248,11 +401,22 @@ export function EquipmentPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="col-span-2 space-y-1.5"><Label>Description</Label><Input value={form.description || ''} onChange={e => u('description', e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Operator</Label><Input value={form.operator || ''} onChange={e => u('operator', e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Hours</Label><Input type="number" step="0.5" value={form.hours || 0} onChange={e => u('hours', +e.target.value)} /></div>
+            <div className="space-y-1.5">
+              <Label>Billing Basis</Label>
+              <Select value={form.billingBasis || 'hourly'} onValueChange={v => u('billingBasis', v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="hourly">Hourly</SelectItem>
+                  <SelectItem value="daily">Daily</SelectItem>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5"><Label>Rate</Label><Input type="number" value={form.rate || 0} onChange={e => u('rate', +e.target.value)} /></div>
+            <div className="space-y-1.5"><Label>Operator Name</Label><Input value={form.operator || ''} onChange={e => u('operator', e.target.value)} /></div>
+            <div className="space-y-1.5"><Label>Hours Worked</Label><Input type="number" step="0.5" value={form.hours || 0} onChange={e => u('hours', +e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Fuel (L)</Label><Input type="number" value={form.fuel || 0} onChange={e => u('fuel', +e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Activity</Label><Input value={form.activity || ''} onChange={e => u('activity', e.target.value)} /></div>
+            <div className="col-span-2 space-y-1.5"><Label>Activity</Label><Input value={form.activity || ''} onChange={e => u('activity', e.target.value)} /></div>
             <div className="col-span-2 space-y-1.5"><Label>Issues</Label><Input value={form.issues || ''} onChange={e => u('issues', e.target.value)} /></div>
           </div>
           <DialogFooter>
@@ -300,7 +464,15 @@ export function SafetyPage() {
           reporter: r.Reporter || '',
         }))}
         fileName="Safety"
-        extraToolbar={<CrudToolbar canUndo={crud.canUndo} onUndo={crud.undo} onClear={crud.clearAll} dataLength={crud.data.length} />}
+        extraToolbar={
+          <CrudToolbar canUndo={crud.canUndo} onUndo={crud.undo} onClear={crud.clearAll} dataLength={crud.data.length}
+            printBtn={<PrintableReport title="Safety Incidents" columns={[
+              { key: 'date', label: 'Date' }, { key: 'type', label: 'Type' }, { key: 'location', label: 'Location' },
+              { key: 'description', label: 'Description' }, { key: 'cause', label: 'Root Cause' },
+              { key: 'preventive', label: 'Preventive Action' }, { key: 'reporter', label: 'Reporter' },
+            ]} data={crud.data} />}
+          />
+        }
       />
       <Dialog open={crud.dialogOpen} onOpenChange={crud.setDialogOpen}>
         <DialogContent className="max-w-lg">
@@ -369,7 +541,15 @@ export function DelaysPage() {
           recovery: r['Recovery Action'] || r.recovery || '', status: (r.Status || 'open').toLowerCase(),
         }))}
         fileName="Delays"
-        extraToolbar={<CrudToolbar canUndo={crud.canUndo} onUndo={crud.undo} onClear={crud.clearAll} dataLength={crud.data.length} />}
+        extraToolbar={
+          <CrudToolbar canUndo={crud.canUndo} onUndo={crud.undo} onClear={crud.clearAll} dataLength={crud.data.length}
+            printBtn={<PrintableReport title="Delays Register" columns={[
+              { key: 'date', label: 'Date' }, { key: 'activity', label: 'Activity' }, { key: 'description', label: 'Description' },
+              { key: 'cause', label: 'Cause' }, { key: 'duration', label: 'Days' }, { key: 'impact', label: 'Impact' },
+              { key: 'recovery', label: 'Recovery' }, { key: 'status', label: 'Status' },
+            ]} data={crud.data} />}
+          />
+        }
       />
       <Dialog open={crud.dialogOpen} onOpenChange={crud.setDialogOpen}>
         <DialogContent className="max-w-lg">
@@ -440,7 +620,15 @@ export function PurchaseOrdersPage() {
           status: (r.Status || 'draft').toLowerCase(), remarks: r.Remarks || '',
         }))}
         fileName="PurchaseOrders"
-        extraToolbar={<CrudToolbar canUndo={crud.canUndo} onUndo={crud.undo} onClear={crud.clearAll} dataLength={crud.data.length} />}
+        extraToolbar={
+          <CrudToolbar canUndo={crud.canUndo} onUndo={crud.undo} onClear={crud.clearAll} dataLength={crud.data.length}
+            printBtn={<PrintableReport title="Purchase Orders" columns={[
+              { key: 'poNo', label: 'PO No.' }, { key: 'date', label: 'Date' }, { key: 'supplier', label: 'Supplier' },
+              { key: 'itemCode', label: 'Item Code' }, { key: 'qty', label: 'Qty' }, { key: 'price', label: 'Amount' },
+              { key: 'status', label: 'Status' }, { key: 'remarks', label: 'Remarks' },
+            ]} data={crud.data} />}
+          />
+        }
       />
       <Dialog open={crud.dialogOpen} onOpenChange={crud.setDialogOpen}>
         <DialogContent className="max-w-lg">
@@ -545,7 +733,11 @@ function GenericModule({ title, description, fields, extraToolbar }: { title: st
           setData(prev => [...prev, ...mapped]);
         }}
         fileName={title.replace(/\s+/g, '_')}
-        extraToolbar={<CrudToolbar canUndo={history.length > 0} onUndo={undo} onClear={clearAll} dataLength={data.length} />}
+        extraToolbar={
+          <CrudToolbar canUndo={history.length > 0} onUndo={undo} onClear={clearAll} dataLength={data.length}
+            printBtn={<PrintableReport title={title} columns={fields.map(f => ({ key: f.key, label: f.label }))} data={data} />}
+          />
+        }
       />
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg">
@@ -557,7 +749,7 @@ function GenericModule({ title, description, fields, extraToolbar }: { title: st
                 {f.options ? (
                   <Select value={form[f.key] || ''} onValueChange={v => u(f.key, v)}>
                     <SelectTrigger><SelectValue placeholder={`Select ${f.label}`} /></SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-h-60">
                       {f.options.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
@@ -577,7 +769,7 @@ function GenericModule({ title, description, fields, extraToolbar }: { title: st
   );
 }
 
-// Equipment options for fuel log dropdown
+// Equipment options for fuel log dropdown (dynamic from sample + any added)
 const equipmentOptions = sampleEquipment.map(e => ({ value: `${e.eqId} - ${e.equipmentName}`, label: `${e.eqId} - ${e.equipmentName}` }));
 
 export const DailyQuantityPage = () => <GenericModule title="Daily Quantity" description="Enter executed quantities per BOQ item" fields={[
@@ -621,12 +813,27 @@ export const QualityPage = () => <GenericModule title="Quality (ITP/NCR)" descri
   { key: 'testedBy', label: 'Tested By' },
 ]} />;
 
+// ─── Concrete Pour (Enhanced with comprehensive grades) ───
 export const ConcreteLogPage = () => <GenericModule title="Concrete Pour" description="Daily pour cards with slump, cubes, weather" fields={[
-  { key: 'date', label: 'Date', type: 'date' }, { key: 'location', label: 'Location' },
-  { key: 'grade', label: 'Grade', options: [{ value: 'C20', label: 'C20' }, { value: 'C25', label: 'C25' }, { value: 'C30', label: 'C30' }, { value: 'C40', label: 'C40' }] },
-  { key: 'volume', label: 'Volume (m³)', type: 'number' }, { key: 'slump', label: 'Slump (mm)', type: 'number' }, { key: 'temp', label: 'Temp (°C)', type: 'number' },
-  { key: 'weather', label: 'Weather', options: [{ value: 'sunny', label: 'Sunny' }, { value: 'cloudy', label: 'Cloudy' }, { value: 'rainy', label: 'Rainy' }, { value: 'windy', label: 'Windy' }] },
-  { key: 'cubes', label: 'Cubes', type: 'number' }, { key: 'supervisor', label: 'Supervisor' },
+  { key: 'date', label: 'Date', type: 'date' },
+  { key: 'location', label: 'Location' },
+  { key: 'grade', label: 'Concrete Grade', options: CONCRETE_GRADES.map(g => ({ value: g, label: g })) },
+  { key: 'supplier', label: 'Supplier / Batch Plant' },
+  { key: 'volume', label: 'Volume (m³)', type: 'number' },
+  { key: 'slump', label: 'Slump (mm)', type: 'number' },
+  { key: 'temp', label: 'Temp (°C)', type: 'number' },
+  { key: 'weather', label: 'Weather', options: [
+    { value: 'sunny', label: 'Sunny' }, { value: 'cloudy', label: 'Cloudy' },
+    { value: 'rainy', label: 'Rainy' }, { value: 'windy', label: 'Windy' },
+    { value: 'hot', label: 'Hot (>35°C)' }, { value: 'cold', label: 'Cold (<5°C)' },
+  ]},
+  { key: 'cubes', label: 'Test Cubes', type: 'number' },
+  { key: 'pourMethod', label: 'Pour Method', options: [
+    { value: 'pump', label: 'Pump' }, { value: 'skip', label: 'Skip / Bucket' },
+    { value: 'chute', label: 'Chute' }, { value: 'tremie', label: 'Tremie' },
+  ]},
+  { key: 'element', label: 'Structural Element' },
+  { key: 'supervisor', label: 'Supervisor' },
 ]} />;
 
 export const WeldingPage = () => <GenericModule title="Welding Log" description="Daily welding reports with NDT results" fields={[
@@ -649,10 +856,102 @@ export const SubcontractorsPage = () => <GenericModule title="Subcontractors" de
   { key: 'cumulative', label: 'Cumulative %', type: 'number' }, { key: 'supervisor', label: 'Supervisor' },
 ]} />;
 
-export const PhotosPage = () => <GenericModule title="Photos" description="Photo records with location and description" fields={[
-  { key: 'date', label: 'Date', type: 'date' }, { key: 'fileName', label: 'File Name' }, { key: 'location', label: 'Location' },
-  { key: 'description', label: 'Description' }, { key: 'takenBy', label: 'Taken By' },
-]} />;
+// ─── Photos (Enhanced with local file upload) ───
+export function PhotosPage() {
+  const [photos, setPhotos] = useState<any[]>([]);
+  const [history, setHistory] = useState<any[][]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const pushHistory = () => setHistory(prev => [...prev.slice(-20), photos]);
+
+  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    pushHistory();
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        setPhotos(prev => [...prev, {
+          id: crypto.randomUUID(),
+          fileName: file.name,
+          date: new Date().toISOString().split('T')[0],
+          size: (file.size / 1024).toFixed(1) + ' KB',
+          location: '',
+          description: '',
+          takenBy: '',
+          dataUrl: evt.target?.result as string,
+        }]);
+      };
+      reader.readAsDataURL(file);
+    });
+    if (fileRef.current) fileRef.current.value = '';
+    toast({ title: 'Uploaded', description: `${files.length} photo(s) added` });
+  };
+
+  const undo = () => {
+    if (history.length === 0) return;
+    setPhotos(history[history.length - 1]);
+    setHistory(prev => prev.slice(0, -1));
+    toast({ title: 'Undone' });
+  };
+
+  const clearAll = () => {
+    if (photos.length === 0) return;
+    pushHistory();
+    setPhotos([]);
+    toast({ title: 'Cleared', description: 'All photos removed. Use Undo to restore.' });
+  };
+
+  return (
+    <div>
+      <div className="page-header flex items-start justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Site Photos</h1>
+          <p className="text-sm text-muted-foreground mt-1">Upload and manage site photographs · {photos.length} photos</p>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <PrintableReport title="Site Photos" columns={[
+            { key: 'date', label: 'Date' }, { key: 'fileName', label: 'File Name' },
+            { key: 'location', label: 'Location' }, { key: 'description', label: 'Description' }, { key: 'takenBy', label: 'Taken By' },
+          ]} data={photos} />
+          <Button variant="ghost" size="sm" onClick={undo} disabled={history.length === 0}><Undo2 size={14} className="mr-1" /> Undo</Button>
+          <Button variant="ghost" size="sm" onClick={clearAll} disabled={photos.length === 0} className="text-destructive"><Trash2 size={14} className="mr-1" /> Clear All</Button>
+          <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleUpload} />
+          <Button size="sm" onClick={() => fileRef.current?.click()}>
+            <ImagePlus size={14} className="mr-1" /> Upload Photos
+          </Button>
+        </div>
+      </div>
+      {photos.length === 0 ? (
+        <div className="bg-card rounded-xl border shadow-sm p-12 text-center text-muted-foreground">
+          No photos uploaded yet. Click "Upload Photos" to add site images from your computer.
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {photos.map(p => (
+            <div key={p.id} className="bg-card rounded-xl border shadow-sm overflow-hidden group">
+              <div className="aspect-video bg-muted overflow-hidden">
+                <img src={p.dataUrl} alt={p.fileName} className="w-full h-full object-cover" />
+              </div>
+              <div className="p-3">
+                <p className="text-sm font-medium truncate">{p.fileName}</p>
+                <p className="text-xs text-muted-foreground">{p.date} · {p.size}</p>
+                <Input className="mt-2 h-7 text-xs" placeholder="Location" value={p.location}
+                  onChange={e => setPhotos(prev => prev.map(x => x.id === p.id ? { ...x, location: e.target.value } : x))} />
+                <Input className="mt-1 h-7 text-xs" placeholder="Description" value={p.description}
+                  onChange={e => setPhotos(prev => prev.map(x => x.id === p.id ? { ...x, description: e.target.value } : x))} />
+                <Button variant="ghost" size="sm" className="mt-1 h-6 text-xs text-destructive w-full"
+                  onClick={() => { pushHistory(); setPhotos(prev => prev.filter(x => x.id !== p.id)); }}>
+                  Remove
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export const ChangeOrdersPage = () => <GenericModule title="Change Orders" description="Track change requests with cost and schedule impact" fields={[
   { key: 'coNo', label: 'CO No.' }, { key: 'date', label: 'Date', type: 'date' }, { key: 'description', label: 'Description' },
@@ -699,15 +998,19 @@ export const HelpPage = () => (
           <li><strong>Activities (CPM)</strong> – Gantt chart + CPM network diagram with critical path, float, and warnings</li>
           <li><strong>AI Assistant</strong> – Automated critical path analysis, schedule optimization</li>
           <li><strong>BOQ / Items</strong> – Bill of quantities with progress tracking and budget analysis</li>
+          <li><strong>Manpower</strong> – Dropdown selection for 35+ construction trades with per-trade counts</li>
+          <li><strong>Equipment</strong> – 45+ equipment types with hourly/daily/monthly billing and cost tracking</li>
+          <li><strong>Concrete Pour</strong> – 30+ international concrete grades (BS/EN/IS standards)</li>
+          <li><strong>Photos</strong> – Direct upload from local PC with grid gallery view</li>
+          <li><strong>Print Reports</strong> – International standard format with letterhead, signatures, and stamp</li>
           <li><strong>Cross-module linking</strong> – BOQ items linked in POs, Daily Qty; Equipment linked in Fuel Log</li>
-          <li><strong>Undo / Clear</strong> – Every module has Undo and Clear All buttons</li>
+          <li><strong>Undo / Clear / Select</strong> – Every module has Undo, Clear All, and batch delete</li>
           <li><strong>Excel Import/Export</strong> – Import data from .xlsx/.csv files and export to Excel</li>
-          <li><strong>Equipment</strong> – Track ownership (owned/leased/rented), operator, and fuel</li>
         </ul>
       </div>
       <div>
-        <h2 className="text-lg font-semibold mb-2">Import Instructions</h2>
-        <p className="text-sm text-muted-foreground">Click "Import XLS" on any module. Your spreadsheet headers should match the column names shown in the table. Use the Templates button in the sidebar to download pre-formatted Excel templates.</p>
+        <h2 className="text-lg font-semibold mb-2">Print Reports</h2>
+        <p className="text-sm text-muted-foreground">Click the Print Report button on any major module to generate a professional A4 landscape report with your company letterhead, project details, signature blocks, and company stamp. Configure these in Settings.</p>
       </div>
     </div>
   </div>

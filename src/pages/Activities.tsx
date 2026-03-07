@@ -7,6 +7,7 @@ import ActivityDialog from '@/components/ActivityDialog';
 import ExcelImportExport from '@/components/ExcelImportExport';
 import AIAssistant from '@/components/AIAssistant';
 import { Button } from '@/components/ui/button';
+import PrintableReport from '@/components/PrintableReport';
 import { Plus, BarChart3, Table2, Pencil, Trash2, Bot, Network, Undo2, Trash } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
@@ -126,6 +127,11 @@ export default function Activities() {
           <Button variant="ghost" size="sm" onClick={handleClearAll} disabled={activities.length === 0} className="text-destructive" title="Clear all">
             <Trash size={14} className="mr-1" /> Clear
           </Button>
+          <PrintableReport title="Activities Schedule" columns={[
+            { key: 'wbs', label: 'WBS' }, { key: 'name', label: 'Activity' }, { key: 'plannedStart', label: 'Planned Start' },
+            { key: 'plannedEnd', label: 'Planned End' }, { key: 'actualStart', label: 'Actual Start' }, { key: 'actualEnd', label: 'Actual End' },
+            { key: 'percentComplete', label: 'Progress %' }, { key: 'critical', label: 'Critical' }, { key: 'predecessors', label: 'Predecessors' }, { key: 'status', label: 'Status' },
+          ]} data={activities.map(a => ({ ...a, critical: a.critical ? 'Yes' : 'No', actualStart: a.actualStart || '—', actualEnd: a.actualEnd || '—', predecessors: a.predecessors || '—' }))} />
           <Button variant="outline" size="sm" onClick={() => setAiOpen(true)} className="border-primary/30 text-primary hover:bg-primary/5">
             <Bot size={14} className="mr-1" /> AI Assist
           </Button>
