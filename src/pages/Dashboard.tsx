@@ -174,6 +174,13 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Data Approval Queue (Admin/Co-Admin only) */}
+      {canApprove && currentProjectId && (
+        <div className="bg-card rounded-xl border shadow-sm p-5 mt-6">
+          <DataApproval projectId={currentProjectId} />
+        </div>
+      )}
     </div>
   );
 }
