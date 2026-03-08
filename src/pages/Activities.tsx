@@ -3,12 +3,13 @@ import { useProjectData } from '@/context/ProjectDataContext';
 import { Activity } from '@/types/construction';
 import GanttChart from '@/components/GanttChart';
 import CPMDiagram from '@/components/CPMDiagram';
+import CriticalPathFlow from '@/components/CriticalPathFlow';
 import PrimaveraSchedule from '@/components/PrimaveraSchedule';
 import ActivityDialog from '@/components/ActivityDialog';
 import AIAssistant from '@/components/AIAssistant';
 import { Button } from '@/components/ui/button';
 import PrintableReport from '@/components/PrintableReport';
-import { Plus, BarChart3, Table2, Pencil, Trash2, Bot, Network, Undo2, Trash, CalendarRange } from 'lucide-react';
+import { Plus, BarChart3, Table2, Pencil, Trash2, Bot, Network, Undo2, Trash, CalendarRange, GitBranch } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const statusBadge = (status: string, critical: boolean) => {
@@ -21,7 +22,7 @@ const statusBadge = (status: string, critical: boolean) => {
 
 export default function Activities() {
   const { activities, activitiesOps } = useProjectData();
-  const [view, setView] = useState<'gantt' | 'table' | 'cpm' | 'primavera'>('gantt');
+  const [view, setView] = useState<'gantt' | 'table' | 'cpm' | 'primavera' | 'flow'>('gantt');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [aiOpen, setAiOpen] = useState(false);
@@ -106,6 +107,9 @@ export default function Activities() {
             <Button variant="ghost" size="sm" onClick={() => setView('cpm')} className={cn("rounded-none", view === 'cpm' && 'bg-muted')}>
               <Network size={14} className="mr-1" /> CPM
             </Button>
+            <Button variant="ghost" size="sm" onClick={() => setView('flow')} className={cn("rounded-none", view === 'flow' && 'bg-muted')}>
+              <GitBranch size={14} className="mr-1" /> Flow
+            </Button>
             <Button variant="ghost" size="sm" onClick={() => setView('table')} className={cn("rounded-none", view === 'table' && 'bg-muted')}>
               <Table2 size={14} className="mr-1" /> Table
             </Button>
@@ -118,6 +122,8 @@ export default function Activities() {
         <GanttChart activities={activities} onEditActivity={openEdit} />
       ) : view === 'cpm' ? (
         <CPMDiagram activities={activities} onEditActivity={openEdit} />
+      ) : view === 'flow' ? (
+        <CriticalPathFlow activities={activities} onEditActivity={openEdit} />
       ) : view === 'primavera' ? (
         <PrimaveraSchedule activities={activities} onEditActivity={openEdit} />
       ) : (

@@ -115,12 +115,26 @@ export function useModuleSync() {
         receipts: 0,
         issues: 0,
         balance: 0,
-        minLevel: Math.ceil(m.totalWithWaste * 0.1), // 10% as min level
+        minLevel: Math.ceil(m.totalWithWaste * 0.1),
         location: m.category || '',
+        requiredQty: Math.ceil(m.totalWithWaste || m.requiredQty || 0),
       }));
+
+    // Update requiredQty for existing items
+    const updatedExisting = projectData.inventory.map(item => {
+      const mat = materials.find(m => m.code === item.code);
+      if (mat) {
+        return { ...item, requiredQty: Math.ceil(mat.totalWithWaste || mat.requiredQty || 0) };
+      }
+      return item;
+    });
+
     if (newItems.length > 0) {
-      projectData.inventoryOps.bulkAdd(newItems);
-      toast({ title: 'Inventory Updated', description: `${newItems.length} new materials added to inventory` });
+      projectData.inventoryOps.setAll([...updatedExisting, ...newItems]);
+      toast({ title: 'Inventory Updated', description: `${newItems.length} new materials added, required quantities updated` });
+    } else if (updatedExisting.some((item, i) => item.requiredQty !== projectData.inventory[i]?.requiredQty)) {
+      projectData.inventoryOps.setAll(updatedExisting);
+      toast({ title: 'Inventory Updated', description: 'Required quantities updated from BOQ analysis' });
     } else {
       toast({ title: 'Inventory', description: 'All materials already exist in inventory' });
     }

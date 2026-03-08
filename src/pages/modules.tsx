@@ -96,16 +96,28 @@ export function InventoryPage() {
           { key: 'code', label: 'Code', render: i => <span className="font-mono text-xs font-medium">{i.code}</span> },
           { key: 'description', label: 'Description', render: i => <span className="font-medium">{i.description}</span> },
           { key: 'unit', label: 'Unit' },
+          { key: 'requiredQty', label: 'Required', render: i => (
+            <span className="text-right font-mono block font-medium text-primary">{i.requiredQty ? i.requiredQty.toLocaleString() : '—'}</span>
+          )},
           { key: 'opening', label: 'Opening', render: i => <span className="text-right font-mono block">{i.opening}</span> },
           { key: 'receipts', label: 'Receipts', render: i => <span className="text-right font-mono block">{i.receipts}</span> },
           { key: 'issues', label: 'Issues', render: i => <span className="text-right font-mono block">{i.issues}</span> },
           { key: 'balance', label: 'Balance', render: i => (
             <span className={`text-right font-mono font-medium block ${i.balance <= i.minLevel ? 'text-destructive' : ''}`}>{i.balance}</span>
           )},
+          { key: 'shortage', label: 'Shortage', render: i => {
+            const shortage = (i.requiredQty || 0) - i.balance;
+            return shortage > 0
+              ? <span className="text-right font-mono font-medium block text-destructive">{shortage.toLocaleString()}</span>
+              : <span className="text-right font-mono block text-muted-foreground">—</span>;
+          }},
           { key: 'minLevel', label: 'Min Level', render: i => <span className="text-right font-mono block">{i.minLevel}</span> },
-          { key: 'status', label: 'Status', render: i => (
-            i.balance <= i.minLevel ? <span className="badge-critical">Low Stock</span> : <span className="badge-success">OK</span>
-          )},
+          { key: 'status', label: 'Status', render: i => {
+            const shortage = (i.requiredQty || 0) - i.balance;
+            if (shortage > 0) return <span className="badge-critical">Short {Math.round((shortage / (i.requiredQty || 1)) * 100)}%</span>;
+            if (i.balance <= i.minLevel) return <span className="badge-warning">Low Stock</span>;
+            return <span className="badge-success">OK</span>;
+          }},
           { key: 'location', label: 'Location' },
         ]}
         data={data}
