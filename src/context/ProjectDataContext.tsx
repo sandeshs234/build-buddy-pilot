@@ -1,10 +1,40 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { Activity, BOQItem, InventoryItem, ManpowerEntry, EquipmentEntry, SafetyIncident, DelayEntry, PurchaseOrder } from '@/types/construction';
-import { sampleActivities, sampleBOQ, sampleInventory, sampleManpower, sampleEquipment, sampleSafety, sampleDelays, samplePOs } from '@/data/sampleData';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Activity, BOQItem, InventoryItem, EquipmentEntry, SafetyIncident, DelayEntry, PurchaseOrder } from '@/types/construction';
+import { sampleActivities, sampleBOQ, sampleInventory, sampleEquipment, sampleSafety, sampleDelays, samplePOs } from '@/data/sampleData';
 import { toast } from '@/hooks/use-toast';
 
-// Generic CRUD state with undo
-function createCrudOps<T extends { id: string }>(data: T[], setData: React.Dispatch<React.SetStateAction<T[]>>, history: T[][], setHistory: React.Dispatch<React.SetStateAction<T[][]>>) {
+const STORAGE_KEY = 'buildforge_project_data';
+
+// Load from localStorage or use defaults
+function loadState(): Record<string, any[]> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return {};
+}
+
+function saveState(key: string, data: any[]) {
+  try {
+    const current = loadState();
+    current[key] = data;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
+  } catch {}
+}
+
+function getInitial<T>(key: string, fallback: T[]): T[] {
+  const stored = loadState();
+  if (key in stored) return stored[key] as T[];
+  return fallback;
+}
+
+// Generic CRUD with undo
+function createCrudOps<T extends { id: string }>(
+  data: T[],
+  setData: React.Dispatch<React.SetStateAction<T[]>>,
+  history: T[][],
+  setHistory: React.Dispatch<React.SetStateAction<T[][]>>
+) {
   const pushHistory = () => setHistory(prev => [...prev.slice(-20), data]);
 
   return {
@@ -37,6 +67,18 @@ function createCrudOps<T extends { id: string }>(data: T[], setData: React.Dispa
   };
 }
 
+// Hook: persistent state with localStorage
+function usePersistentState<T>(key: string, fallback: T[]) {
+  const [data, setData] = useState<T[]>(() => getInitial(key, fallback));
+  const [history, setHistory] = useState<T[][]>([]);
+
+  useEffect(() => {
+    saveState(key, data);
+  }, [key, data]);
+
+  return { data, setData, history, setHistory };
+}
+
 interface ProjectDataContextType {
   activities: Activity[];
   activitiesOps: ReturnType<typeof createCrudOps<Activity>>;
@@ -52,7 +94,6 @@ interface ProjectDataContextType {
   delaysOps: ReturnType<typeof createCrudOps<DelayEntry>>;
   purchaseOrders: PurchaseOrder[];
   poOps: ReturnType<typeof createCrudOps<PurchaseOrder>>;
-  // Generic stores for other modules
   manpower: any[];
   manpowerOps: ReturnType<typeof createCrudOps<any>>;
   fuelLog: any[];
@@ -66,62 +107,41 @@ interface ProjectDataContextType {
 const ProjectDataContext = createContext<ProjectDataContextType | null>(null);
 
 export function ProjectDataProvider({ children }: { children: ReactNode }) {
-  const [activities, setActivities] = useState<Activity[]>(sampleActivities);
-  const [activitiesHistory, setActivitiesHistory] = useState<Activity[][]>([]);
-
-  const [boqItems, setBoqItems] = useState<BOQItem[]>(sampleBOQ);
-  const [boqHistory, setBoqHistory] = useState<BOQItem[][]>([]);
-
-  const [inventory, setInventory] = useState<InventoryItem[]>(sampleInventory);
-  const [inventoryHistory, setInventoryHistory] = useState<InventoryItem[][]>([]);
-
-  const [equipment, setEquipment] = useState<EquipmentEntry[]>(sampleEquipment);
-  const [equipmentHistory, setEquipmentHistory] = useState<EquipmentEntry[][]>([]);
-
-  const [safety, setSafety] = useState<SafetyIncident[]>(sampleSafety);
-  const [safetyHistory, setSafetyHistory] = useState<SafetyIncident[][]>([]);
-
-  const [delays, setDelays] = useState<DelayEntry[]>(sampleDelays);
-  const [delaysHistory, setDelaysHistory] = useState<DelayEntry[][]>([]);
-
-  const [purchaseOrders, setPOs] = useState<PurchaseOrder[]>(samplePOs);
-  const [poHistory, setPoHistory] = useState<PurchaseOrder[][]>([]);
-
-  const [manpower, setManpower] = useState<any[]>([]);
-  const [manpowerHistory, setManpowerHistory] = useState<any[][]>([]);
-
-  const [fuelLog, setFuelLog] = useState<any[]>([]);
-  const [fuelHistory, setFuelHistory] = useState<any[][]>([]);
-
-  const [concretePours, setConcrete] = useState<any[]>([]);
-  const [concreteHistory, setConcreteHistory] = useState<any[][]>([]);
-
-  const [dailyQty, setDailyQty] = useState<any[]>([]);
-  const [dailyQtyHistory, setDailyQtyHistory] = useState<any[][]>([]);
+  const act = usePersistentState<Activity>('activities', sampleActivities);
+  const boq = usePersistentState<BOQItem>('boqItems', sampleBOQ);
+  const inv = usePersistentState<InventoryItem>('inventory', sampleInventory);
+  const eq = usePersistentState<EquipmentEntry>('equipment', sampleEquipment);
+  const saf = usePersistentState<SafetyIncident>('safety', sampleSafety);
+  const del = usePersistentState<DelayEntry>('delays', sampleDelays);
+  const po = usePersistentState<PurchaseOrder>('purchaseOrders', samplePOs);
+  const mp = usePersistentState<any>('manpower', []);
+  const fl = usePersistentState<any>('fuelLog', []);
+  const cp = usePersistentState<any>('concretePours', []);
+  const dq = usePersistentState<any>('dailyQty', []);
 
   const value: ProjectDataContextType = {
-    activities,
-    activitiesOps: createCrudOps(activities, setActivities, activitiesHistory, setActivitiesHistory),
-    boqItems,
-    boqOps: createCrudOps(boqItems, setBoqItems, boqHistory, setBoqHistory),
-    inventory,
-    inventoryOps: createCrudOps(inventory, setInventory, inventoryHistory, setInventoryHistory),
-    equipment,
-    equipmentOps: createCrudOps(equipment, setEquipment, equipmentHistory, setEquipmentHistory),
-    safety,
-    safetyOps: createCrudOps(safety, setSafety, safetyHistory, setSafetyHistory),
-    delays,
-    delaysOps: createCrudOps(delays, setDelays, delaysHistory, setDelaysHistory),
-    purchaseOrders,
-    poOps: createCrudOps(purchaseOrders, setPOs, poHistory, setPoHistory),
-    manpower,
-    manpowerOps: createCrudOps(manpower, setManpower, manpowerHistory, setManpowerHistory),
-    fuelLog,
-    fuelOps: createCrudOps(fuelLog, setFuelLog, fuelHistory, setFuelHistory),
-    concretePours,
-    concreteOps: createCrudOps(concretePours, setConcrete, concreteHistory, setConcreteHistory),
-    dailyQty,
-    dailyQtyOps: createCrudOps(dailyQty, setDailyQty, dailyQtyHistory, setDailyQtyHistory),
+    activities: act.data,
+    activitiesOps: createCrudOps(act.data, act.setData, act.history, act.setHistory),
+    boqItems: boq.data,
+    boqOps: createCrudOps(boq.data, boq.setData, boq.history, boq.setHistory),
+    inventory: inv.data,
+    inventoryOps: createCrudOps(inv.data, inv.setData, inv.history, inv.setHistory),
+    equipment: eq.data,
+    equipmentOps: createCrudOps(eq.data, eq.setData, eq.history, eq.setHistory),
+    safety: saf.data,
+    safetyOps: createCrudOps(saf.data, saf.setData, saf.history, saf.setHistory),
+    delays: del.data,
+    delaysOps: createCrudOps(del.data, del.setData, del.history, del.setHistory),
+    purchaseOrders: po.data,
+    poOps: createCrudOps(po.data, po.setData, po.history, po.setHistory),
+    manpower: mp.data,
+    manpowerOps: createCrudOps(mp.data, mp.setData, mp.history, mp.setHistory),
+    fuelLog: fl.data,
+    fuelOps: createCrudOps(fl.data, fl.setData, fl.history, fl.setHistory),
+    concretePours: cp.data,
+    concreteOps: createCrudOps(cp.data, cp.setData, cp.history, cp.setHistory),
+    dailyQty: dq.data,
+    dailyQtyOps: createCrudOps(dq.data, dq.setData, dq.history, dq.setHistory),
   };
 
   return <ProjectDataContext.Provider value={value}>{children}</ProjectDataContext.Provider>;
