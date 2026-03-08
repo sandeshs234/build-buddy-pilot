@@ -22,6 +22,7 @@ interface MyChange {
   table_name: string;
   operation: string;
   data: any;
+  original_data: any;
   status: string;
   created_at: string;
   approved_at: string | null;
