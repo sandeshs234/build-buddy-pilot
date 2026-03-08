@@ -52,11 +52,59 @@ export default function NotificationBell() {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const handleNotificationClick = (notification: Notification) => {
-    // Navigate based on notification type
-    if (notification.type === 'join_request' || notification.type === 'approved' || notification.type === 'rejected') {
-      navigate('/projects');
+  const getNavigationPath = (type: string): string => {
+    switch (type) {
+      case 'join_request':
+      case 'approved':
+      case 'rejected':
+        return '/projects';
+      case 'data_approval':
+      case 'data_approved':
+      case 'data_rejected':
+        return '/dashboard';
+      case 'activity':
+      case 'schedule':
+        return '/activities';
+      case 'boq':
+        return '/boq';
+      case 'inventory':
+      case 'low_inventory':
+        return '/inventory';
+      case 'safety':
+        return '/safety';
+      case 'delay':
+        return '/delays';
+      case 'equipment':
+        return '/equipment';
+      case 'manpower':
+        return '/manpower';
+      case 'purchase_order':
+        return '/purchase-orders';
+      case 'quality':
+        return '/quality';
+      case 'concrete':
+        return '/concrete';
+      case 'welding':
+        return '/welding';
+      case 'fuel':
+        return '/fuel';
+      case 'daily_quantity':
+        return '/daily-quantity';
+      default:
+        return '/dashboard';
     }
+  };
+
+  const handleNotificationClick = async (notification: Notification) => {
+    // Mark as read
+    if (!notification.read) {
+      await (supabase as any)
+        .from('notifications')
+        .update({ read: true })
+        .eq('id', notification.id);
+      setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n));
+    }
+    navigate(getNavigationPath(notification.type));
     setOpen(false);
   };
 
@@ -73,8 +121,14 @@ export default function NotificationBell() {
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'join_request': return 'bg-amber-500';
-      case 'approved': return 'bg-green-500';
-      case 'rejected': return 'bg-red-500';
+      case 'approved':
+      case 'data_approved': return 'bg-green-500';
+      case 'rejected':
+      case 'data_rejected': return 'bg-red-500';
+      case 'data_approval': return 'bg-blue-500';
+      case 'safety': return 'bg-orange-500';
+      case 'delay': return 'bg-yellow-500';
+      case 'low_inventory': return 'bg-rose-500';
       default: return 'bg-primary';
     }
   };
