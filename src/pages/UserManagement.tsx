@@ -44,6 +44,7 @@ export default function UserManagement() {
   const [newName, setNewName] = useState('');
   const [newRole, setNewRole] = useState<AppRole>('viewer');
   const [loading, setLoading] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
 
   const fetchUsers = async () => {
     const { data: profiles } = await supabase.from('profiles').select('*');
