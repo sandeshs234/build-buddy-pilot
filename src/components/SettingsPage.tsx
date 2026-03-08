@@ -95,8 +95,8 @@ export default function SettingsPage() {
     toast({ title: 'Settings Saved', description: 'Project settings updated successfully' });
   };
 
-  const Field = ({ label, field, type = 'text', span = false }: { label: string; field: keyof ProjectSettings; type?: string; span?: boolean }) => (
-    <div className={span ? 'col-span-2 space-y-1.5' : 'space-y-1.5'}>
+  const renderField = (label: string, field: keyof ProjectSettings, type = 'text', span = false) => (
+    <div key={field} className={span ? 'col-span-2 space-y-1.5' : 'space-y-1.5'}>
       <Label className="text-xs font-medium">{label}</Label>
       <Input type={type} value={settings[field]} onChange={e => u(field, e.target.value)} />
     </div>
