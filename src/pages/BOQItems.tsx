@@ -1,16 +1,17 @@
 import { useState } from 'react';
-import { sampleBOQ } from '@/data/sampleData';
+import { useProjectData } from '@/context/ProjectDataContext';
 import { BOQItem } from '@/types/construction';
 import ExcelImportExport from '@/components/ExcelImportExport';
+import PrintableReport from '@/components/PrintableReport';
 import { Button } from '@/components/ui/button';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Undo2, Trash } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function BOQItems() {
-  const [items, setItems] = useState<BOQItem[]>(sampleBOQ);
+  const { boqItems: items, boqOps } = useProjectData();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<BOQItem | null>(null);
 
@@ -23,50 +24,27 @@ export default function BOQItems() {
   const openAdd = () => { setEditing(null); setForm({ ...emptyItem, id: crypto.randomUUID() }); setDialogOpen(true); };
   const openEdit = (item: BOQItem) => { setEditing(item); setForm(item); setDialogOpen(true); };
 
-  const handleSave = () => {
-    setItems(prev => {
-      const idx = prev.findIndex(i => i.id === form.id);
-      if (idx >= 0) { const copy = [...prev]; copy[idx] = form; return copy; }
-      return [...prev, form];
-    });
-    setDialogOpen(false);
-  };
-
-  const handleDelete = (id: string) => setItems(prev => prev.filter(i => i.id !== id));
+  const handleSave = () => { boqOps.save(form); setDialogOpen(false); };
+  const handleDelete = (id: string) => boqOps.remove(id);
 
   const handleImport = (data: Record<string, any>[]) => {
-    const imported: BOQItem[] = data.map(() => ({
-      id: crypto.randomUUID(),
-      code: data[0]?.code || data[0]?.Code || '',
-      description: data[0]?.description || data[0]?.Description || '',
-      unit: data[0]?.unit || data[0]?.Unit || '',
-      measureType: 'direct' as const,
-      totalQty: Number(data[0]?.totalQty || data[0]?.['Total Qty'] || 0),
-      executedQty: Number(data[0]?.executedQty || data[0]?.['Executed Qty'] || 0),
-      rate: Number(data[0]?.rate || data[0]?.Rate || 0),
-    }));
-    // Actually map each row properly
     const mapped: BOQItem[] = data.map(row => ({
       id: crypto.randomUUID(),
-      code: row.code || row.Code || '',
+      code: row.code || row.Code || row['Item Code'] || '',
       description: row.description || row.Description || '',
       unit: row.unit || row.Unit || '',
-      measureType: (row.measureType || row.Method || 'direct') as BOQItem['measureType'],
+      measureType: (row.measureType || row.Method || row['Measure Type (direct/rectangular/trapezoidal/rebar)'] || 'direct') as BOQItem['measureType'],
       totalQty: Number(row.totalQty || row['Total Qty'] || 0),
       executedQty: Number(row.executedQty || row['Executed Qty'] || 0),
-      rate: Number(row.rate || row.Rate || 0),
+      rate: Number(row.rate || row.Rate || row['Unit Rate'] || 0),
     }));
-    setItems(prev => [...prev, ...mapped]);
+    boqOps.bulkAdd(mapped);
   };
 
   const excelColumns = [
-    { key: 'code', label: 'Code' },
-    { key: 'description', label: 'Description' },
-    { key: 'unit', label: 'Unit' },
-    { key: 'measureType', label: 'Method' },
-    { key: 'totalQty', label: 'Total Qty' },
-    { key: 'executedQty', label: 'Executed Qty' },
-    { key: 'rate', label: 'Rate' },
+    { key: 'code', label: 'Code' }, { key: 'description', label: 'Description' }, { key: 'unit', label: 'Unit' },
+    { key: 'measureType', label: 'Method' }, { key: 'totalQty', label: 'Total Qty' },
+    { key: 'executedQty', label: 'Executed Qty' }, { key: 'rate', label: 'Rate' },
   ];
 
   const update = (field: keyof BOQItem, value: any) => setForm(prev => ({ ...prev, [field]: value }));
@@ -76,71 +54,77 @@ export default function BOQItems() {
       <div className="page-header flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">BOQ / Item Master</h1>
-          <p className="text-sm text-muted-foreground mt-1">{items.length} items · Budget: AED {(totalBudget / 1000000).toFixed(1)}M · Executed: AED {(totalExecuted / 1000000).toFixed(1)}M</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {items.length} items · Budget: AED {(totalBudget / 1000000).toFixed(1)}M · Executed: AED {(totalExecuted / 1000000).toFixed(1)}M
+          </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <PrintableReport title="BOQ / Item Master" columns={excelColumns} data={items} />
+          <Button variant="ghost" size="sm" onClick={boqOps.undo} disabled={!boqOps.canUndo} title="Undo">
+            <Undo2 size={14} className="mr-1" /> Undo
+          </Button>
+          <Button variant="ghost" size="sm" onClick={boqOps.clearAll} disabled={items.length === 0} className="text-destructive" title="Clear all">
+            <Trash size={14} className="mr-1" /> Clear All
+          </Button>
           <ExcelImportExport data={items} columns={excelColumns} fileName="BOQ_Items" onImport={handleImport} />
           <Button size="sm" onClick={openAdd}><Plus size={14} className="mr-1" /> Add Item</Button>
         </div>
       </div>
 
       <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Code</th>
-                <th>Description</th>
-                <th>Unit</th>
-                <th>Method</th>
-                <th className="text-right">Total Qty</th>
-                <th className="text-right">Executed</th>
-                <th>Progress</th>
-                <th className="text-right">Rate</th>
-                <th className="text-right">Amount</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map(item => {
-                const pct = Math.round((item.executedQty / item.totalQty) * 100);
-                return (
-                  <tr key={item.id}>
-                    <td className="font-mono text-xs font-medium">{item.code}</td>
-                    <td className="font-medium">{item.description}</td>
-                    <td className="text-muted-foreground">{item.unit}</td>
-                    <td className="text-xs text-muted-foreground capitalize">{item.measureType}</td>
-                    <td className="text-right font-mono">{item.totalQty.toLocaleString()}</td>
-                    <td className="text-right font-mono">{item.executedQty.toLocaleString()}</td>
-                    <td>
-                      <div className="flex items-center gap-2">
-                        <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
-                          <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
+        {items.length === 0 ? (
+          <div className="p-12 text-center text-muted-foreground">No BOQ items. Click "Add Item" or import from Excel.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Code</th><th>Description</th><th>Unit</th><th>Method</th>
+                  <th className="text-right">Total Qty</th><th className="text-right">Executed</th>
+                  <th>Progress</th><th className="text-right">Rate</th><th className="text-right">Amount</th><th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map(item => {
+                  const pct = item.totalQty > 0 ? Math.round((item.executedQty / item.totalQty) * 100) : 0;
+                  return (
+                    <tr key={item.id}>
+                      <td className="font-mono text-xs font-medium">{item.code}</td>
+                      <td className="font-medium">{item.description}</td>
+                      <td className="text-muted-foreground">{item.unit}</td>
+                      <td className="text-xs text-muted-foreground capitalize">{item.measureType}</td>
+                      <td className="text-right font-mono">{item.totalQty.toLocaleString()}</td>
+                      <td className="text-right font-mono">{item.executedQty.toLocaleString()}</td>
+                      <td>
+                        <div className="flex items-center gap-2">
+                          <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
+                            <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="text-xs text-muted-foreground w-8">{pct}%</span>
                         </div>
-                        <span className="text-xs text-muted-foreground w-8">{pct}%</span>
-                      </div>
-                    </td>
-                    <td className="text-right font-mono">{item.rate.toLocaleString()}</td>
-                    <td className="text-right font-mono font-medium">{(item.totalQty * item.rate).toLocaleString()}</td>
-                    <td>
-                      <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEdit(item)}><Pencil size={13} /></Button>
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => handleDelete(item.id)}><Trash2 size={13} /></Button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-            <tfoot>
-              <tr className="bg-muted/50">
-                <td colSpan={8} className="px-4 py-3 font-semibold text-sm">Total</td>
-                <td className="px-4 py-3 text-right font-mono font-bold">{totalBudget.toLocaleString()}</td>
-                <td></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+                      </td>
+                      <td className="text-right font-mono">{item.rate.toLocaleString()}</td>
+                      <td className="text-right font-mono font-medium">{(item.totalQty * item.rate).toLocaleString()}</td>
+                      <td>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEdit(item)}><Pencil size={13} /></Button>
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => handleDelete(item.id)}><Trash2 size={13} /></Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              <tfoot>
+                <tr className="bg-muted/50">
+                  <td colSpan={8} className="px-4 py-3 font-semibold text-sm">Total</td>
+                  <td className="px-4 py-3 text-right font-mono font-bold">{totalBudget.toLocaleString()}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
       </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
