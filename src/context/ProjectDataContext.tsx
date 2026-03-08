@@ -4,7 +4,6 @@ import { sampleActivities, sampleBOQ, sampleInventory, sampleEquipment, sampleSa
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import StorageChoiceDialog from '@/components/StorageChoiceDialog';
 
 const STORAGE_KEY = 'buildforge_project_data';
 
