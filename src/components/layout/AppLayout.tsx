@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, CalendarClock, ClipboardList, Ruler, Package, ShoppingCart, 
   Receipt, Users, UserCog, Truck, Droplets, ShieldCheck, AlertTriangle, 
   HardHat, Flame, Wrench, Building2, Camera, Clock, Settings, Database, 
   BarChart3, HelpCircle, FileText, FileDiff, ChevronDown, ChevronRight,
-  Construction, FileSpreadsheet, Bot, LogOut, Shield, FolderKanban, CheckSquare
+  Construction, FileSpreadsheet, Bot, LogOut, Shield, FolderKanban, Menu, X
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -13,6 +13,7 @@ import SampleTemplates from '@/components/SampleTemplates';
 import AIAssistant from '@/components/AIAssistant';
 import ProjectChat from '@/components/ProjectChat';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface NavGroup {
   label: string;
@@ -92,9 +93,18 @@ const navGroups: NavGroup[] = [
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { profile, role, signOut, currentProjectId, setCurrentProjectId, projectMemberships, projectRole } = useAuth();
   const location = useLocation();
+  const isMobile = useIsMobile();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+
+  // Close sidebar on route change for mobile/tablet
+  useEffect(() => {
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
+  }, [location.pathname, isMobile]);
 
   const toggleGroup = (label: string) => {
     setCollapsed(prev => ({ ...prev, [label]: !prev[label] }));
@@ -103,19 +113,56 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const currentProjectName = projectMemberships.find(m => m.project_id === currentProjectId)?.project_name || 'No Project';
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden relative">
+      {/* Mobile Header Bar */}
+      {isMobile && (
+        <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-sidebar flex items-center justify-between px-4 border-b border-sidebar-border">
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-2 rounded-md text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+          >
+            {sidebarOpen ? <X size={22} /> : <Menu size={22} />}
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-sidebar-primary flex items-center justify-center">
+              <Construction size={16} className="text-sidebar-primary-foreground" />
+            </div>
+            <h1 className="text-sm font-bold text-sidebar-foreground">BuildForge</h1>
+          </div>
+          <div className="w-10" /> {/* Spacer for centering */}
+        </header>
+      )}
+
+      {/* Overlay for mobile */}
+      {isMobile && sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 flex-shrink-0 bg-sidebar flex flex-col border-r border-sidebar-border overflow-hidden">
-        {/* Logo */}
-        <div className="px-5 py-5 flex items-center gap-3 border-b border-sidebar-border">
-          <div className="w-9 h-9 rounded-lg bg-sidebar-primary flex items-center justify-center">
-            <Construction size={20} className="text-sidebar-primary-foreground" />
+      <aside
+        className={cn(
+          'flex-shrink-0 bg-sidebar flex flex-col border-r border-sidebar-border overflow-hidden transition-transform duration-300 ease-in-out z-50',
+          isMobile
+            ? 'fixed top-14 left-0 bottom-0 w-72 shadow-2xl'
+            : 'w-64 relative',
+          isMobile && !sidebarOpen && '-translate-x-full'
+        )}
+      >
+        {/* Logo - only on desktop */}
+        {!isMobile && (
+          <div className="px-5 py-5 flex items-center gap-3 border-b border-sidebar-border">
+            <div className="w-9 h-9 rounded-lg bg-sidebar-primary flex items-center justify-center">
+              <Construction size={20} className="text-sidebar-primary-foreground" />
+            </div>
+            <div>
+              <h1 className="text-sm font-bold text-sidebar-foreground tracking-tight">BuildForge</h1>
+              <p className="text-[10px] text-sidebar-foreground/50 uppercase tracking-widest">Construction PM</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-sm font-bold text-sidebar-foreground tracking-tight">BuildForge</h1>
-            <p className="text-[10px] text-sidebar-foreground/50 uppercase tracking-widest">Construction PM</p>
-          </div>
-        </div>
+        )}
 
         {/* Project Selector */}
         {projectMemberships.length > 0 && (
@@ -216,8 +263,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="p-6 max-w-[1600px] mx-auto animate-fade-in">
+      <main className={cn('flex-1 overflow-y-auto', isMobile && 'pt-14')}>
+        <div className="p-4 md:p-6 max-w-[1600px] mx-auto animate-fade-in">
           {children}
         </div>
       </main>
