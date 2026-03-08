@@ -122,6 +122,8 @@ export default function Activities() {
         <GanttChart activities={activities} onEditActivity={openEdit} />
       ) : view === 'cpm' ? (
         <CPMDiagram activities={activities} onEditActivity={openEdit} />
+      ) : view === 'flow' ? (
+        <CriticalPathFlow activities={activities} onEditActivity={openEdit} />
       ) : view === 'primavera' ? (
         <PrimaveraSchedule activities={activities} onEditActivity={openEdit} />
       ) : (
