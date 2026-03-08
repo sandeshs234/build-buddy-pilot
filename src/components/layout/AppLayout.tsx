@@ -76,6 +76,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'Inventory', path: '/inventory', icon: <Package size={18} />, allowedRoles: ['admin', 'project_manager', 'engineer', 'store_keeper', 'accountant'] },
       { label: 'Procurement Plan', path: '/procurement-plan', icon: <TrendingUp size={18} />, allowedRoles: ['admin', 'project_manager', 'store_keeper', 'accountant'] },
+      { label: 'Procurement Tracker', path: '/procurement-tracker', icon: <Truck size={18} />, allowedRoles: ['admin', 'project_manager', 'store_keeper', 'accountant'] },
       { label: 'Procurement Digest', path: '/procurement-digest', icon: <FileText size={18} />, allowedRoles: ['admin', 'project_manager', 'store_keeper', 'accountant'] },
       { label: 'Purchase Orders', path: '/purchase-orders', icon: <ShoppingCart size={18} />, allowedRoles: ['admin', 'project_manager', 'engineer', 'store_keeper', 'accountant'] },
       { label: 'Bills', path: '/bills', icon: <Receipt size={18} />, allowedRoles: ['admin', 'project_manager', 'accountant'] },

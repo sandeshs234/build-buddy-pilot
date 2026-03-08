@@ -18,6 +18,7 @@ import ProjectManagement from "./pages/ProjectManagement";
 import SettingsPage from "./components/SettingsPage";
 import MaterialProcurement from "./pages/MaterialProcurement";
 import ProcurementDigest from "./pages/ProcurementDigest";
+import ProcurementTrackerPage from "./pages/ProcurementTrackerPage";
 import ProjectSummaryReport from "./pages/ProjectSummaryReport";
 import {
   InventoryPage, ManpowerPage, EquipmentPage, SafetyPage, DelaysPage,
@@ -54,6 +55,7 @@ const App = () => (
               <Route path="/inventory" element={<ProtectedPage><InventoryPage /></ProtectedPage>} />
               <Route path="/procurement-plan" element={<ProtectedPage><MaterialProcurement /></ProtectedPage>} />
               <Route path="/procurement-digest" element={<ProtectedPage><ProcurementDigest /></ProtectedPage>} />
+              <Route path="/procurement-tracker" element={<ProtectedPage><ProcurementTrackerPage /></ProtectedPage>} />
               <Route path="/project-summary" element={<ProtectedPage><ProjectSummaryReport /></ProtectedPage>} />
               <Route path="/manpower" element={<ProtectedPage><ManpowerPage /></ProtectedPage>} />
               <Route path="/equipment" element={<ProtectedPage><EquipmentPage /></ProtectedPage>} />
