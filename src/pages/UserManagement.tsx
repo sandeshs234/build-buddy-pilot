@@ -567,10 +567,7 @@ export default function UserManagement() {
               <Select value={newRole} onValueChange={v => setNewRole(v as AppRole)}>
                 <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="project_manager">Project Manager</SelectItem>
-                  <SelectItem value="engineer">Engineer</SelectItem>
-                  <SelectItem value="viewer">Viewer</SelectItem>
+                  {roleSelectItems}
                 </SelectContent>
               </Select>
             </div>
