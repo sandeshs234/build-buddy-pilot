@@ -369,11 +369,6 @@ export function SafetyPage() {
         onAdd={() => { setForm({ id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0], type: 'observation', location: '', description: '', injured: '', cause: '', preventive: '', reporter: '' }); setEditing(null); setDialogOpen(true); }}
         onEdit={item => { setForm(item); setEditing(item); setDialogOpen(true); }}
         onDelete={item => ops.remove(item.id)}
-        onImport={rows => rows.forEach(r => ops.add({
-          id: crypto.randomUUID(), date: r.Date || '', type: (r.Type || 'observation').toLowerCase(),
-          location: r.Location || '', description: r.Description || '', injured: r.Injured || '',
-          cause: r['Root Cause'] || r.cause || '', preventive: r['Preventive Action'] || r.preventive || '', reporter: r.Reporter || '',
-        } as any))}
         fileName="Safety"
         extraToolbar={
           <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
