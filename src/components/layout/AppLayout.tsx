@@ -271,21 +271,34 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 {!isCollapsed && (
                   <div className="space-y-0.5 mt-0.5 mb-2">
                     {group.items.map((item) => {
-                      const active = location.pathname === item.path;
-                      return (
-                        <Link
-                          key={item.path}
-                          to={item.path}
-                          className={cn(
-                            'sidebar-item',
-                            active ? 'sidebar-item-active' : 'sidebar-item-inactive'
-                          )}
-                        >
-                          {item.icon}
-                          <span>{item.label}</span>
-                        </Link>
-                      );
-                    })}
+                       const active = location.pathname === item.path;
+                       let badge: number | null = null;
+                       
+                       if (item.path === '/projects') {
+                         badge = pendingMembersCount;
+                       } else if (item.path === '/dashboard') {
+                         badge = pendingChangesCount;
+                       }
+
+                       return (
+                         <Link
+                           key={item.path}
+                           to={item.path}
+                           className={cn(
+                             'sidebar-item relative',
+                             active ? 'sidebar-item-active' : 'sidebar-item-inactive'
+                           )}
+                         >
+                           {item.icon}
+                           <span>{item.label}</span>
+                           {badge !== null && badge > 0 && (
+                             <span className="ml-auto flex items-center justify-center w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold">
+                               {badge > 99 ? '99+' : badge}
+                             </span>
+                           )}
+                         </Link>
+                       );
+                     })}
                   </div>
                 )}
               </div>
