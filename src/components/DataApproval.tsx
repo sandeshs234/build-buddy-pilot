@@ -20,6 +20,7 @@ interface DataChange {
   operation: string;
   data: any;
   original_data: any;
+  rejection_reason: string | null;
   status: string;
   approved_by: string | null;
   approved_at: string | null;
