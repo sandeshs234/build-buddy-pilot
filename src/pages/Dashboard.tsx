@@ -21,6 +21,8 @@ interface ProcTrackingItem {
 export default function Dashboard() {
   const { activities, boqItems, manpower, delays, equipment, purchaseOrders } = useProjectData();
   const { canApprove, currentProjectId } = useAuth();
+  const navigate = useNavigate();
+  const [procItems, setProcItems] = useState<ProcTrackingItem[]>([]);
   const [procItems, setProcItems] = useState<ProcTrackingItem[]>([]);
 
   useEffect(() => {
