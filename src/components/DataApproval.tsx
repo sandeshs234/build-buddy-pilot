@@ -72,6 +72,7 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchProcessing, setBatchProcessing] = useState(false);
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({ pending: 0, approved: 0, rejected: 0 });
 
   const [rejectDialogId, setRejectDialogId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
