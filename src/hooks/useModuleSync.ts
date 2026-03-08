@@ -14,7 +14,7 @@ interface SyncResult {
 
 export function useModuleSync() {
   const projectData = useProjectData();
-  const { user, currentProject } = useAuth();
+  const { user, currentProjectId } = useAuth();
   const [syncing, setSyncing] = useState(false);
   const [lastSyncResult, setLastSyncResult] = useState<SyncResult | null>(null);
 
