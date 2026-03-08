@@ -65,6 +65,7 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
   const [form, setForm] = useState<Omit<TrackingItem, 'id'> & { id?: string }>(emptyItem);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Filter items early for use in functions
   const filteredItems = selectedStatus 
@@ -86,6 +87,33 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
   }, [user]);
 
   useEffect(() => { fetchItems(); }, [fetchItems]);
+
+  // Keyboard shortcuts: Ctrl+A to select all, Delete to open delete confirmation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Skip if user is typing in an input/textarea
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        e.preventDefault();
+        if (filteredItems.length > 0) {
+          setSelectedIds(new Set(filteredItems.map(i => i.id)));
+        }
+      }
+
+      if (e.key === 'Delete' && selectedIds.size > 0) {
+        e.preventDefault();
+        setShowDeleteConfirm(true);
+      }
+
+      if (e.key === 'Escape' && selectedIds.size > 0) {
+        setSelectedIds(new Set());
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [filteredItems, selectedIds.size]);
 
   const u = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }));
 
@@ -381,7 +409,8 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
             aria-label="Select all"
           />
           <span className="text-xs text-muted-foreground">{selectedIds.size} selected</span>
-          <AlertDialog>
+          <span className="text-[10px] text-muted-foreground/60 hidden md:inline">Ctrl+A select all · Delete to remove · Esc clear</span>
+          <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
             <AlertDialogTrigger asChild>
               <Button size="sm" variant="destructive" className="ml-auto">
                 <Trash2 size={14} className="mr-1" /> Delete ({selectedIds.size})
