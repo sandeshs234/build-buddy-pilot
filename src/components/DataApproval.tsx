@@ -123,9 +123,11 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
     }
     setSelectedIds(new Set());
     setLoading(false);
+    fetchCounts();
   };
 
   useEffect(() => { fetchChanges(); }, [projectId, filter]);
+  useEffect(() => { fetchCounts(); }, [projectId]);
 
   useEffect(() => {
     const channel = supabase
