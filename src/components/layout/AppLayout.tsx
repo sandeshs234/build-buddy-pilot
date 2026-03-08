@@ -78,6 +78,7 @@ const navGroups: NavGroup[] = [
   {
     label: 'System',
     items: [
+      { label: 'User Management', path: '/users', icon: <Shield size={18} /> },
       { label: 'Settings', path: '/settings', icon: <Settings size={18} /> },
       { label: 'Backup / Restore', path: '/backup', icon: <Database size={18} /> },
       { label: 'Help', path: '/help', icon: <HelpCircle size={18} /> },
