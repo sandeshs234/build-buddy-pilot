@@ -62,6 +62,7 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<TrackingItem | null>(null);
   const [form, setForm] = useState<Omit<TrackingItem, 'id'> & { id?: string }>(emptyItem);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const fetchItems = useCallback(async () => {
     if (!user) return;
