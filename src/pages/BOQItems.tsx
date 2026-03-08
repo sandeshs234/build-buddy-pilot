@@ -3,8 +3,9 @@ import { useProjectData } from '@/context/ProjectDataContext';
 import { BOQItem } from '@/types/construction';
 import PrintableReport from '@/components/PrintableReport';
 import ExcelImportExport from '@/components/ExcelImportExport';
+import MaterialAnalysis from '@/components/MaterialAnalysis';
 import { Button } from '@/components/ui/button';
-import { Plus, Pencil, Trash2, Undo2, Trash, FolderPlus } from 'lucide-react';
+import { Plus, Pencil, Trash2, Undo2, Trash, FolderPlus, Sparkles } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,6 +17,7 @@ export default function BOQItems() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<BOQItem | null>(null);
   const [newProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
+  const [materialAnalysisOpen, setMaterialAnalysisOpen] = useState(false);
 
   const totalBudget = items.reduce((sum, i) => sum + i.totalQty * i.rate, 0);
   const totalExecuted = items.reduce((sum, i) => sum + i.executedQty * i.rate, 0);
@@ -79,6 +81,9 @@ export default function BOQItems() {
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setNewProjectDialogOpen(true)} disabled={items.length === 0} className="text-destructive" title="Start fresh">
             <FolderPlus size={14} className="mr-1" /> New Project
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setMaterialAnalysisOpen(true)} disabled={items.length === 0}>
+            <Sparkles size={14} className="mr-1" /> AI Analysis
           </Button>
           <Button size="sm" onClick={openAdd}><Plus size={14} className="mr-1" /> Add Item</Button>
         </div>
@@ -192,6 +197,7 @@ export default function BOQItems() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <MaterialAnalysis open={materialAnalysisOpen} onOpenChange={setMaterialAnalysisOpen} />
     </div>
   );
 }

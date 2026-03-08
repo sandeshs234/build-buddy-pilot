@@ -1,1 +1,4 @@
 project_id = "aikpqsisqmyebkujazon"
+
+[functions.boq-material-analysis]
+verify_jwt = false
