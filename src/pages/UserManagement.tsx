@@ -399,19 +399,20 @@ export default function UserManagement() {
                 <thead>
                   <tr className="border-b">
                     <th className="text-left py-2 pr-4 font-medium text-muted-foreground">Permission</th>
-                    <th className="text-center py-2 px-3 font-medium"><Badge variant="outline" className={ROLE_COLORS.admin}>Admin</Badge></th>
-                    <th className="text-center py-2 px-3 font-medium"><Badge variant="outline" className={ROLE_COLORS.project_manager}>PM</Badge></th>
-                    <th className="text-center py-2 px-3 font-medium"><Badge variant="outline" className={ROLE_COLORS.engineer}>Engineer</Badge></th>
-                    <th className="text-center py-2 px-3 font-medium"><Badge variant="outline" className={ROLE_COLORS.viewer}>Viewer</Badge></th>
+                    {permRoleHeaders.map(r => (
+                      <th key={r.key} className="text-center py-2 px-2 font-medium">
+                        <Badge variant="outline" className={r.color}>{r.label}</Badge>
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
                   {permissions.map((p) => (
                     <tr key={p.action} className="border-b last:border-0">
                       <td className="py-2 pr-4 text-foreground">{p.action}</td>
-                      {[p.admin, p.pm, p.eng, p.viewer].map((allowed, i) => (
-                        <td key={i} className="text-center py-2 px-3">
-                          {allowed
+                      {permRoleHeaders.map(r => (
+                        <td key={r.key} className="text-center py-2 px-2">
+                          {p.roles.includes(r.key)
                             ? <CheckCircle2 size={15} className="inline text-emerald-500" />
                             : <XCircle size={15} className="inline text-muted-foreground/40" />}
                         </td>
