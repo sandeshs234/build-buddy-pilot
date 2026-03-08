@@ -178,6 +178,9 @@ export default function UserManagement() {
           <Button variant="outline" onClick={() => setGuideOpen(!guideOpen)}>
             <Info size={14} className="mr-1.5" /> Role Guide
           </Button>
+          <Button variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/5" onClick={() => setClearAllOpen(true)} disabled={users.filter(u => u.id !== currentUser?.id).length === 0}>
+            <Trash size={14} className="mr-1.5" /> Clear All Users
+          </Button>
           <Button onClick={() => setDialogOpen(true)}>
             <UserPlus size={14} className="mr-1.5" /> Create User
           </Button>
