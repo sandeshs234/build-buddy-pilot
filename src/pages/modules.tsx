@@ -115,6 +115,7 @@ export function InventoryPage() {
             <p className="text-xs text-muted-foreground mt-1">Shortage Items</p>
           </div>
         </div>
+      )}
       {totalItems > 0 && (() => {
         const chartData = data
           .filter(i => i.minLevel > 0)
