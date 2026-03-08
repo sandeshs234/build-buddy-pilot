@@ -211,6 +211,35 @@ export default function BOQItems() {
         </div>
       </div>
 
+      {/* Analysis Progress Indicator */}
+      {analysisStep && (
+        <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex items-center gap-4 animate-in fade-in slide-in-from-top-2">
+          <div className="relative">
+            <Loader2 size={24} className="animate-spin text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-foreground">AI Analysis in Progress</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{analysisStep}</p>
+            <div className="flex items-center gap-3 mt-2">
+              {['Analyzing materials & quantities...', 'Generating construction activities...', 'Checking inventory gaps...'].map((step, i) => {
+                const steps = ['Analyzing materials & quantities...', 'Generating construction activities...', 'Checking inventory gaps...'];
+                const currentIdx = steps.indexOf(analysisStep);
+                const isDone = i < currentIdx;
+                const isCurrent = i === currentIdx;
+                return (
+                  <div key={step} className="flex items-center gap-1.5">
+                    <div className={`h-2 w-2 rounded-full transition-colors ${isDone ? 'bg-primary' : isCurrent ? 'bg-primary animate-pulse' : 'bg-muted'}`} />
+                    <span className={`text-[10px] ${isDone ? 'text-primary font-medium' : isCurrent ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+                      {['Materials', 'Activities', 'Inventory'][i]}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
         {items.length === 0 ? (
           <div className="p-12 text-center text-muted-foreground">
