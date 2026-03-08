@@ -111,15 +111,6 @@ export function InventoryPage() {
         onAdd={() => { setForm({ id: crypto.randomUUID(), code: '', description: '', unit: '', opening: 0, receipts: 0, issues: 0, balance: 0, minLevel: 0, location: '' }); setEditing(null); setDialogOpen(true); }}
         onEdit={item => { setForm(item); setEditing(item); setDialogOpen(true); }}
         onDelete={item => ops.remove(item.id)}
-        onImport={rows => {
-          const mapped = rows.map(r => ({
-            id: crypto.randomUUID(), code: r.Code || r.code || '', description: r.Description || r.description || '',
-            unit: r.Unit || r.unit || '', opening: Number(r.Opening || r.opening || 0), receipts: Number(r.Receipts || r.receipts || 0),
-            issues: Number(r.Issues || r.issues || 0), balance: Number(r.Balance || r.balance || 0),
-            minLevel: Number(r['Min Level'] || r.minLevel || 0), location: r.Location || r.location || '',
-          }));
-          mapped.forEach(m => ops.add(m as any));
-        }}
         fileName="Inventory"
         extraToolbar={
           <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
