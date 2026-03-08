@@ -298,7 +298,7 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
                 <Button size="sm" onClick={() => approveChange(change.id)} className="bg-green-600 hover:bg-green-700">
                   <Check size={14} className="mr-1" /> Approve
                 </Button>
-                <Button size="sm" variant="destructive" onClick={() => rejectChange(change.id)}>
+                <Button size="sm" variant="destructive" onClick={() => { setRejectDialogId(change.id); setRejectReason(''); }}>
                   <X size={14} className="mr-1" /> Reject
                 </Button>
               </div>
