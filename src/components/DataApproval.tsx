@@ -135,10 +135,23 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
   };
 
   const rejectChange = async (changeId: string) => {
+    const change = changes.find(c => c.id === changeId);
+    if (!change) return;
+
     await (supabase as any)
       .from('data_changes')
       .update({ status: 'rejected', approved_by: user?.id, approved_at: new Date().toISOString() })
       .eq('id', changeId);
+    
+    // Notify the submitting user
+    await (supabase as any).from('notifications').insert({
+      user_id: change.user_id,
+      project_id: change.project_id,
+      title: '❌ Your change was rejected',
+      message: `Your ${change.operation} on ${change.table_name.replace(/_/g, ' ')} has been rejected and will not be applied.`,
+      type: 'approval_notification',
+    });
+    
     toast({ title: '❌ Change rejected', description: 'Data has been discarded and will not be applied.' });
     fetchChanges();
   };
