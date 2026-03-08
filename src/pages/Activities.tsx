@@ -5,7 +5,6 @@ import GanttChart from '@/components/GanttChart';
 import CPMDiagram from '@/components/CPMDiagram';
 import PrimaveraSchedule from '@/components/PrimaveraSchedule';
 import ActivityDialog from '@/components/ActivityDialog';
-import { Button } from '@/components/ui/button';
 import AIAssistant from '@/components/AIAssistant';
 import { Button } from '@/components/ui/button';
 import PrintableReport from '@/components/PrintableReport';
