@@ -144,6 +144,26 @@ export default function ProjectManagement() {
       } else if (error) {
         toast({ title: 'Error', description: error.message, variant: 'destructive' });
       } else {
+        // Notify project admins about new join request
+        const { data: adminMembers } = await (supabase as any)
+          .from('project_members')
+          .select('user_id')
+          .eq('project_id', project.id)
+          .in('role', ['admin', 'co_admin'])
+          .eq('status', 'approved');
+
+        const userName = profile?.full_name || user.email || 'Someone';
+        if (adminMembers) {
+          for (const admin of adminMembers) {
+            await (supabase as any).from('notifications').insert({
+              user_id: admin.user_id,
+              title: 'New Join Request',
+              message: `${userName} requested to join "${project.name}"`,
+              type: 'join_request',
+              project_id: project.id,
+            });
+          }
+        }
         toast({ title: 'Request sent!', description: 'Waiting for admin approval.' });
       }
       setJoinOpen(false);
