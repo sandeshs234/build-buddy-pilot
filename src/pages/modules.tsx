@@ -88,8 +88,33 @@ export function InventoryPage() {
   const [form, setForm] = useState<any>({});
   const u = (k: string, v: any) => setForm((p: any) => ({ ...p, [k]: v }));
 
+  const totalItems = data.length;
+  const lowStockCount = data.filter(i => i.minLevel > 0 && i.balance > 0 && i.balance <= i.minLevel).length;
+  const outOfStockCount = data.filter(i => i.balance <= 0 && i.minLevel > 0).length;
+  const shortageCount = data.filter(i => (i.requiredQty || 0) > 0 && i.balance < (i.requiredQty || 0)).length;
+
   return (
     <>
+      {totalItems > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+          <div className="bg-card rounded-xl border shadow-sm p-4 text-center">
+            <p className="text-2xl font-bold text-foreground">{totalItems}</p>
+            <p className="text-xs text-muted-foreground mt-1">Total Items</p>
+          </div>
+          <div className="bg-card rounded-xl border shadow-sm p-4 text-center">
+            <p className={`text-2xl font-bold ${lowStockCount > 0 ? 'text-amber-500' : 'text-foreground'}`}>{lowStockCount}</p>
+            <p className="text-xs text-muted-foreground mt-1">Low Stock</p>
+          </div>
+          <div className="bg-card rounded-xl border shadow-sm p-4 text-center">
+            <p className={`text-2xl font-bold ${outOfStockCount > 0 ? 'text-destructive' : 'text-foreground'}`}>{outOfStockCount}</p>
+            <p className="text-xs text-muted-foreground mt-1">Out of Stock</p>
+          </div>
+          <div className="bg-card rounded-xl border shadow-sm p-4 text-center">
+            <p className={`text-2xl font-bold ${shortageCount > 0 ? 'text-destructive' : 'text-foreground'}`}>{shortageCount}</p>
+            <p className="text-xs text-muted-foreground mt-1">Shortage Items</p>
+          </div>
+        </div>
+      )}
       <ModulePage
         title="Inventory"
         description={`Track stock levels, receipts, and issues · ${data.length} items`}
