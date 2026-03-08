@@ -114,11 +114,12 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="company" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="company" className="text-xs"><Building2 size={14} className="mr-1.5" /> Company</TabsTrigger>
           <TabsTrigger value="project" className="text-xs"><FileText size={14} className="mr-1.5" /> Project</TabsTrigger>
           <TabsTrigger value="parties" className="text-xs"><Users size={14} className="mr-1.5" /> Parties</TabsTrigger>
           <TabsTrigger value="branding" className="text-xs"><Image size={14} className="mr-1.5" /> Branding</TabsTrigger>
+          <TabsTrigger value="backup" className="text-xs"><HardDrive size={14} className="mr-1.5" /> Backup</TabsTrigger>
         </TabsList>
 
         <TabsContent value="company">
