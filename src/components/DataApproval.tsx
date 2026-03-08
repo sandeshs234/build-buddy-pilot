@@ -171,24 +171,31 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
     fetchChanges();
   };
 
-  const rejectChange = async (changeId: string) => {
+  const rejectChange = async (changeId: string, reason: string) => {
     const change = changes.find(c => c.id === changeId);
     if (!change) return;
 
     await (supabase as any)
       .from('data_changes')
-      .update({ status: 'rejected', approved_by: user?.id, approved_at: new Date().toISOString() })
+      .update({
+        status: 'rejected',
+        approved_by: user?.id,
+        approved_at: new Date().toISOString(),
+        rejection_reason: reason || null,
+      })
       .eq('id', changeId);
 
     await (supabase as any).from('notifications').insert({
       user_id: change.user_id,
       project_id: change.project_id,
       title: '❌ Your change was rejected',
-      message: `Your ${change.operation} on ${change.table_name.replace(/_/g, ' ')} has been rejected and will not be applied.`,
+      message: `Your ${change.operation} on ${change.table_name.replace(/_/g, ' ')} has been rejected.${reason ? ` Reason: ${reason}` : ''}`,
       type: 'approval_notification',
     });
 
     toast({ title: '❌ Change rejected', description: 'Data has been discarded and will not be applied.' });
+    setRejectDialogId(null);
+    setRejectReason('');
     fetchChanges();
   };
 
