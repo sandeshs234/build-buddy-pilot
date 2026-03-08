@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
-import { Check, X, Clock, Eye, ArrowRight, MessageSquare, CheckCheck, CalendarIcon, XCircle } from 'lucide-react';
+import { Check, X, Clock, Eye, ArrowRight, MessageSquare, CheckCheck, CalendarIcon, XCircle, Download } from 'lucide-react';
+import * as XLSX from '@e965/xlsx';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
@@ -307,10 +308,37 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
     }
   };
 
+  const exportToExcel = () => {
+    if (changes.length === 0) {
+      toast({ title: 'Nothing to export', description: 'No data in the current view.' });
+      return;
+    }
+    const rows = changes.map(c => ({
+      'Status': c.status,
+      'Operation': c.operation,
+      'Table': c.table_name.replace(/_/g, ' '),
+      'Submitted By': c.profile?.full_name || c.profile?.email || 'Unknown',
+      'Submitted At': format(new Date(c.created_at), 'yyyy-MM-dd HH:mm'),
+      'Reviewed At': c.approved_at ? format(new Date(c.approved_at), 'yyyy-MM-dd HH:mm') : '',
+      'Rejection Reason': c.rejection_reason || '',
+      'Data': JSON.stringify(c.data),
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Approval Queue');
+    XLSX.writeFile(wb, `approval_queue_${filter}_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+    toast({ title: 'Exported', description: `${rows.length} records exported` });
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h2 className="text-lg font-semibold text-foreground">Data Approval Queue</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-foreground">Data Approval Queue</h2>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={exportToExcel}>
+            <Download size={14} /> Export
+          </Button>
+        </div>
         <div className="flex gap-1">
           {(['pending', 'approved', 'rejected', 'all'] as const).map(f => {
             const count = f === 'all'
