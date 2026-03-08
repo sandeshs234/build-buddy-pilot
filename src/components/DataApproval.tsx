@@ -72,6 +72,7 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [batchProcessing, setBatchProcessing] = useState(false);
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({ pending: 0, approved: 0, rejected: 0 });
 
   const [rejectDialogId, setRejectDialogId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
@@ -80,6 +81,18 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
 
   const pendingChanges = changes.filter(c => c.status === 'pending');
   const allPendingSelected = pendingChanges.length > 0 && pendingChanges.every(c => selectedIds.has(c.id));
+
+  const fetchCounts = async () => {
+    const { data } = await (supabase as any)
+      .from('data_changes')
+      .select('status')
+      .eq('project_id', projectId);
+    if (data) {
+      const counts: Record<string, number> = { pending: 0, approved: 0, rejected: 0 };
+      data.forEach((d: any) => { counts[d.status] = (counts[d.status] || 0) + 1; });
+      setStatusCounts(counts);
+    }
+  };
 
   const fetchChanges = async () => {
     setLoading(true);
@@ -110,9 +123,11 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
     }
     setSelectedIds(new Set());
     setLoading(false);
+    fetchCounts();
   };
 
   useEffect(() => { fetchChanges(); }, [projectId, filter]);
+  useEffect(() => { fetchCounts(); }, [projectId]);
 
   useEffect(() => {
     const channel = supabase
@@ -285,17 +300,27 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-lg font-semibold text-foreground">Data Approval Queue</h2>
         <div className="flex gap-1">
-          {(['pending', 'approved', 'rejected', 'all'] as const).map(f => (
-            <Button
-              key={f}
-              variant={filter === f ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setFilter(f)}
-              className="capitalize"
-            >
-              {f}
-            </Button>
-          ))}
+          {(['pending', 'approved', 'rejected', 'all'] as const).map(f => {
+            const count = f === 'all'
+              ? statusCounts.pending + statusCounts.approved + statusCounts.rejected
+              : statusCounts[f] || 0;
+            return (
+              <Button
+                key={f}
+                variant={filter === f ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setFilter(f)}
+                className="capitalize gap-1.5"
+              >
+                {f}
+                {count > 0 && (
+                  <Badge variant={filter === f ? 'secondary' : 'outline'} className="text-[10px] px-1.5 py-0 h-4 min-w-[1.25rem] flex items-center justify-center">
+                    {count}
+                  </Badge>
+                )}
+              </Button>
+            );
+          })}
         </div>
       </div>
 
