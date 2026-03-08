@@ -283,6 +283,13 @@ export default function Dashboard() {
           <DataApproval projectId={currentProjectId} />
         </div>
       )}
+
+      {/* My Pending Changes (non-admin users) */}
+      {!canApprove && (
+        <div className="mt-6">
+          <MyPendingChanges />
+        </div>
+      )}
     </div>
   );
 }
