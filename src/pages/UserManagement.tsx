@@ -149,6 +149,46 @@ export default function UserManagement() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+        body: { user_ids: ids },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: 'Users Deleted', description: `${data.deleted} user(s) removed.` });
+      setBulkDeleteOpen(false);
+      setSelectedIds(new Set());
+      fetchUsers();
+    } catch (err: any) {
+      toast({ title: 'Bulk Delete Failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const selectableUsers = users.filter(u => u.id !== currentUser?.id);
+  const allSelected = selectableUsers.length > 0 && selectableUsers.every(u => selectedIds.has(u.id));
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(selectableUsers.map(u => u.id)));
+    }
+  };
+
   if (!isAdmin) {
     return (
       <div className="p-12 text-center">
