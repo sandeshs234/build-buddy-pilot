@@ -44,7 +44,17 @@ export default function NotificationBell() {
         schema: 'public',
         table: 'notifications',
         filter: `user_id=eq.${user?.id}`,
-      }, () => fetchNotifications())
+      }, (payload: any) => {
+        fetchNotifications();
+        // Show real-time toast for approval notifications
+        const row = payload.new;
+        if (row && (row.type === 'approval_notification' || row.type === 'approval')) {
+          toast({
+            title: row.title || 'New Notification',
+            description: row.message || '',
+          });
+        }
+      })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
