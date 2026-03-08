@@ -122,6 +122,27 @@ function createCrudOps<T extends { id: string }>(
       data: snakeData,
       status: 'pending',
     });
+
+    // Notify project admins/co-admins
+    const { data: admins } = await (supabase as any)
+      .from('project_members')
+      .select('user_id')
+      .eq('project_id', approvalMode.projectId)
+      .eq('status', 'approved')
+      .in('role', ['admin', 'co_admin']);
+
+    if (admins && admins.length > 0) {
+      const tableFriendly = approvalMode.tableName.replace(/_/g, ' ');
+      const notifications = admins.map((a: any) => ({
+        user_id: a.user_id,
+        project_id: approvalMode.projectId,
+        title: `📝 New ${operation} pending approval`,
+        message: `A team member submitted a ${operation} on ${tableFriendly}. Review it in the Dashboard approval queue.`,
+        type: 'approval',
+      }));
+      await (supabase as any).from('notifications').insert(notifications);
+    }
+
     toast({ 
       title: '📋 Submitted for Approval', 
       description: `Your ${operation} has been sent to admin/co-admin for review.` 
