@@ -355,6 +355,39 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
         )}
       </div>
 
+      {/* Bulk selection bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 bg-muted/40 rounded-lg px-4 py-2 border">
+          <Checkbox
+            checked={selectedIds.size === items.length}
+            onCheckedChange={toggleSelectAll}
+            aria-label="Select all"
+          />
+          <span className="text-xs text-muted-foreground">{selectedIds.size} selected</span>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button size="sm" variant="destructive" className="ml-auto">
+                <Trash2 size={14} className="mr-1" /> Delete ({selectedIds.size})
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete {selectedIds.size} entries?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently remove the selected procurement tracking entries. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={deleteSelected} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Yes, delete them
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      )}
+
       {/* Table */}
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">Loading tracking data...</div>
@@ -380,6 +413,13 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
+                <th className="p-3 w-10">
+                  <Checkbox
+                    checked={items.length > 0 && selectedIds.size === items.length}
+                    onCheckedChange={toggleSelectAll}
+                    aria-label="Select all"
+                  />
+                </th>
                 <th className="text-left p-3 font-medium">Material</th>
                 <th className="text-center p-3 font-medium">Status</th>
                 <th className="text-right p-3 font-medium">Required</th>
