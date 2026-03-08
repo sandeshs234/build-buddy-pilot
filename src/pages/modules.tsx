@@ -616,7 +616,6 @@ function GenericModule({ title, description, fields }: { title: string; descript
         onAdd={openAdd}
         onEdit={openEdit}
         onDelete={item => { pushHistory(data); setData(prev => prev.filter(i => i.id !== item.id)); }}
-        onImport={rows => { pushHistory(data); setData(prev => [...prev, ...rows.map(r => ({ id: crypto.randomUUID(), ...r }))]); }}
         fileName={title.replace(/\s+/g, '_')}
         extraToolbar={
           <CrudToolbar canUndo={history.length > 0} onUndo={undo} onClear={clearAll} dataLength={data.length}
