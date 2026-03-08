@@ -114,6 +114,137 @@ export default function MaterialProcurement() {
   };
 
   const totalBudget = useMemo(() => materials.reduce((s, m) => s + (m.totalCost || 0), 0), [materials]);
+
+  const handleExportExcel = () => {
+    const wsData = materials.map((m, i) => ({
+      '#': i + 1,
+      'Code': m.code,
+      'Description': m.description,
+      'Category': m.category,
+      'Unit': m.unit,
+      'Required Qty': m.requiredQty,
+      'Qty (with Waste)': m.totalWithWaste,
+      'Unit Rate (NPR)': m.unitRate || 0,
+      'Total Cost (NPR)': m.totalCost || 0,
+      'Priority': m.priority,
+      'Lead Time (days)': m.leadTimeDays,
+      'Suppliers': (m.suggestedSuppliers || []).join(', '),
+      'Nepal Standard': m.nepalStandard || '',
+      'Procurement Week': m.procurementWeek,
+    }));
+    wsData.push({
+      '#': '' as any, 'Code': '', 'Description': '', 'Category': '', 'Unit': '',
+      'Required Qty': '' as any, 'Qty (with Waste)': '' as any,
+      'Unit Rate (NPR)': 'GRAND TOTAL' as any,
+      'Total Cost (NPR)': totalBudget,
+      'Priority': '', 'Lead Time (days)': '' as any, 'Suppliers': '', 'Nepal Standard': '', 'Procurement Week': '' as any,
+    });
+    const ws = XLSX.utils.json_to_sheet(wsData);
+    ws['!cols'] = [{ wch: 4 }, { wch: 10 }, { wch: 30 }, { wch: 14 }, { wch: 8 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 10 }, { wch: 12 }, { wch: 30 }, { wch: 20 }, { wch: 10 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Procurement Plan');
+    XLSX.writeFile(wb, 'Procurement-Plan.xlsx');
+  };
+
+  const handlePrintPDF = () => {
+    const settings = JSON.parse(localStorage.getItem('buildforge-settings') || '{}');
+    const logo = localStorage.getItem('buildforge-logo') || '';
+    const stamp = localStorage.getItem('buildforge-stamp') || '';
+    const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const docRef = `PROC-PLAN-${Date.now().toString(36).toUpperCase()}`;
+
+    const pw = window.open('', '_blank');
+    if (!pw) return;
+
+    pw.document.write(`<!DOCTYPE html><html><head><title>Procurement Plan</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;color:#1a1a2e;padding:12mm 15mm;font-size:9pt}
+  .header{text-align:center;padding-bottom:10px;margin-bottom:8px}
+  .header-logo img{max-height:60px;max-width:160px;margin-bottom:6px}
+  .company-name{font-size:20pt;font-weight:900;text-transform:uppercase;letter-spacing:3px;color:#1a1a2e}
+  .company-tagline{font-size:9pt;font-weight:600;color:#444;letter-spacing:1px;margin-top:2px}
+  .company-contact{font-size:7.5pt;color:#666;margin-top:4px}
+  .header-line{height:2px;background:linear-gradient(90deg,transparent,#1a1a2e,transparent);margin:8px 0}
+  .project-info{display:flex;justify-content:space-between;font-size:8pt;color:#444;margin-bottom:6px;padding:6px 0}
+  .project-info strong{color:#1a1a2e;font-weight:700}
+  .report-title{font-size:13pt;font-weight:800;text-align:center;text-transform:uppercase;letter-spacing:2px;color:#1a1a2e;margin:6px 0 4px}
+  .report-subtitle{text-align:center;font-size:8pt;color:#666;margin-bottom:8px}
+  .summary-cards{display:flex;gap:12px;margin-bottom:10px}
+  .s-card{flex:1;border:1px solid #ddd;border-radius:6px;padding:8px 10px;text-align:center}
+  .s-card .label{font-size:7pt;color:#888;text-transform:uppercase;letter-spacing:0.5px}
+  .s-card .value{font-size:12pt;font-weight:800;color:#1a1a2e;margin-top:2px}
+  .s-card .value.critical{color:#dc2626}
+  table{width:100%;border-collapse:collapse;margin-top:4px}
+  th{background:#1a1a2e;color:#fff;font-size:7pt;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;padding:5px 4px;text-align:left}
+  th:first-child{border-radius:3px 0 0 0}th:last-child{border-radius:0 3px 0 0}
+  td{padding:3px 4px;font-size:7.5pt;border-bottom:0.5px solid #e8e8e8}
+  tr:nth-child(even){background:#f9fafb}
+  .priority-critical{color:#dc2626;font-weight:700}
+  .priority-high{color:#ea580c;font-weight:600}
+  .priority-medium{color:#2563eb}
+  .priority-low{color:#888}
+  .total-row td{font-weight:800;border-top:2px solid #1a1a2e;background:#f0f4ff;font-size:8pt}
+  .signatures{display:flex;justify-content:space-between;margin-top:30px;padding:0 20px}
+  .sig-block{text-align:center;min-width:120px}
+  .sig-line{border-top:1px solid #333;margin-top:40px;padding-top:4px;font-size:7.5pt;font-weight:600;color:#444;text-transform:uppercase}
+  .sig-role{font-size:7pt;color:#888;margin-top:1px}
+  .footer{margin-top:16px;padding-top:8px;display:flex;justify-content:space-between;align-items:flex-end}
+  .footer-left{font-size:7pt;color:#888}
+  .footer-stamp img{max-height:55px;opacity:0.6}
+  @media print{body{padding:8mm 12mm}@page{size:A4 landscape;margin:8mm}}
+</style></head><body>
+  <div class="header">
+    ${logo ? `<div class="header-logo"><img src="${logo}" /></div>` : ''}
+    <div class="company-name">${settings.companyName || 'BuildForge Engineering'}</div>
+    <div class="company-tagline">${settings.companyTagline || 'Construction Project Management'}</div>
+    <div class="company-contact">${[settings.companyAddress, settings.companyPhone, settings.companyEmail].filter(Boolean).join('  ·  ')}</div>
+    <div class="header-line"></div>
+  </div>
+  <div class="project-info">
+    <div><strong>Project:</strong> ${settings.projectName || 'Construction Project'} &nbsp;&nbsp; <strong>Client:</strong> ${settings.clientName || '—'} &nbsp;&nbsp; <strong>Contractor:</strong> ${settings.contractorName || settings.companyName || '—'}</div>
+    <div><strong>Contract No:</strong> ${settings.contractNo || '—'} &nbsp;&nbsp; <strong>Date:</strong> ${today} &nbsp;&nbsp; <strong>Ref:</strong> ${docRef}</div>
+  </div>
+  <div class="report-title">Material Procurement Plan</div>
+  <div class="report-subtitle">${materials.length} materials · NPR ${totalBudget.toLocaleString()} estimated budget · Generated ${new Date().toLocaleString('en-GB')}</div>
+  <div class="summary-cards">
+    <div class="s-card"><div class="label">Total Budget</div><div class="value">NPR ${totalBudget.toLocaleString()}</div></div>
+    <div class="s-card"><div class="label">Materials</div><div class="value">${materials.length}</div></div>
+    <div class="s-card"><div class="label">Critical Items</div><div class="value critical">${criticalCount}</div></div>
+    <div class="s-card"><div class="label">Procurement Weeks</div><div class="value">${weekGroups.length}</div></div>
+  </div>
+  <table>
+    <thead><tr><th>#</th><th>Code</th><th>Description</th><th>Category</th><th>Qty (w/ waste)</th><th>Unit</th><th>Rate (NPR)</th><th>Total (NPR)</th><th>Priority</th><th>Lead</th><th>Week</th></tr></thead>
+    <tbody>
+      ${materials.map((m, i) => `<tr>
+        <td style="text-align:center;color:#888">${i + 1}</td>
+        <td style="font-family:monospace">${m.code}</td>
+        <td>${m.description}</td>
+        <td>${m.category}</td>
+        <td style="text-align:right;font-family:monospace">${m.totalWithWaste?.toLocaleString()}</td>
+        <td>${m.unit}</td>
+        <td style="text-align:right;font-family:monospace">${(m.unitRate || 0).toLocaleString()}</td>
+        <td style="text-align:right;font-family:monospace">${(m.totalCost || 0).toLocaleString()}</td>
+        <td class="priority-${m.priority}" style="text-align:center">${m.priority}</td>
+        <td style="text-align:center">${m.leadTimeDays}d</td>
+        <td style="text-align:center">W${m.procurementWeek}</td>
+      </tr>`).join('')}
+      <tr class="total-row"><td colspan="7" style="text-align:right">Grand Total:</td><td style="text-align:right;font-family:monospace">NPR ${totalBudget.toLocaleString()}</td><td colspan="3"></td></tr>
+    </tbody>
+  </table>
+  <div class="signatures">
+    <div class="sig-block"><div class="sig-line">Prepared By</div><div class="sig-role">Name / Date / Signature</div></div>
+    <div class="sig-block"><div class="sig-line">Checked By</div><div class="sig-role">Name / Date / Signature</div></div>
+    <div class="sig-block"><div class="sig-line">Approved By</div><div class="sig-role">Name / Date / Signature</div></div>
+  </div>
+  <div class="footer">
+    <div class="footer-left"><div>${settings.companyName || 'BuildForge Engineering'} — Confidential</div><div>Page 1 of 1 · ${docRef}</div></div>
+    ${stamp ? `<div class="footer-stamp"><img src="${stamp}" /></div>` : ''}
+  </div>
+</body></html>`);
+    pw.document.close();
+    setTimeout(() => pw.print(), 300);
+  };
   const criticalCount = useMemo(() => materials.filter(m => m.priority === 'critical').length, [materials]);
   const highCount = useMemo(() => materials.filter(m => m.priority === 'high').length, [materials]);
   const categories = useMemo(() => {
