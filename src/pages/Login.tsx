@@ -29,10 +29,16 @@ export default function Login() {
     }
   };
 
+  const hasMinLength = password.length >= 8;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const isPasswordStrong = hasMinLength && hasUppercase && hasSpecial && hasNumber;
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.length < 6) {
-      toast({ title: 'Password too short', description: 'Minimum 6 characters', variant: 'destructive' });
+    if (!isPasswordStrong) {
+      toast({ title: 'Weak password', description: 'Must include 8+ chars, uppercase, number & special character', variant: 'destructive' });
       return;
     }
     setLoading(true);
