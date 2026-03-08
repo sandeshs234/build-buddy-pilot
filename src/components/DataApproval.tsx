@@ -293,6 +293,16 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
               </pre>
             )}
 
+            {change.status === 'rejected' && change.rejection_reason && (
+              <div className="flex items-start gap-2 bg-destructive/5 rounded-md px-3 py-2 border border-destructive/20">
+                <MessageSquare size={14} className="text-destructive mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-[10px] font-medium text-destructive uppercase tracking-wider">Rejection Reason</p>
+                  <p className="text-xs text-foreground mt-0.5">{change.rejection_reason}</p>
+                </div>
+              </div>
+            )}
+
             {change.status === 'pending' && (
               <div className="flex gap-2 pt-1">
                 <Button size="sm" onClick={() => approveChange(change.id)} className="bg-green-600 hover:bg-green-700">
@@ -306,6 +316,30 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
           </div>
         ))}
       </div>
+
+      {/* Reject Reason Dialog */}
+      <Dialog open={!!rejectDialogId} onOpenChange={(open) => { if (!open) { setRejectDialogId(null); setRejectReason(''); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reject Submission</DialogTitle>
+            <DialogDescription>
+              Provide a reason for rejection so the user understands why their change was not accepted.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            placeholder="Enter rejection reason (optional)..."
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            className="min-h-[80px]"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setRejectDialogId(null); setRejectReason(''); }}>Cancel</Button>
+            <Button variant="destructive" onClick={() => rejectDialogId && rejectChange(rejectDialogId, rejectReason)}>
+              <X size={14} className="mr-1" /> Reject
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

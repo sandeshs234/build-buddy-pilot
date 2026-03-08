@@ -43,7 +43,7 @@ export default function MyPendingChanges() {
     setLoading(true);
     let query = (supabase as any)
       .from('data_changes')
-      .select('id, table_name, operation, data, original_data, status, created_at, approved_at')
+      .select('id, table_name, operation, data, original_data, rejection_reason, status, created_at, approved_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(20);
