@@ -57,19 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
   const [projectMemberships, setProjectMemberships] = useState<ProjectMembership[]>([]);
 
-  const fetchProfileAndRole = async (userId: string) => {
-    const [profileRes, roleRes] = await Promise.all([
-      supabase.from('profiles').select('*').eq('id', userId).single(),
-      supabase.from('user_roles').select('role').eq('user_id', userId).single(),
-    ]);
-    if (profileRes.data) {
-      const p = profileRes.data as Profile;
-      setProfile(p);
-      setStorageModeState((p.storage_mode as StorageMode) || null);
-    }
-    if (roleRes.data) setRole(roleRes.data.role as AppRole);
-
-    // Fetch project memberships
+  const fetchMemberships = async (userId: string) => {
     const { data: memberships } = await (supabase as any)
       .from('project_members')
       .select('project_id, role, status')
@@ -77,7 +65,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .eq('status', 'approved');
 
     if (memberships && memberships.length > 0) {
-      // Fetch project names
       const projectIds = memberships.map((m: any) => m.project_id);
       const { data: projects } = await (supabase as any)
         .from('projects')
@@ -90,12 +77,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }));
       setProjectMemberships(enriched);
 
-      // Auto-select first project if none selected
       if (!currentProjectId && enriched.length > 0) {
         setCurrentProjectId(enriched[0].project_id);
         try { localStorage.setItem('buildforge_current_project', enriched[0].project_id); } catch {}
       }
+    } else {
+      setProjectMemberships([]);
     }
+  };
+
+  const fetchProfileAndRole = async (userId: string) => {
+    const [profileRes, roleRes] = await Promise.all([
+      supabase.from('profiles').select('*').eq('id', userId).single(),
+      supabase.from('user_roles').select('role').eq('user_id', userId).single(),
+    ]);
+    if (profileRes.data) {
+      const p = profileRes.data as Profile;
+      setProfile(p);
+      setStorageModeState((p.storage_mode as StorageMode) || null);
+    }
+    if (roleRes.data) setRole(roleRes.data.role as AppRole);
+    await fetchMemberships(userId);
+  };
+
+  const refreshMemberships = async () => {
+    if (user) await fetchMemberships(user.id);
   };
 
   useEffect(() => {
