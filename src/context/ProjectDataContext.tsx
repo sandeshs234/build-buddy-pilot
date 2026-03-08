@@ -259,47 +259,36 @@ const ProjectDataContext = createContext<ProjectDataContextType | null>(null);
 
 export function ProjectDataProvider({ children }: { children: ReactNode }) {
   const { user, storageMode, setStorageMode, currentProjectId } = useAuth();
-  const isCloud = storageMode === 'cloud';
   const userId = user?.id || null;
   const projectId = currentProjectId;
-  const showChoice = !!user && storageMode === null;
 
-  const cloudSync = isCloud && userId ? (key: string) => ({
+  // Auto-set to cloud if not set
+  useEffect(() => {
+    if (user && storageMode === null) {
+      setStorageMode('cloud');
+    }
+  }, [user, storageMode]);
+
+  const cloudSync = userId ? (key: string) => ({
     tableName: TABLE_MAP[key],
     key,
     userId,
     projectId,
   }) : () => undefined;
 
-  const act = useDataState<Activity>('activities', sampleActivities, isCloud, userId, projectId);
-  const boq = useDataState<BOQItem>('boqItems', sampleBOQ, isCloud, userId, projectId);
-  const inv = useDataState<InventoryItem>('inventory', sampleInventory, isCloud, userId, projectId);
-  const eq = useDataState<EquipmentEntry>('equipment', sampleEquipment, isCloud, userId, projectId);
-  const saf = useDataState<SafetyIncident>('safety', sampleSafety, isCloud, userId, projectId);
-  const del = useDataState<DelayEntry>('delays', sampleDelays, isCloud, userId, projectId);
-  const po = useDataState<PurchaseOrder>('purchaseOrders', samplePOs, isCloud, userId, projectId);
-  const mp = useDataState<any>('manpower', [], isCloud, userId, projectId);
-  const fl = useDataState<any>('fuelLog', [], isCloud, userId, projectId);
-  const cp = useDataState<any>('concretePours', [], isCloud, userId, projectId);
-  const dq = useDataState<any>('dailyQty', [], isCloud, userId, projectId);
+  const act = useDataState<Activity>('activities', sampleActivities, userId, projectId);
+  const boq = useDataState<BOQItem>('boqItems', sampleBOQ, userId, projectId);
+  const inv = useDataState<InventoryItem>('inventory', sampleInventory, userId, projectId);
+  const eq = useDataState<EquipmentEntry>('equipment', sampleEquipment, userId, projectId);
+  const saf = useDataState<SafetyIncident>('safety', sampleSafety, userId, projectId);
+  const del = useDataState<DelayEntry>('delays', sampleDelays, userId, projectId);
+  const po = useDataState<PurchaseOrder>('purchaseOrders', samplePOs, userId, projectId);
+  const mp = useDataState<any>('manpower', [], userId, projectId);
+  const fl = useDataState<any>('fuelLog', [], userId, projectId);
+  const cp = useDataState<any>('concretePours', [], userId, projectId);
+  const dq = useDataState<any>('dailyQty', [], userId, projectId);
 
   const dataLoaded = act.loaded && boq.loaded;
-
-  const handleStorageChoice = async (mode: 'local' | 'cloud') => {
-    await setStorageMode(mode);
-    if (mode === 'cloud' && userId) {
-      const localData = loadState();
-      for (const [key, items] of Object.entries(localData)) {
-        const tableName = TABLE_MAP[key];
-        if (!tableName || !items || items.length === 0) continue;
-        const rows = items.map((item: any) => toSnakeCase(key, item, userId, projectId));
-        await (supabase as any).from(tableName).insert(rows);
-      }
-      localStorage.removeItem(STORAGE_KEY);
-      toast({ title: 'Data migrated to cloud', description: 'Your local data has been synced to the cloud.' });
-      window.location.reload();
-    }
-  };
 
   const value: ProjectDataContextType = {
     activities: act.data,
@@ -324,13 +313,12 @@ export function ProjectDataProvider({ children }: { children: ReactNode }) {
     concreteOps: createCrudOps(cp.data, cp.setData, cp.history, cp.setHistory, cloudSync('concretePours')),
     dailyQty: dq.data,
     dailyQtyOps: createCrudOps(dq.data, dq.setData, dq.history, dq.setHistory, cloudSync('dailyQty')),
-    isCloudMode: isCloud,
+    isCloudMode: true,
     dataLoaded,
   };
 
   return (
     <ProjectDataContext.Provider value={value}>
-      <StorageChoiceDialog open={showChoice} onChoose={handleStorageChoice} />
       {children}
     </ProjectDataContext.Provider>
   );
