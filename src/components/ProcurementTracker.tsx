@@ -444,7 +444,14 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
                   new Date(item.expected_delivery) < new Date();
 
                 return (
-                  <tr key={item.id} className={`border-b hover:bg-muted/30 ${isOverdue ? 'bg-destructive/5' : ''}`}>
+                  <tr key={item.id} className={`border-b hover:bg-muted/30 ${isOverdue ? 'bg-destructive/5' : ''} ${selectedIds.has(item.id) ? 'bg-primary/5' : ''}`}>
+                    <td className="p-3">
+                      <Checkbox
+                        checked={selectedIds.has(item.id)}
+                        onCheckedChange={() => toggleSelect(item.id)}
+                        aria-label={`Select ${item.material_description}`}
+                      />
+                    </td>
                     <td className="p-3">
                       <div className="font-medium">{item.material_description}</div>
                       <div className="text-[10px] text-muted-foreground font-mono">{item.material_code}</div>
