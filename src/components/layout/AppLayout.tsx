@@ -18,6 +18,7 @@ import NotificationBell from '@/components/NotificationBell';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useDeliveryAlerts } from '@/hooks/useDeliveryAlerts';
+import { useBackupReminder } from '@/hooks/useBackupReminder';
 
 type AppRole = 'admin' | 'project_manager' | 'engineer' | 'viewer';
 
