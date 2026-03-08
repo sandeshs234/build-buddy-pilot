@@ -3,6 +3,7 @@ import { useProjectData } from '@/context/ProjectDataContext';
 import { Activity } from '@/types/construction';
 import GanttChart from '@/components/GanttChart';
 import CPMDiagram from '@/components/CPMDiagram';
+import CriticalPathFlow from '@/components/CriticalPathFlow';
 import PrimaveraSchedule from '@/components/PrimaveraSchedule';
 import ActivityDialog from '@/components/ActivityDialog';
 import AIAssistant from '@/components/AIAssistant';
