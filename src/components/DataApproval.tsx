@@ -4,8 +4,12 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Check, X, Clock, Eye, ArrowRight } from 'lucide-react';
+import { Check, X, Clock, Eye, ArrowRight, MessageSquare } from 'lucide-react';
 import { format } from 'date-fns';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
 
 interface DataChange {
   id: string;
@@ -16,6 +20,7 @@ interface DataChange {
   operation: string;
   data: any;
   original_data: any;
+  rejection_reason: string | null;
   status: string;
   approved_by: string | null;
   approved_at: string | null;
@@ -64,6 +69,9 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const [rejectDialogId, setRejectDialogId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   const fetchChanges = async () => {
     setLoading(true);
@@ -163,24 +171,31 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
     fetchChanges();
   };
 
-  const rejectChange = async (changeId: string) => {
+  const rejectChange = async (changeId: string, reason: string) => {
     const change = changes.find(c => c.id === changeId);
     if (!change) return;
 
     await (supabase as any)
       .from('data_changes')
-      .update({ status: 'rejected', approved_by: user?.id, approved_at: new Date().toISOString() })
+      .update({
+        status: 'rejected',
+        approved_by: user?.id,
+        approved_at: new Date().toISOString(),
+        rejection_reason: reason || null,
+      })
       .eq('id', changeId);
 
     await (supabase as any).from('notifications').insert({
       user_id: change.user_id,
       project_id: change.project_id,
       title: '❌ Your change was rejected',
-      message: `Your ${change.operation} on ${change.table_name.replace(/_/g, ' ')} has been rejected and will not be applied.`,
+      message: `Your ${change.operation} on ${change.table_name.replace(/_/g, ' ')} has been rejected.${reason ? ` Reason: ${reason}` : ''}`,
       type: 'approval_notification',
     });
 
     toast({ title: '❌ Change rejected', description: 'Data has been discarded and will not be applied.' });
+    setRejectDialogId(null);
+    setRejectReason('');
     fetchChanges();
   };
 
@@ -278,12 +293,22 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
               </pre>
             )}
 
+            {change.status === 'rejected' && change.rejection_reason && (
+              <div className="flex items-start gap-2 bg-destructive/5 rounded-md px-3 py-2 border border-destructive/20">
+                <MessageSquare size={14} className="text-destructive mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-[10px] font-medium text-destructive uppercase tracking-wider">Rejection Reason</p>
+                  <p className="text-xs text-foreground mt-0.5">{change.rejection_reason}</p>
+                </div>
+              </div>
+            )}
+
             {change.status === 'pending' && (
               <div className="flex gap-2 pt-1">
                 <Button size="sm" onClick={() => approveChange(change.id)} className="bg-green-600 hover:bg-green-700">
                   <Check size={14} className="mr-1" /> Approve
                 </Button>
-                <Button size="sm" variant="destructive" onClick={() => rejectChange(change.id)}>
+                <Button size="sm" variant="destructive" onClick={() => { setRejectDialogId(change.id); setRejectReason(''); }}>
                   <X size={14} className="mr-1" /> Reject
                 </Button>
               </div>
@@ -291,6 +316,30 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
           </div>
         ))}
       </div>
+
+      {/* Reject Reason Dialog */}
+      <Dialog open={!!rejectDialogId} onOpenChange={(open) => { if (!open) { setRejectDialogId(null); setRejectReason(''); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reject Submission</DialogTitle>
+            <DialogDescription>
+              Provide a reason for rejection so the user understands why their change was not accepted.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            placeholder="Enter rejection reason (optional)..."
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            className="min-h-[80px]"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setRejectDialogId(null); setRejectReason(''); }}>Cancel</Button>
+            <Button variant="destructive" onClick={() => rejectDialogId && rejectChange(rejectDialogId, rejectReason)}>
+              <X size={14} className="mr-1" /> Reject
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -269,6 +269,7 @@ export type Database = {
           original_data: Json | null
           project_id: string
           record_id: string
+          rejection_reason: string | null
           status: string
           table_name: string
           user_id: string
@@ -283,6 +284,7 @@ export type Database = {
           original_data?: Json | null
           project_id: string
           record_id: string
+          rejection_reason?: string | null
           status?: string
           table_name: string
           user_id: string
@@ -297,6 +299,7 @@ export type Database = {
           original_data?: Json | null
           project_id?: string
           record_id?: string
+          rejection_reason?: string | null
           status?: string
           table_name?: string
           user_id?: string

@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Clock, Check, X, FileText, Trash2, Pencil } from 'lucide-react';
+import { Clock, Check, X, FileText, Trash2, Pencil, MessageSquare } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -23,6 +23,7 @@ interface MyChange {
   operation: string;
   data: any;
   original_data: any;
+  rejection_reason: string | null;
   status: string;
   created_at: string;
   approved_at: string | null;
@@ -42,7 +43,7 @@ export default function MyPendingChanges() {
     setLoading(true);
     let query = (supabase as any)
       .from('data_changes')
-      .select('id, table_name, operation, data, original_data, status, created_at, approved_at')
+      .select('id, table_name, operation, data, original_data, rejection_reason, status, created_at, approved_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(20);
@@ -174,13 +175,14 @@ export default function MyPendingChanges() {
 
         <div className="space-y-2 max-h-64 overflow-y-auto">
           {changes.map(change => (
-            <div key={change.id} className="flex items-center justify-between bg-muted/30 rounded-lg px-3 py-2 border">
-              <div className="flex items-center gap-3 min-w-0">
-                {opLabel(change.operation)}
-                <span className="text-sm text-foreground capitalize truncate">
-                  {change.table_name.replace(/_/g, ' ')}
-                </span>
-              </div>
+            <div key={change.id} className="bg-muted/30 rounded-lg px-3 py-2 border space-y-1">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 min-w-0">
+                  {opLabel(change.operation)}
+                  <span className="text-sm text-foreground capitalize truncate">
+                    {change.table_name.replace(/_/g, ' ')}
+                  </span>
+                </div>
               <div className="flex items-center gap-3 flex-shrink-0">
                 {statusIcon(change.status)}
                 <span className="text-[10px] text-muted-foreground">
@@ -227,6 +229,13 @@ export default function MyPendingChanges() {
                   </AlertDialog>
                 )}
               </div>
+              </div>
+              {change.status === 'rejected' && change.rejection_reason && (
+                <div className="flex items-start gap-1.5 mt-1">
+                  <MessageSquare size={10} className="text-destructive mt-0.5 flex-shrink-0" />
+                  <p className="text-[10px] text-destructive">{change.rejection_reason}</p>
+                </div>
+              )}
             </div>
           ))}
         </div>
