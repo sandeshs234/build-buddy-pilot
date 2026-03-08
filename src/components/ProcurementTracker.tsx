@@ -64,6 +64,12 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
   const [editing, setEditing] = useState<TrackingItem | null>(null);
   const [form, setForm] = useState<Omit<TrackingItem, 'id'> & { id?: string }>(emptyItem);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+
+  // Filter items early for use in functions
+  const filteredItems = selectedStatus 
+    ? items.filter(i => i.status === selectedStatus)
+    : items;
 
   const fetchItems = useCallback(async () => {
     if (!user) return;
@@ -155,10 +161,10 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === items.length) {
+    if (selectedIds.size === filteredItems.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(items.map(i => i.id)));
+      setSelectedIds(new Set(filteredItems.map(i => i.id)));
     }
   };
 
@@ -235,9 +241,9 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
     return acc;
   }, {} as Record<string, number>);
 
-  const totalOrdered = items.reduce((s, i) => s + (i.ordered_qty * i.unit_rate), 0);
-  const totalReceived = items.filter(i => i.status === 'received').length;
-  const overallProgress = items.length > 0 ? Math.round((totalReceived / items.length) * 100) : 0;
+  const totalOrdered = filteredItems.reduce((s, i) => s + (i.ordered_qty * i.unit_rate), 0);
+  const totalReceived = filteredItems.filter(i => i.status === 'received').length;
+  const overallProgress = filteredItems.length > 0 ? Math.round((totalReceived / filteredItems.length) * 100) : 0;
 
   return (
     <div className="space-y-4">
@@ -278,6 +284,17 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
         <Button variant="outline" size="sm" onClick={fetchItems}>
           <RefreshCw size={14} className="mr-1" /> Refresh
         </Button>
+        <Select value={selectedStatus || ''} onValueChange={(v) => setSelectedStatus(v || null)}>
+          <SelectTrigger className="w-40 h-9">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">All Items</SelectItem>
+            {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+              <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Button size="sm" onClick={openAdd}>
           <Plus size={14} className="mr-1" /> Add Material
         </Button>
@@ -359,7 +376,7 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-3 bg-muted/40 rounded-lg px-4 py-2 border">
           <Checkbox
-            checked={selectedIds.size === items.length}
+            checked={selectedIds.size === filteredItems.length}
             onCheckedChange={toggleSelectAll}
             aria-label="Select all"
           />
@@ -391,13 +408,13 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
       {/* Table */}
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">Loading tracking data...</div>
-      ) : items.length === 0 ? (
+      ) : filteredItems.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <Package size={48} className="mx-auto text-muted-foreground/30 mb-3" />
-            <p className="font-medium mb-1">No materials being tracked</p>
+            <p className="font-medium mb-1">{selectedStatus ? 'No items with this status' : 'No materials being tracked'}</p>
             <p className="text-sm text-muted-foreground mb-4">
-              {materials.length > 0
+              {selectedStatus ? 'Try selecting a different status or add new items.' : materials.length > 0
                 ? 'Click "Import from Analysis" to add materials from BOQ analysis.'
                 : 'Add materials manually or run BOQ analysis first.'}
             </p>
@@ -415,7 +432,7 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
               <tr className="border-b bg-muted/50">
                 <th className="p-3 w-10">
                   <Checkbox
-                    checked={items.length > 0 && selectedIds.size === items.length}
+                    checked={filteredItems.length > 0 && selectedIds.size === filteredItems.length}
                     onCheckedChange={toggleSelectAll}
                     aria-label="Select all"
                   />
@@ -434,7 +451,7 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
               </tr>
             </thead>
             <tbody>
-              {items.map(item => {
+              {filteredItems.map(item => {
                 const cfg = STATUS_CONFIG[item.status] || STATUS_CONFIG.pending;
                 const Icon = cfg.icon;
                 const deliveryPct = item.required_qty > 0
