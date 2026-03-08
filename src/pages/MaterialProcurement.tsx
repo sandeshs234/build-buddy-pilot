@@ -137,7 +137,7 @@ export default function MaterialProcurement() {
       'Required Qty': '' as any, 'Qty (with Waste)': '' as any,
       'Unit Rate (NPR)': 'GRAND TOTAL' as any,
       'Total Cost (NPR)': totalBudget,
-      'Priority': '', 'Lead Time (days)': '' as any, 'Suppliers': '', 'Nepal Standard': '', 'Procurement Week': '' as any,
+      'Priority': '' as any, 'Lead Time (days)': '' as any, 'Suppliers': '', 'Nepal Standard': '', 'Procurement Week': '' as any,
     });
     const ws = XLSX.utils.json_to_sheet(wsData);
     ws['!cols'] = [{ wch: 4 }, { wch: 10 }, { wch: 30 }, { wch: 14 }, { wch: 8 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 16 }, { wch: 10 }, { wch: 12 }, { wch: 30 }, { wch: 20 }, { wch: 10 }];
