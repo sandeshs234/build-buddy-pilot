@@ -1,0 +1,1 @@
+UPDATE public.project_members SET status = 'approved' WHERE id = '96fb4aa4-2b62-422b-8e38-7028ec2112cd';
