@@ -35,7 +35,7 @@ const ROLE_COLORS: Record<AppRole, string> = {
 };
 
 export default function UserManagement() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, currentProjectId } = useAuth();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newEmail, setNewEmail] = useState('');
@@ -71,7 +71,7 @@ export default function UserManagement() {
 
     // Use edge function to create user (admin-only)
     const { data, error } = await supabase.functions.invoke('admin-create-user', {
-      body: { email: newEmail, password: newPassword, full_name: newName, role: newRole },
+      body: { email: newEmail, password: newPassword, full_name: newName, role: newRole, project_id: currentProjectId },
     });
 
     setLoading(false);

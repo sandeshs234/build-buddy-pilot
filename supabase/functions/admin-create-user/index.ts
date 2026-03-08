@@ -29,7 +29,7 @@ serve(async (req) => {
       .single();
     if (callerRole?.role !== "admin") throw new Error("Admin access required");
 
-    const { email, password, full_name, role } = await req.json();
+    const { email, password, full_name, role, project_id } = await req.json();
 
     // Create user with service role (bypasses signup disabled)
     const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
@@ -46,6 +46,18 @@ serve(async (req) => {
         .from("user_roles")
         .update({ role })
         .eq("user_id", newUser.user.id);
+    }
+
+    // Auto-approve into admin's current project if provided
+    if (project_id && newUser.user) {
+      await supabase
+        .from("project_members")
+        .insert({
+          project_id,
+          user_id: newUser.user.id,
+          role: "member",
+          status: "approved",
+        });
     }
 
     return new Response(JSON.stringify({ success: true, user_id: newUser.user?.id }), {
