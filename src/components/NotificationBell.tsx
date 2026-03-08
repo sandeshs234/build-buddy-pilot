@@ -52,6 +52,14 @@ export default function NotificationBell() {
 
   const unreadCount = notifications.filter(n => !n.read).length;
 
+  const handleNotificationClick = (notification: Notification) => {
+    // Navigate based on notification type
+    if (notification.type === 'join_request' || notification.type === 'approved' || notification.type === 'rejected') {
+      navigate('/projects');
+    }
+    setOpen(false);
+  };
+
   const markAllRead = async () => {
     if (!user) return;
     await (supabase as any)
