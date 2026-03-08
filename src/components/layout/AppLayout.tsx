@@ -5,9 +5,10 @@ import {
   Receipt, Users, UserCog, Truck, Droplets, ShieldCheck, AlertTriangle, 
   HardHat, Flame, Wrench, Building2, Camera, Clock, Settings, Database, 
   BarChart3, HelpCircle, FileText, FileDiff, ChevronDown, ChevronRight,
-  Construction, FileSpreadsheet, Bot
+  Construction, FileSpreadsheet, Bot, LogOut, Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 import SampleTemplates from '@/components/SampleTemplates';
 import AIAssistant from '@/components/AIAssistant';
 
@@ -77,6 +78,7 @@ const navGroups: NavGroup[] = [
   {
     label: 'System',
     items: [
+      { label: 'User Management', path: '/users', icon: <Shield size={18} /> },
       { label: 'Settings', path: '/settings', icon: <Settings size={18} /> },
       { label: 'Backup / Restore', path: '/backup', icon: <Database size={18} /> },
       { label: 'Help', path: '/help', icon: <HelpCircle size={18} /> },
@@ -85,6 +87,7 @@ const navGroups: NavGroup[] = [
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const { profile, role, signOut } = useAuth();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [templatesOpen, setTemplatesOpen] = useState(false);
@@ -163,6 +166,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             );
           })}
         </nav>
+
+        {/* User Info */}
+        <div className="px-3 py-3 border-t border-sidebar-border">
+          <div className="flex items-center gap-2 px-2 mb-2">
+            <div className="w-7 h-7 rounded-full bg-sidebar-primary/20 flex items-center justify-center text-[11px] font-bold text-sidebar-primary">
+              {profile?.full_name?.[0]?.toUpperCase() || profile?.email?.[0]?.toUpperCase() || '?'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-medium text-sidebar-foreground truncate">{profile?.full_name || profile?.email || 'User'}</p>
+              <p className="text-[10px] text-sidebar-foreground/50 capitalize">{role?.replace('_', ' ') || 'viewer'}</p>
+            </div>
+          </div>
+          <button
+            onClick={signOut}
+            className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[11px] text-sidebar-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            <LogOut size={13} /> Sign Out
+          </button>
+        </div>
       </aside>
 
       {/* Main Content */}
