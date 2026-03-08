@@ -5,6 +5,23 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const MODULE_PROMPTS: Record<string, string> = {
+  activities: `You are a CPM scheduling expert. Analyze activities for critical path, float, delays, and resource leveling. Suggest dependency optimizations and recovery plans.`,
+  boq: `You are a BOQ/quantity surveying expert. Analyze bill of quantities for cost trends, over/under-execution, rate anomalies, and budget forecasting. Flag items with low execution vs plan.`,
+  inventory: `You are an inventory management expert. Analyze stock levels, flag items below minimum, suggest reorder quantities, and identify slow-moving or excess stock.`,
+  equipment: `You are an equipment management expert. Analyze utilization rates, maintenance schedules, fuel efficiency, and suggest optimal fleet allocation.`,
+  safety: `You are a construction safety expert. Analyze incident patterns, identify high-risk areas, suggest preventive measures, and evaluate safety performance metrics.`,
+  delays: `You are a delay analysis expert (SCL protocol). Classify delays as excusable/non-excusable, concurrent, analyze EOT claims, and suggest mitigation strategies.`,
+  "purchase-orders": `You are a procurement expert. Analyze PO status, supplier performance, cost trends, and suggest procurement optimizations.`,
+  manpower: `You are a workforce planning expert. Analyze labor productivity, trade distribution, overtime patterns, and suggest optimal crew sizes.`,
+  fuel: `You are a fuel/energy management expert. Analyze consumption patterns, cost per unit, equipment efficiency, and suggest cost reduction measures.`,
+  concrete: `You are a concrete technology expert. Analyze pour records, slump trends, temperature effects, supplier quality, and suggest quality improvements.`,
+  "daily-quantity": `You are a progress measurement expert. Analyze daily quantities vs planned, productivity rates, and forecast completion dates.`,
+  quality: `You are a quality management expert (ISO 19650). Analyze ITP compliance, NCR trends, rework costs, and suggest quality improvements.`,
+  welding: `You are a welding engineering expert. Analyze WPS compliance, NDT results, welder qualifications, and defect rates.`,
+  dashboard: `You are a project controls expert. Provide executive-level analysis of project health: SPI, CPI, earned value, risk summary, and key recommendations.`,
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -37,6 +54,19 @@ Return a JSON response with this structure:
     } else if (action === "schedule-optimize") {
       systemPrompt = `You are a construction scheduling optimizer. Given the activities, suggest optimizations to reduce project duration, level resources, and improve efficiency. Return practical, actionable suggestions.`;
       userPrompt = `Optimize this schedule:\n${JSON.stringify(data.activities, null, 2)}`;
+    } else if (action === "module-suggest") {
+      // Context-aware suggestions for any module
+      const moduleKey = data.module || "dashboard";
+      systemPrompt = (MODULE_PROMPTS[moduleKey] || MODULE_PROMPTS.dashboard) +
+        `\n\nYou are BuildForge AI. Analyze the provided data and give 3-5 smart, actionable suggestions. Be concise and data-driven. Format as markdown with bullet points. Reference specific items by their codes/IDs when possible.`;
+      userPrompt = `Here is the current ${moduleKey} data (${data.itemCount || 0} items):\n${JSON.stringify(data.moduleData?.slice(0, 50), null, 2)}\n\nProvide smart suggestions and insights for this module.`;
+    } else if (action === "module-chat") {
+      // Context-aware chat for any module
+      const moduleKey = data.module || "dashboard";
+      systemPrompt = (MODULE_PROMPTS[moduleKey] || MODULE_PROMPTS.dashboard) +
+        `\n\nYou are BuildForge AI, an expert construction project management assistant. You have access to the current module data. Be concise, practical, and data-driven. When analyzing data, reference specific items by their codes/IDs. Format responses with markdown.`;
+      const contextSnippet = data.moduleData?.slice(0, 30);
+      userPrompt = `Current module: ${moduleKey} (${data.itemCount || 0} items)\nModule data snapshot:\n${JSON.stringify(contextSnippet, null, 2)}\n\nUser question: ${data.message}`;
     } else if (action === "general") {
       systemPrompt = `You are BuildForge AI, an expert construction project management assistant. Help with scheduling, BOQ analysis, cost control, safety, quality management, and all aspects of construction project management. Be concise, practical, and data-driven. When analyzing data, reference specific items by their codes/IDs.`;
       userPrompt = data.message;
