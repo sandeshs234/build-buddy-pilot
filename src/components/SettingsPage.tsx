@@ -151,11 +151,11 @@ export default function SettingsPage() {
             <div className="bg-card rounded-xl border shadow-sm p-6">
               <h3 className="text-sm font-semibold mb-4">Client Details</h3>
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Client Name" field="clientName" span />
-                <Field label="Address" field="clientAddress" span />
-                <Field label="Phone" field="clientPhone" />
-                <Field label="Email" field="clientEmail" type="email" />
-                <Field label="Representative" field="clientRepresentative" span />
+                {renderField("Client Name", "clientName", "text", true)}
+                {renderField("Address", "clientAddress", "text", true)}
+                {renderField("Phone", "clientPhone")}
+                {renderField("Email", "clientEmail", "email")}
+                {renderField("Representative", "clientRepresentative", "text", true)}
               </div>
             </div>
             <div className="bg-card rounded-xl border shadow-sm p-6">
