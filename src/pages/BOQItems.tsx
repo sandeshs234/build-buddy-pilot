@@ -19,7 +19,7 @@ import { supabase } from '@/integrations/supabase/client';
 export default function BOQItems() {
   const navigate = useNavigate();
   const { boqItems: items, boqOps } = useProjectData();
-  const { syncing: aiAnalyzing, fullSync, applyActivities, applyMaterials } = useModuleSync();
+  const { syncing: aiAnalyzing, fullSync, analyzeMaterials, generateActivities, applyActivities, applyMaterials } = useModuleSync();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<BOQItem | null>(null);
   const [newProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
