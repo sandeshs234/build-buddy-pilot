@@ -302,7 +302,7 @@ interface ProjectDataContextType {
 const ProjectDataContext = createContext<ProjectDataContextType | null>(null);
 
 export function ProjectDataProvider({ children }: { children: ReactNode }) {
-  const { user, storageMode, setStorageMode, currentProjectId } = useAuth();
+  const { user, storageMode, setStorageMode, currentProjectId, canApprove } = useAuth();
   const userId = user?.id || null;
   const projectId = currentProjectId;
 
@@ -320,6 +320,18 @@ export function ProjectDataProvider({ children }: { children: ReactNode }) {
     projectId,
   }) : () => undefined;
 
+  // Non-admin/co-admin users go through approval
+  const approvalInfo = (key: string) => {
+    if (!userId || canApprove) return undefined;
+    return {
+      enabled: true,
+      userId,
+      projectId,
+      tableName: TABLE_MAP[key],
+      key,
+    };
+  };
+
   const act = useDataState<Activity>('activities', sampleActivities, userId, projectId);
   const boq = useDataState<BOQItem>('boqItems', sampleBOQ, userId, projectId);
   const inv = useDataState<InventoryItem>('inventory', sampleInventory, userId, projectId);
@@ -336,27 +348,27 @@ export function ProjectDataProvider({ children }: { children: ReactNode }) {
 
   const value: ProjectDataContextType = {
     activities: act.data,
-    activitiesOps: createCrudOps(act.data, act.setData, act.history, act.setHistory, cloudSync('activities')),
+    activitiesOps: createCrudOps(act.data, act.setData, act.history, act.setHistory, cloudSync('activities'), approvalInfo('activities')),
     boqItems: boq.data,
-    boqOps: createCrudOps(boq.data, boq.setData, boq.history, boq.setHistory, cloudSync('boqItems')),
+    boqOps: createCrudOps(boq.data, boq.setData, boq.history, boq.setHistory, cloudSync('boqItems'), approvalInfo('boqItems')),
     inventory: inv.data,
-    inventoryOps: createCrudOps(inv.data, inv.setData, inv.history, inv.setHistory, cloudSync('inventory')),
+    inventoryOps: createCrudOps(inv.data, inv.setData, inv.history, inv.setHistory, cloudSync('inventory'), approvalInfo('inventory')),
     equipment: eq.data,
-    equipmentOps: createCrudOps(eq.data, eq.setData, eq.history, eq.setHistory, cloudSync('equipment')),
+    equipmentOps: createCrudOps(eq.data, eq.setData, eq.history, eq.setHistory, cloudSync('equipment'), approvalInfo('equipment')),
     safety: saf.data,
-    safetyOps: createCrudOps(saf.data, saf.setData, saf.history, saf.setHistory, cloudSync('safety')),
+    safetyOps: createCrudOps(saf.data, saf.setData, saf.history, saf.setHistory, cloudSync('safety'), approvalInfo('safety')),
     delays: del.data,
-    delaysOps: createCrudOps(del.data, del.setData, del.history, del.setHistory, cloudSync('delays')),
+    delaysOps: createCrudOps(del.data, del.setData, del.history, del.setHistory, cloudSync('delays'), approvalInfo('delays')),
     purchaseOrders: po.data,
-    poOps: createCrudOps(po.data, po.setData, po.history, po.setHistory, cloudSync('purchaseOrders')),
+    poOps: createCrudOps(po.data, po.setData, po.history, po.setHistory, cloudSync('purchaseOrders'), approvalInfo('purchaseOrders')),
     manpower: mp.data,
-    manpowerOps: createCrudOps(mp.data, mp.setData, mp.history, mp.setHistory, cloudSync('manpower')),
+    manpowerOps: createCrudOps(mp.data, mp.setData, mp.history, mp.setHistory, cloudSync('manpower'), approvalInfo('manpower')),
     fuelLog: fl.data,
-    fuelOps: createCrudOps(fl.data, fl.setData, fl.history, fl.setHistory, cloudSync('fuelLog')),
+    fuelOps: createCrudOps(fl.data, fl.setData, fl.history, fl.setHistory, cloudSync('fuelLog'), approvalInfo('fuelLog')),
     concretePours: cp.data,
-    concreteOps: createCrudOps(cp.data, cp.setData, cp.history, cp.setHistory, cloudSync('concretePours')),
+    concreteOps: createCrudOps(cp.data, cp.setData, cp.history, cp.setHistory, cloudSync('concretePours'), approvalInfo('concretePours')),
     dailyQty: dq.data,
-    dailyQtyOps: createCrudOps(dq.data, dq.setData, dq.history, dq.setHistory, cloudSync('dailyQty')),
+    dailyQtyOps: createCrudOps(dq.data, dq.setData, dq.history, dq.setHistory, cloudSync('dailyQty'), approvalInfo('dailyQty')),
     isCloudMode: true,
     dataLoaded,
   };
