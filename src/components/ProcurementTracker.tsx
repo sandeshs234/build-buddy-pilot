@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import ExcelImportExport from '@/components/ExcelImportExport';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -233,6 +234,55 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
         <Button size="sm" onClick={openAdd}>
           <Plus size={14} className="mr-1" /> Add Material
         </Button>
+        <ExcelImportExport
+          data={items}
+          columns={[
+            { key: 'material_code', label: 'Material Code' },
+            { key: 'material_description', label: 'Description' },
+            { key: 'unit', label: 'Unit' },
+            { key: 'required_qty', label: 'Required Qty' },
+            { key: 'ordered_qty', label: 'Ordered Qty' },
+            { key: 'received_qty', label: 'Received Qty' },
+            { key: 'status', label: 'Status' },
+            { key: 'supplier', label: 'Supplier' },
+            { key: 'po_number', label: 'PO Number' },
+            { key: 'order_date', label: 'Order Date' },
+            { key: 'expected_delivery', label: 'Expected Delivery' },
+            { key: 'actual_delivery', label: 'Actual Delivery' },
+            { key: 'unit_rate', label: 'Unit Rate' },
+            { key: 'total_cost', label: 'Total Cost' },
+            { key: 'remarks', label: 'Remarks' },
+          ]}
+          fileName="procurement_tracking"
+          onImport={async (rows) => {
+            if (!user) return;
+            const inserts = rows.map(r => ({
+              user_id: user.id,
+              material_code: r.material_code || '',
+              material_description: r.material_description || r.description || '',
+              unit: r.unit || '',
+              required_qty: Number(r.required_qty) || 0,
+              ordered_qty: Number(r.ordered_qty) || 0,
+              received_qty: Number(r.received_qty) || 0,
+              status: r.status || 'pending',
+              supplier: r.supplier || '',
+              po_number: r.po_number || '',
+              order_date: r.order_date || '',
+              expected_delivery: r.expected_delivery || '',
+              actual_delivery: r.actual_delivery || '',
+              unit_rate: Number(r.unit_rate) || 0,
+              total_cost: Number(r.total_cost) || (Number(r.ordered_qty) || 0) * (Number(r.unit_rate) || 0),
+              remarks: r.remarks || '',
+            }));
+            const { error } = await supabase.from('procurement_tracking').insert(inserts as any);
+            if (error) {
+              toast({ title: 'Import Error', description: error.message, variant: 'destructive' });
+            } else {
+              toast({ title: 'Imported', description: `${inserts.length} items imported` });
+              fetchItems();
+            }
+          }}
+        />
       </div>
 
       {/* Table */}

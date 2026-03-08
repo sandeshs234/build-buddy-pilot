@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Clock, Check, X, FileText, Trash2, Pencil, MessageSquare } from 'lucide-react';
+import { Clock, Check, X, FileText, Trash2, Pencil, MessageSquare, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -88,6 +88,43 @@ export default function MyPendingChanges() {
       setChanges(prev => prev.filter(c => c.id !== changeId));
     }
     setCancelling(null);
+  };
+
+  const deleteRejected = async (changeId: string) => {
+    setCancelling(changeId);
+    const { error } = await (supabase as any)
+      .from('data_changes')
+      .delete()
+      .eq('id', changeId)
+      .eq('user_id', user?.id)
+      .eq('status', 'rejected');
+
+    if (error) {
+      toast({ title: '❌ Failed to delete', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: '🗑️ Deleted', description: 'Rejected submission removed.' });
+      setChanges(prev => prev.filter(c => c.id !== changeId));
+    }
+    setCancelling(null);
+  };
+
+  const resubmitChange = async () => {
+    if (!editingChange) return;
+    setSaving(true);
+    const { error } = await (supabase as any)
+      .from('data_changes')
+      .update({ data: editData, status: 'pending', rejection_reason: null, approved_at: null, approved_by: null })
+      .eq('id', editingChange.id)
+      .eq('user_id', user?.id);
+
+    if (error) {
+      toast({ title: '❌ Failed to resubmit', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: '🔄 Resubmitted', description: 'Your change has been resubmitted for approval.' });
+      setChanges(prev => prev.map(c => c.id === editingChange.id ? { ...c, data: editData, status: 'pending', rejection_reason: null } : c));
+      setEditingChange(null);
+    }
+    setSaving(false);
   };
 
   const openEdit = (change: MyChange) => {
@@ -199,6 +236,17 @@ export default function MyPendingChanges() {
                     <Pencil size={12} />
                   </Button>
                 )}
+                {change.status === 'rejected' && change.operation !== 'delete' && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-primary hover:text-primary hover:bg-primary/10"
+                    onClick={() => openEdit(change)}
+                    title="Edit & resubmit"
+                  >
+                    <RotateCcw size={12} />
+                  </Button>
+                )}
                 {change.status === 'pending' && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
@@ -228,6 +276,35 @@ export default function MyPendingChanges() {
                     </AlertDialogContent>
                   </AlertDialog>
                 )}
+                {change.status === 'rejected' && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        disabled={cancelling === change.id}
+                        title="Delete rejected submission"
+                      >
+                        <Trash2 size={12} />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete rejected submission?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently remove this rejected submission. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Keep it</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => deleteRejected(change.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          Yes, delete it
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
               </div>
               </div>
               {change.status === 'rejected' && change.rejection_reason && (
@@ -241,15 +318,28 @@ export default function MyPendingChanges() {
         </div>
       </div>
 
-      {/* Edit Pending Submission Dialog */}
+      {/* Edit / Resubmit Submission Dialog */}
       <Dialog open={!!editingChange} onOpenChange={(open) => { if (!open) setEditingChange(null); }}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Edit Pending Submission</DialogTitle>
+            <DialogTitle>
+              {editingChange?.status === 'rejected' ? 'Edit & Resubmit' : 'Edit Pending Submission'}
+            </DialogTitle>
             <DialogDescription>
-              Modify your {editingChange?.operation} on {editingChange?.table_name.replace(/_/g, ' ')} before admin reviews it.
+              {editingChange?.status === 'rejected'
+                ? `Modify your ${editingChange?.operation} on ${editingChange?.table_name.replace(/_/g, ' ')} and resubmit for approval.`
+                : `Modify your ${editingChange?.operation} on ${editingChange?.table_name.replace(/_/g, ' ')} before admin reviews it.`}
             </DialogDescription>
           </DialogHeader>
+          {editingChange?.status === 'rejected' && editingChange?.rejection_reason && (
+            <div className="flex items-start gap-2 bg-destructive/5 rounded-md px-3 py-2 border border-destructive/20">
+              <MessageSquare size={14} className="text-destructive mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-[10px] font-medium text-destructive uppercase tracking-wider">Previous Rejection Reason</p>
+                <p className="text-xs text-foreground mt-0.5">{editingChange.rejection_reason}</p>
+              </div>
+            </div>
+          )}
           <ScrollArea className="max-h-[60vh]">
             <div className="space-y-3 pr-4">
               {editingChange && getEditableFields(editData).map(([key, value]) => (
@@ -266,9 +356,16 @@ export default function MyPendingChanges() {
           </ScrollArea>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingChange(null)}>Cancel</Button>
-            <Button onClick={saveEdit} disabled={saving}>
-              {saving ? 'Saving...' : 'Save Changes'}
-            </Button>
+            {editingChange?.status === 'rejected' ? (
+              <Button onClick={resubmitChange} disabled={saving} className="gap-1.5">
+                <RotateCcw size={14} />
+                {saving ? 'Resubmitting...' : 'Resubmit for Approval'}
+              </Button>
+            ) : (
+              <Button onClick={saveEdit} disabled={saving}>
+                {saving ? 'Saving...' : 'Save Changes'}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
