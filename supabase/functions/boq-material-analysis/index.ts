@@ -244,11 +244,8 @@ serve(async (req) => {
       }];
       toolChoice = { type: "function", function: { name: "cross_module_sync" } };
     } else if (action === "generate-boq") {
-      const { projectDescription } = await req.json().catch(() => ({ projectDescription: "" }));
-      const desc = projectDescription || (await req.json().catch(() => ({}))).projectDescription || "";
-      // projectDescription was already parsed above, re-read from the initial parse
       systemPrompt += `\n\nYou are generating a complete BOQ (Bill of Quantities) from a project description. Create realistic items with proper codes, descriptions, units, quantities, and rates based on Nepal construction standards and current market rates. Include all major work categories: earthwork, concrete, masonry, finishing, MEP, etc.`;
-      userPrompt = `Generate a complete BOQ for the following project:\n\n${(req as any).__parsedBody?.projectDescription || "Construction project"}\n\nProvide realistic quantities and current Nepal market rates in NPR.`;
+      userPrompt = `Generate a complete BOQ for the following project:\n\n${projectDescription || "Construction project"}\n\nProvide realistic quantities and current Nepal market rates in NPR.`;
 
       tools = [{
         type: "function",
