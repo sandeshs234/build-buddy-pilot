@@ -34,6 +34,7 @@ export interface InventoryItem {
   balance: number;
   minLevel: number;
   location: string;
+  requiredQty?: number;
 }
 
 export interface PurchaseOrder {
