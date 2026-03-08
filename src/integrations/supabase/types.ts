@@ -629,6 +629,80 @@ export type Database = {
           },
         ]
       }
+      procurement_tracking: {
+        Row: {
+          actual_delivery: string
+          created_at: string
+          expected_delivery: string
+          id: string
+          material_code: string
+          material_description: string
+          order_date: string
+          ordered_qty: number
+          po_number: string
+          project_id: string | null
+          received_qty: number
+          remarks: string
+          required_qty: number
+          status: string
+          supplier: string
+          total_cost: number
+          unit: string
+          unit_rate: number
+          user_id: string
+        }
+        Insert: {
+          actual_delivery?: string
+          created_at?: string
+          expected_delivery?: string
+          id?: string
+          material_code?: string
+          material_description?: string
+          order_date?: string
+          ordered_qty?: number
+          po_number?: string
+          project_id?: string | null
+          received_qty?: number
+          remarks?: string
+          required_qty?: number
+          status?: string
+          supplier?: string
+          total_cost?: number
+          unit?: string
+          unit_rate?: number
+          user_id: string
+        }
+        Update: {
+          actual_delivery?: string
+          created_at?: string
+          expected_delivery?: string
+          id?: string
+          material_code?: string
+          material_description?: string
+          order_date?: string
+          ordered_qty?: number
+          po_number?: string
+          project_id?: string | null
+          received_qty?: number
+          remarks?: string
+          required_qty?: number
+          status?: string
+          supplier?: string
+          total_cost?: number
+          unit?: string
+          unit_rate?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procurement_tracking_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
