@@ -5,6 +5,7 @@ import { projectInfo } from '@/data/sampleData';
 import { CalendarClock, Users, AlertTriangle, TrendingUp, ShoppingCart, Package, Truck, CheckCircle2, Clock } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, Legend } from 'recharts';
 import DataApproval from '@/components/DataApproval';
+import MyPendingChanges from '@/components/MyPendingChanges';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -280,6 +281,13 @@ export default function Dashboard() {
       {canApprove && currentProjectId && (
         <div className="bg-card rounded-xl border shadow-sm p-5 mt-6">
           <DataApproval projectId={currentProjectId} />
+        </div>
+      )}
+
+      {/* My Pending Changes (non-admin users) */}
+      {!canApprove && (
+        <div className="mt-6">
+          <MyPendingChanges />
         </div>
       )}
     </div>
