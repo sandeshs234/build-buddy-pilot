@@ -5,7 +5,7 @@ import {
   Receipt, Users, UserCog, Truck, Droplets, ShieldCheck, AlertTriangle, 
   HardHat, Flame, Wrench, Building2, Camera, Clock, Settings, Database, 
   BarChart3, HelpCircle, FileText, FileDiff, ChevronDown, ChevronRight,
-  Construction, FileSpreadsheet, Bot, LogOut, Shield, FolderKanban, Menu, X
+  Construction, FileSpreadsheet, Bot, LogOut, Shield, FolderKanban, Menu, X, TrendingUp
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -78,6 +78,7 @@ const navGroups: NavGroup[] = [
     label: 'Procurement',
     items: [
       { label: 'Inventory', path: '/inventory', icon: <Package size={18} /> },
+      { label: 'Procurement Plan', path: '/procurement-plan', icon: <TrendingUp size={18} /> },
       { label: 'Purchase Orders', path: '/purchase-orders', icon: <ShoppingCart size={18} />, minRole: 'engineer' },
       { label: 'Bills', path: '/bills', icon: <Receipt size={18} />, minRole: 'project_manager' },
     ],
