@@ -295,6 +295,45 @@ export default function BOQItems() {
         </DialogContent>
       </Dialog>
       <MaterialAnalysis open={materialAnalysisOpen} onOpenChange={setMaterialAnalysisOpen} />
+
+      {/* AI Generate BOQ Dialog */}
+      <Dialog open={generateDialogOpen} onOpenChange={setGenerateDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Wand2 size={18} /> AI Generate BOQ</DialogTitle>
+            <DialogDescription>
+              Describe your construction project and AI will generate a complete Bill of Quantities with items, quantities, and rates based on Nepal construction standards.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label>Project Description</Label>
+              <Textarea
+                value={projectDesc}
+                onChange={e => setProjectDesc(e.target.value)}
+                placeholder="e.g. 3-storey residential building with basement parking, RCC frame structure, total built-up area 450 sqm, located in Kathmandu. Include foundation, superstructure, masonry, plastering, flooring, painting, electrical, plumbing, and drainage works."
+                rows={5}
+                className="resize-none"
+              />
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
+              <p className="font-medium text-foreground">Tips for better results:</p>
+              <ul className="list-disc pl-4 space-y-0.5">
+                <li>Specify building type, floors, and area</li>
+                <li>Mention structure type (RCC, steel, load-bearing)</li>
+                <li>List specific work categories needed</li>
+                <li>Include location for rate accuracy</li>
+              </ul>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGenerateDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleGenerateBOQ} disabled={generating || !projectDesc.trim()}>
+              {generating ? <><Loader2 size={14} className="mr-1 animate-spin" /> Generating...</> : <><Wand2 size={14} className="mr-1" /> Generate BOQ</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
