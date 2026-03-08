@@ -7,6 +7,7 @@ import {
   BarChart3, HelpCircle, FileText, FileDiff, ChevronDown, ChevronRight,
   Construction, FileSpreadsheet, Bot, LogOut, Shield, FolderKanban, Menu, X
 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
