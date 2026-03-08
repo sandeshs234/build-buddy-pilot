@@ -120,6 +120,16 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
       .from('data_changes')
       .update({ status: 'approved', approved_by: user?.id, approved_at: new Date().toISOString() })
       .eq('id', changeId);
+    
+    // Notify the submitting user
+    await (supabase as any).from('notifications').insert({
+      user_id: change.user_id,
+      project_id: change.project_id,
+      title: '✅ Your change was approved',
+      message: `Your ${change.operation} on ${change.table_name.replace(/_/g, ' ')} has been approved and applied.`,
+      type: 'approval_notification',
+    });
+    
     toast({ title: '✅ Change approved & applied', description: `Data has been written to ${change.table_name.replace(/_/g, ' ')}` });
     fetchChanges();
   };
