@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import SampleTemplates from '@/components/SampleTemplates';
 import AIAssistant from '@/components/AIAssistant';
 import ProjectChat from '@/components/ProjectChat';
