@@ -172,10 +172,10 @@ export default function SettingsPage() {
             <div className="bg-card rounded-xl border shadow-sm p-6">
               <h3 className="text-sm font-semibold mb-4">Consultant Details</h3>
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Consultant Name" field="consultantName" span />
-                <Field label="Address" field="consultantAddress" span />
-                <Field label="Phone" field="consultantPhone" />
-                <Field label="Email" field="consultantEmail" type="email" />
+                {renderField("Consultant Name", "consultantName", "text", true)}
+                {renderField("Address", "consultantAddress", "text", true)}
+                {renderField("Phone", "consultantPhone")}
+                {renderField("Email", "consultantEmail", "email")}
               </div>
             </div>
           </div>
