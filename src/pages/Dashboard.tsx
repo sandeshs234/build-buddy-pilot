@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import StatCard from '@/components/StatCard';
 import { useProjectData } from '@/context/ProjectDataContext';
 import { useAuth } from '@/context/AuthContext';
