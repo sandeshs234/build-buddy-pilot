@@ -5,12 +5,14 @@ import {
   Receipt, Users, UserCog, Truck, Droplets, ShieldCheck, AlertTriangle, 
   HardHat, Flame, Wrench, Building2, Camera, Clock, Settings, Database, 
   BarChart3, HelpCircle, FileText, FileDiff, ChevronDown, ChevronRight,
-  Construction, FileSpreadsheet, Bot, LogOut, Shield
+  Construction, FileSpreadsheet, Bot, LogOut, Shield, FolderKanban, CheckSquare
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import SampleTemplates from '@/components/SampleTemplates';
 import AIAssistant from '@/components/AIAssistant';
+import ProjectChat from '@/components/ProjectChat';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface NavGroup {
   label: string;
@@ -22,6 +24,7 @@ const navGroups: NavGroup[] = [
     label: 'Overview',
     items: [
       { label: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={18} /> },
+      { label: 'Projects', path: '/projects', icon: <FolderKanban size={18} /> },
     ],
   },
   {
@@ -87,7 +90,7 @@ const navGroups: NavGroup[] = [
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { profile, role, signOut } = useAuth();
+  const { profile, role, signOut, currentProjectId, setCurrentProjectId, projectMemberships, projectRole } = useAuth();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [templatesOpen, setTemplatesOpen] = useState(false);
@@ -96,6 +99,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const toggleGroup = (label: string) => {
     setCollapsed(prev => ({ ...prev, [label]: !prev[label] }));
   };
+
+  const currentProjectName = projectMemberships.find(m => m.project_id === currentProjectId)?.project_name || 'No Project';
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -111,6 +116,29 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <p className="text-[10px] text-sidebar-foreground/50 uppercase tracking-widest">Construction PM</p>
           </div>
         </div>
+
+        {/* Project Selector */}
+        {projectMemberships.length > 0 && (
+          <div className="px-3 py-2 border-b border-sidebar-border">
+            <Select value={currentProjectId || ''} onValueChange={(v) => setCurrentProjectId(v)}>
+              <SelectTrigger className="w-full h-8 text-xs bg-sidebar-accent/50">
+                <SelectValue placeholder="Select Project" />
+              </SelectTrigger>
+              <SelectContent>
+                {projectMemberships.map(m => (
+                  <SelectItem key={m.project_id} value={m.project_id} className="text-xs">
+                    {m.project_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {projectRole && (
+              <p className="text-[10px] text-sidebar-foreground/50 mt-1 px-1 capitalize">
+                Role: {projectRole.replace('_', ' ')}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Quick Actions */}
         <div className="px-3 py-2 border-b border-sidebar-border flex gap-1.5">
@@ -197,6 +225,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Global Dialogs */}
       <SampleTemplates open={templatesOpen} onOpenChange={setTemplatesOpen} />
       <AIAssistant open={aiOpen} onOpenChange={setAiOpen} />
+
+      {/* Project Chat */}
+      {currentProjectId && (
+        <ProjectChat projectId={currentProjectId} projectName={currentProjectName} />
+      )}
     </div>
   );
 }
