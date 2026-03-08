@@ -418,6 +418,27 @@ export default function UserManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk Delete Confirmation */}
+      <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete {selectedIds.size} User(s)?</DialogTitle>
+            <DialogDescription>
+              This will permanently remove the selected users and all their data. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-sm text-destructive">
+            ⚠️ {users.filter(u => selectedIds.has(u.id)).map(u => u.email).join(', ')}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setBulkDeleteOpen(false)} disabled={deleting}>Cancel</Button>
+            <Button variant="destructive" onClick={handleBulkDelete} disabled={deleting}>
+              {deleting ? <><Loader2 size={14} className="mr-1 animate-spin" /> Deleting...</> : <><Trash2 size={14} className="mr-1" /> Delete Selected</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
