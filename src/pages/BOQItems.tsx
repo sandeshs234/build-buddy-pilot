@@ -6,12 +6,14 @@ import ExcelImportExport from '@/components/ExcelImportExport';
 import MaterialAnalysis from '@/components/MaterialAnalysis';
 import { useModuleSync } from '@/hooks/useModuleSync';
 import { Button } from '@/components/ui/button';
-import { Plus, Pencil, Trash2, Undo2, Trash, FolderPlus, Sparkles, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Undo2, Trash, FolderPlus, Sparkles, Loader2, Wand2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function BOQItems() {
   const { boqItems: items, boqOps } = useProjectData();
@@ -21,6 +23,9 @@ export default function BOQItems() {
   const [newProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
   const [materialAnalysisOpen, setMaterialAnalysisOpen] = useState(false);
   const [autoAnalysisRunning, setAutoAnalysisRunning] = useState(false);
+  const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
+  const [projectDesc, setProjectDesc] = useState('');
+  const [generating, setGenerating] = useState(false);
 
   const totalBudget = items.reduce((sum, i) => sum + i.totalQty * i.rate, 0);
   const totalExecuted = items.reduce((sum, i) => sum + i.executedQty * i.rate, 0);
@@ -78,6 +83,62 @@ export default function BOQItems() {
     setTimeout(() => runAutoAnalysis(), 500);
   };
 
+  const handleGenerateBOQ = useCallback(async () => {
+    if (!projectDesc.trim()) {
+      toast({ title: 'Description Required', description: 'Please describe your project to generate BOQ items.', variant: 'destructive' });
+      return;
+    }
+    setGenerating(true);
+    toast({ title: '🤖 Generating BOQ', description: 'AI is creating BOQ items from your project description...' });
+    try {
+      const { data, error } = await supabase.functions.invoke('boq-material-analysis', {
+        body: { action: 'generate-boq', projectDescription: projectDesc.trim() },
+      });
+      if (error) throw error;
+      
+      const result = data?.result;
+      if (!result?.items?.length) {
+        toast({ title: 'No Items Generated', description: 'AI could not generate items. Try a more detailed description.', variant: 'destructive' });
+        return;
+      }
+
+      const mapped: BOQItem[] = result.items.map((item: any) => ({
+        id: crypto.randomUUID(),
+        code: item.code || '',
+        description: item.description || '',
+        unit: item.unit || '',
+        measureType: (item.measureType || 'direct') as BOQItem['measureType'],
+        totalQty: Number(item.totalQty || 0),
+        executedQty: 0,
+        rate: Number(item.rate || 0),
+      }));
+
+      boqOps.bulkAdd(mapped);
+      setGenerateDialogOpen(false);
+      setProjectDesc('');
+
+      const budget = mapped.reduce((s, i) => s + i.totalQty * i.rate, 0);
+      toast({
+        title: '✅ BOQ Generated',
+        description: `${mapped.length} items created · Est. budget: NPR ${budget.toLocaleString()}`,
+      });
+
+      // Auto-trigger AI analysis on generated items
+      setTimeout(() => runAutoAnalysis(), 500);
+    } catch (err: any) {
+      const msg = err?.message || String(err);
+      if (msg.includes('429')) {
+        toast({ title: 'Rate Limited', description: 'Too many requests. Please try again in a moment.', variant: 'destructive' });
+      } else if (msg.includes('402')) {
+        toast({ title: 'Credits Exhausted', description: 'Please add AI credits to continue.', variant: 'destructive' });
+      } else {
+        toast({ title: 'Generation Failed', description: msg, variant: 'destructive' });
+      }
+    } finally {
+      setGenerating(false);
+    }
+  }, [projectDesc, boqOps, runAutoAnalysis]);
+
   const excelColumns = [
     { key: 'code', label: 'Code' }, { key: 'description', label: 'Description' }, { key: 'unit', label: 'Unit' },
     { key: 'measureType', label: 'Method' }, { key: 'totalQty', label: 'Total Qty' },
@@ -117,6 +178,9 @@ export default function BOQItems() {
           </Button>
           <Button variant="outline" size="sm" onClick={() => setMaterialAnalysisOpen(true)} disabled={items.length === 0 || autoAnalysisRunning}>
             {autoAnalysisRunning ? <><Loader2 size={14} className="mr-1 animate-spin" /> Analyzing...</> : <><Sparkles size={14} className="mr-1" /> AI Analysis</>}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setGenerateDialogOpen(true)} disabled={generating}>
+            {generating ? <><Loader2 size={14} className="mr-1 animate-spin" /> Generating...</> : <><Wand2 size={14} className="mr-1" /> AI Generate BOQ</>}
           </Button>
           <Button size="sm" onClick={openAdd}><Plus size={14} className="mr-1" /> Add Item</Button>
         </div>
@@ -231,6 +295,45 @@ export default function BOQItems() {
         </DialogContent>
       </Dialog>
       <MaterialAnalysis open={materialAnalysisOpen} onOpenChange={setMaterialAnalysisOpen} />
+
+      {/* AI Generate BOQ Dialog */}
+      <Dialog open={generateDialogOpen} onOpenChange={setGenerateDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Wand2 size={18} /> AI Generate BOQ</DialogTitle>
+            <DialogDescription>
+              Describe your construction project and AI will generate a complete Bill of Quantities with items, quantities, and rates based on Nepal construction standards.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label>Project Description</Label>
+              <Textarea
+                value={projectDesc}
+                onChange={e => setProjectDesc(e.target.value)}
+                placeholder="e.g. 3-storey residential building with basement parking, RCC frame structure, total built-up area 450 sqm, located in Kathmandu. Include foundation, superstructure, masonry, plastering, flooring, painting, electrical, plumbing, and drainage works."
+                rows={5}
+                className="resize-none"
+              />
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
+              <p className="font-medium text-foreground">Tips for better results:</p>
+              <ul className="list-disc pl-4 space-y-0.5">
+                <li>Specify building type, floors, and area</li>
+                <li>Mention structure type (RCC, steel, load-bearing)</li>
+                <li>List specific work categories needed</li>
+                <li>Include location for rate accuracy</li>
+              </ul>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGenerateDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleGenerateBOQ} disabled={generating || !projectDesc.trim()}>
+              {generating ? <><Loader2 size={14} className="mr-1 animate-spin" /> Generating...</> : <><Wand2 size={14} className="mr-1" /> Generate BOQ</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
