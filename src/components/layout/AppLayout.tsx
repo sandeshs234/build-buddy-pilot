@@ -5,7 +5,7 @@ import {
   Receipt, Users, UserCog, Truck, Droplets, ShieldCheck, AlertTriangle, 
   HardHat, Flame, Wrench, Building2, Camera, Clock, Settings, Database, 
   BarChart3, HelpCircle, FileText, FileDiff, ChevronDown, ChevronRight,
-  Construction, FileSpreadsheet, Bot, LogOut, Shield, FolderKanban, Menu, X
+  Construction, FileSpreadsheet, Bot, LogOut, Shield, FolderKanban, Menu, X, TrendingUp
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
