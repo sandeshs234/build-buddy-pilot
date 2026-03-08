@@ -432,7 +432,7 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
               <tr className="border-b bg-muted/50">
                 <th className="p-3 w-10">
                   <Checkbox
-                    checked={items.length > 0 && selectedIds.size === items.length}
+                    checked={filteredItems.length > 0 && selectedIds.size === filteredItems.length}
                     onCheckedChange={toggleSelectAll}
                     aria-label="Select all"
                   />
