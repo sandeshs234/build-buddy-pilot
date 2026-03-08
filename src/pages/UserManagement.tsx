@@ -322,14 +322,39 @@ export default function UserManagement() {
   }
 
   const permissions = [
-    { action: 'View project data', admin: true, pm: true, eng: true, viewer: true },
-    { action: 'Add/edit own entries', admin: true, pm: true, eng: true, viewer: false },
-    { action: 'Approve/reject entries', admin: true, pm: true, eng: false, viewer: false },
-    { action: 'Manage project members', admin: true, pm: false, eng: false, viewer: false },
-    { action: 'Create/delete projects', admin: true, pm: false, eng: false, viewer: false },
-    { action: 'Manage users & roles', admin: true, pm: false, eng: false, viewer: false },
-    { action: 'Access settings & backup', admin: true, pm: true, eng: false, viewer: false },
+    { action: 'View project data', roles: ['admin', 'pm', 'eng', 'acct', 'safety', 'store', 'surv', 'viewer'] },
+    { action: 'Add/edit own entries', roles: ['admin', 'pm', 'eng', 'acct', 'safety', 'store', 'surv'] },
+    { action: 'Finance & Bills', roles: ['admin', 'pm', 'acct'] },
+    { action: 'Safety & Quality', roles: ['admin', 'pm', 'eng', 'safety'] },
+    { action: 'Inventory & Procurement', roles: ['admin', 'pm', 'store', 'acct'] },
+    { action: 'Measurements & Quantities', roles: ['admin', 'pm', 'eng', 'surv'] },
+    { action: 'Approve/reject entries', roles: ['admin', 'pm'] },
+    { action: 'Manage users & roles', roles: ['admin'] },
   ];
+
+  const permRoleHeaders = [
+    { key: 'admin', label: 'Admin', color: ROLE_COLORS.admin },
+    { key: 'pm', label: 'PM', color: ROLE_COLORS.project_manager },
+    { key: 'eng', label: 'Eng', color: ROLE_COLORS.engineer },
+    { key: 'acct', label: 'Acct', color: ROLE_COLORS.accountant },
+    { key: 'safety', label: 'Safety', color: ROLE_COLORS.safety_officer },
+    { key: 'store', label: 'Store', color: ROLE_COLORS.store_keeper },
+    { key: 'surv', label: 'Surv', color: ROLE_COLORS.surveyor },
+    { key: 'viewer', label: 'View', color: ROLE_COLORS.viewer },
+  ];
+
+  const roleSelectItems = (
+    <>
+      <SelectItem value="admin">Admin</SelectItem>
+      <SelectItem value="project_manager">Project Manager</SelectItem>
+      <SelectItem value="engineer">Engineer</SelectItem>
+      <SelectItem value="accountant">Accountant</SelectItem>
+      <SelectItem value="safety_officer">Safety Officer</SelectItem>
+      <SelectItem value="store_keeper">Store Keeper</SelectItem>
+      <SelectItem value="surveyor">Surveyor</SelectItem>
+      <SelectItem value="viewer">Viewer</SelectItem>
+    </>
+  );
 
   return (
     <div>
