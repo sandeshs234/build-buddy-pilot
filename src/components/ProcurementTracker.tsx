@@ -156,10 +156,10 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === items.length) {
+    if (selectedIds.size === filteredItems.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(items.map(i => i.id)));
+      setSelectedIds(new Set(filteredItems.map(i => i.id)));
     }
   };
 
