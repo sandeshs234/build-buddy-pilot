@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Loader2, Sparkles, RefreshCw, Package, TrendingUp, AlertTriangle, Clock, ShoppingCart, IndianRupee } from 'lucide-react';
+import ProcurementTracker from '@/components/ProcurementTracker';
 import { useModuleSync } from '@/hooks/useModuleSync';
 import { useProjectData } from '@/context/ProjectDataContext';
 
