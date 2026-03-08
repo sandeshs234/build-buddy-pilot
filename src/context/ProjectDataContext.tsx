@@ -100,10 +100,10 @@ function createCrudOps<T extends { id: string }>(
     if (!cloudSync) return;
     const { tableName, key, userId } = cloudSync;
     // Delete all user data then re-insert
-    await (supabase.from(tableName) as any).delete().eq('user_id', userId);
+    await (supabase as any).from(tableName).delete().eq('user_id', userId);
     if (newData.length > 0) {
       const rows = newData.map(item => toSnakeCase(key, item, userId));
-      await (supabase.from(tableName) as any).insert(rows);
+      await (supabase as any).from(tableName).insert(rows);
     }
   };
 
