@@ -197,6 +197,7 @@ export default function BOQItems() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <MaterialAnalysis open={materialAnalysisOpen} onOpenChange={setMaterialAnalysisOpen} />
     </div>
   );
 }
