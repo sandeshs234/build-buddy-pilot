@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Download, Upload, FolderOpen, HardDrive, Cloud, CheckCircle, AlertCircle, FileJson, FileSpreadsheet, Files, FolderUp, File } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Download, Upload, FolderOpen, HardDrive, Cloud, CheckCircle, AlertCircle, FileJson, FileSpreadsheet, Files, FolderUp, File, RotateCcw, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useProjectData } from '@/context/ProjectDataContext';
 import * as XLSX from '@e965/xlsx';
