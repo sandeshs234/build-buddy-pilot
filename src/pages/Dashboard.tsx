@@ -2,13 +2,29 @@ import StatCard from '@/components/StatCard';
 import { useProjectData } from '@/context/ProjectDataContext';
 import { useAuth } from '@/context/AuthContext';
 import { projectInfo } from '@/data/sampleData';
-import { CalendarClock, Users, AlertTriangle, TrendingUp } from 'lucide-react';
+import { CalendarClock, Users, AlertTriangle, TrendingUp, ShoppingCart, Package, Truck, CheckCircle2, Clock } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, Legend } from 'recharts';
 import DataApproval from '@/components/DataApproval';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+
+interface ProcTrackingItem {
+  status: string;
+  total_cost: number;
+  expected_delivery: string;
+  actual_delivery: string;
+  material_description: string;
+}
 
 export default function Dashboard() {
-  const { activities, boqItems, manpower, delays, equipment } = useProjectData();
+  const { activities, boqItems, manpower, delays, equipment, purchaseOrders } = useProjectData();
   const { canApprove, currentProjectId } = useAuth();
+  const [procItems, setProcItems] = useState<ProcTrackingItem[]>([]);
+
+  useEffect(() => {
+    supabase.from('procurement_tracking').select('status,total_cost,expected_delivery,actual_delivery,material_description')
+      .then(({ data }) => setProcItems((data as ProcTrackingItem[]) || []));
+  }, []);
 
   const criticalCount = activities.filter(a => a.critical && a.status !== 'completed').length;
   const completedCount = activities.filter(a => a.status === 'completed').length;
@@ -90,6 +106,91 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {/* Purchase Orders & Procurement Widget */}
+      {(purchaseOrders.length > 0 || procItems.length > 0) && (() => {
+        const totalPOValue = purchaseOrders.reduce((s, po) => s + (po.price || 0), 0);
+        const draftCount = purchaseOrders.filter(po => po.status === 'draft').length;
+        const issuedCount = purchaseOrders.filter(po => po.status === 'issued').length;
+        const deliveredCount = purchaseOrders.filter(po => po.status === 'delivered').length;
+        const today = new Date().toISOString().split('T')[0];
+        const overdueProcItems = procItems.filter(p => p.expected_delivery && p.expected_delivery < today && p.status !== 'received' && !p.actual_delivery);
+        const poStatusData = [
+          { name: 'Draft', value: draftCount, color: 'hsl(var(--muted-foreground))' },
+          { name: 'Issued', value: issuedCount, color: 'hsl(var(--primary))' },
+          { name: 'Delivered', value: deliveredCount, color: 'hsl(152, 60%, 42%)' },
+          { name: 'Closed', value: purchaseOrders.filter(po => po.status === 'closed').length, color: 'hsl(220, 14%, 70%)' },
+        ].filter(s => s.value > 0);
+
+        return (
+          <div className="mb-6 space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="bg-card rounded-xl border shadow-sm p-5">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1"><ShoppingCart size={14} /> Total PO Value</div>
+                <p className="text-lg font-bold text-foreground">{projectInfo.currency} {totalPOValue.toLocaleString()}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">{purchaseOrders.length} purchase orders</p>
+              </div>
+              <div className="bg-card rounded-xl border shadow-sm p-5">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1"><Package size={14} /> Pending</div>
+                <p className="text-lg font-bold text-foreground">{draftCount + issuedCount}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">{draftCount} draft · {issuedCount} issued</p>
+              </div>
+              <div className="bg-card rounded-xl border shadow-sm p-5">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1"><CheckCircle2 size={14} /> Delivered</div>
+                <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{deliveredCount}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">{purchaseOrders.length > 0 ? Math.round((deliveredCount / purchaseOrders.length) * 100) : 0}% fulfillment</p>
+              </div>
+              <div className="bg-card rounded-xl border shadow-sm p-5">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1"><AlertTriangle size={14} /> Overdue</div>
+                <p className={`text-lg font-bold ${overdueProcItems.length > 0 ? 'text-destructive' : 'text-foreground'}`}>{overdueProcItems.length}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">past expected delivery</p>
+              </div>
+            </div>
+
+            {(poStatusData.length > 0 || overdueProcItems.length > 0) && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {poStatusData.length > 0 && (
+                  <div className="bg-card rounded-xl border shadow-sm p-5">
+                    <h2 className="text-sm font-semibold text-card-foreground mb-4">PO Status Breakdown</h2>
+                    <ResponsiveContainer width="100%" height={180}>
+                      <PieChart>
+                        <Pie data={poStatusData} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={3} dataKey="value">
+                          {poStatusData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    <div className="flex flex-wrap gap-3 justify-center mt-2">
+                      {poStatusData.map(s => (
+                        <div key={s.name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color }} />
+                          {s.name} ({s.value})
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {overdueProcItems.length > 0 && (
+                  <div className="bg-card rounded-xl border shadow-sm p-5">
+                    <h2 className="text-sm font-semibold text-destructive mb-3 flex items-center gap-2"><Clock size={14} /> Overdue Deliveries</h2>
+                    <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                      {overdueProcItems.map((item, i) => {
+                        const daysOverdue = Math.ceil((new Date().getTime() - new Date(item.expected_delivery).getTime()) / 86400000);
+                        return (
+                          <div key={i} className="flex items-center justify-between p-2.5 rounded-lg bg-destructive/5 border border-destructive/10">
+                            <span className="text-sm font-medium">{item.material_description}</span>
+                            <span className="text-xs font-mono text-destructive font-semibold">{daysOverdue}d overdue</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Charts Row */}
       {(boqItems.length > 0 || activities.length > 0) && (
