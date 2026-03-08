@@ -173,14 +173,30 @@ export default function ProjectManagement() {
     setLoading(false);
   };
 
-  const approveMember = async (memberId: string) => {
-    await (supabase as any).from('project_members').update({ status: 'approved' }).eq('id', memberId);
+  const approveMember = async (member: Member, projectName: string) => {
+    await (supabase as any).from('project_members').update({ status: 'approved' }).eq('id', member.id);
+    // Notify the member
+    await (supabase as any).from('notifications').insert({
+      user_id: member.user_id,
+      title: 'Request Approved ✅',
+      message: `Your request to join "${projectName}" has been approved!`,
+      type: 'approved',
+      project_id: member.project_id,
+    });
     toast({ title: 'Member approved' });
     fetchProjects();
   };
 
-  const rejectMember = async (memberId: string) => {
-    await (supabase as any).from('project_members').update({ status: 'rejected' }).eq('id', memberId);
+  const rejectMember = async (member: Member, projectName: string) => {
+    await (supabase as any).from('project_members').update({ status: 'rejected' }).eq('id', member.id);
+    // Notify the member
+    await (supabase as any).from('notifications').insert({
+      user_id: member.user_id,
+      title: 'Request Rejected',
+      message: `Your request to join "${projectName}" was declined.`,
+      type: 'rejected',
+      project_id: member.project_id,
+    });
     toast({ title: 'Member rejected' });
     fetchProjects();
   };
