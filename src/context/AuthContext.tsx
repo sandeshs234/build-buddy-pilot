@@ -162,7 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const projectRole = currentMembership?.role || null;
   const isProjectAdmin = projectRole === 'admin';
   const isProjectCoAdmin = projectRole === 'co_admin';
-  const canApprove = isProjectAdmin || isProjectCoAdmin;
+  const canApprove = isProjectAdmin || isProjectCoAdmin || role === 'project_manager';
 
   return (
     <AuthContext.Provider value={{
