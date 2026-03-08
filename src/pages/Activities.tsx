@@ -107,6 +107,9 @@ export default function Activities() {
             <Button variant="ghost" size="sm" onClick={() => setView('cpm')} className={cn("rounded-none", view === 'cpm' && 'bg-muted')}>
               <Network size={14} className="mr-1" /> CPM
             </Button>
+            <Button variant="ghost" size="sm" onClick={() => setView('flow')} className={cn("rounded-none", view === 'flow' && 'bg-muted')}>
+              <GitBranch size={14} className="mr-1" /> Flow
+            </Button>
             <Button variant="ghost" size="sm" onClick={() => setView('table')} className={cn("rounded-none", view === 'table' && 'bg-muted')}>
               <Table2 size={14} className="mr-1" /> Table
             </Button>
