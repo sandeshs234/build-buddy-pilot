@@ -36,7 +36,7 @@ function generateCode(): string {
 }
 
 export default function ProjectManagement() {
-  const { user, refreshMemberships } = useAuth();
+  const { user, profile, refreshMemberships } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [members, setMembers] = useState<Record<string, Member[]>>({});
   const [createOpen, setCreateOpen] = useState(false);
@@ -144,6 +144,26 @@ export default function ProjectManagement() {
       } else if (error) {
         toast({ title: 'Error', description: error.message, variant: 'destructive' });
       } else {
+        // Notify project admins about new join request
+        const { data: adminMembers } = await (supabase as any)
+          .from('project_members')
+          .select('user_id')
+          .eq('project_id', project.id)
+          .in('role', ['admin', 'co_admin'])
+          .eq('status', 'approved');
+
+        const userName = profile?.full_name || user.email || 'Someone';
+        if (adminMembers) {
+          for (const admin of adminMembers) {
+            await (supabase as any).from('notifications').insert({
+              user_id: admin.user_id,
+              title: 'New Join Request',
+              message: `${userName} requested to join "${project.name}"`,
+              type: 'join_request',
+              project_id: project.id,
+            });
+          }
+        }
         toast({ title: 'Request sent!', description: 'Waiting for admin approval.' });
       }
       setJoinOpen(false);
@@ -153,14 +173,30 @@ export default function ProjectManagement() {
     setLoading(false);
   };
 
-  const approveMember = async (memberId: string) => {
-    await (supabase as any).from('project_members').update({ status: 'approved' }).eq('id', memberId);
+  const approveMember = async (member: Member, projectName: string) => {
+    await (supabase as any).from('project_members').update({ status: 'approved' }).eq('id', member.id);
+    // Notify the member
+    await (supabase as any).from('notifications').insert({
+      user_id: member.user_id,
+      title: 'Request Approved ✅',
+      message: `Your request to join "${projectName}" has been approved!`,
+      type: 'approved',
+      project_id: member.project_id,
+    });
     toast({ title: 'Member approved' });
     fetchProjects();
   };
 
-  const rejectMember = async (memberId: string) => {
-    await (supabase as any).from('project_members').update({ status: 'rejected' }).eq('id', memberId);
+  const rejectMember = async (member: Member, projectName: string) => {
+    await (supabase as any).from('project_members').update({ status: 'rejected' }).eq('id', member.id);
+    // Notify the member
+    await (supabase as any).from('notifications').insert({
+      user_id: member.user_id,
+      title: 'Request Rejected',
+      message: `Your request to join "${projectName}" was declined.`,
+      type: 'rejected',
+      project_id: member.project_id,
+    });
     toast({ title: 'Member rejected' });
     fetchProjects();
   };
@@ -254,10 +290,10 @@ export default function ProjectManagement() {
                         <p className="text-xs text-muted-foreground">{m.profile?.email}</p>
                       </div>
                       <div className="flex gap-1">
-                        <Button size="sm" variant="ghost" onClick={() => approveMember(m.id)} className="text-green-600 hover:text-green-700 hover:bg-green-50">
+                        <Button size="sm" variant="ghost" onClick={() => approveMember(m, project.name)} className="text-green-600 hover:text-green-700 hover:bg-green-50">
                           <Check size={16} />
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => rejectMember(m.id)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                        <Button size="sm" variant="ghost" onClick={() => rejectMember(m, project.name)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
                           <X size={16} />
                         </Button>
                       </div>

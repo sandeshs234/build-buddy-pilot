@@ -12,6 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 import SampleTemplates from '@/components/SampleTemplates';
 import AIAssistant from '@/components/AIAssistant';
 import ProjectChat from '@/components/ProjectChat';
+import NotificationBell from '@/components/NotificationBell';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -129,7 +130,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
             <h1 className="text-sm font-bold text-sidebar-foreground">BuildForge</h1>
           </div>
-          <div className="w-10" /> {/* Spacer for centering */}
+          <NotificationBell />
         </header>
       )}
 
@@ -189,6 +190,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Quick Actions */}
         <div className="px-3 py-2 border-b border-sidebar-border flex gap-1.5">
+          {!isMobile && <NotificationBell />}
           <button
             onClick={() => setAiOpen(true)}
             className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] font-medium bg-sidebar-primary/20 text-sidebar-primary hover:bg-sidebar-primary/30 transition-colors"
