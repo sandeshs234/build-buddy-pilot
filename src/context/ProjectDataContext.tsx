@@ -55,18 +55,18 @@ const FIELD_MAPS: Record<string, Record<string, string>> = {
   purchaseOrders: { poNo: 'po_no', itemCode: 'item_code' },
 };
 
-function toSnakeCase(key: string, item: any, userId: string): any {
+function toSnakeCase(key: string, item: any, userId: string, projectId: string | null): any {
   const map = FIELD_MAPS[key] || {};
   const result: any = { user_id: userId };
+  if (projectId) result.project_id = projectId;
   for (const [k, v] of Object.entries(item)) {
     if (k === 'id') {
-      // Only include id if it's a valid UUID
       if (typeof v === 'string' && v.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
         result.id = v;
       }
-      // Skip non-UUID ids (like "1", "2") - let DB generate UUIDs
       continue;
     }
+    if (k === 'project_id') continue; // already set above
     result[map[k] || k] = v;
   }
   return result;
@@ -80,7 +80,7 @@ function toCamelCase(key: string, row: any): any {
   }
   const result: any = {};
   for (const [k, v] of Object.entries(row)) {
-    if (k === 'user_id' || k === 'created_at') continue;
+    if (k === 'user_id' || k === 'created_at' || k === 'project_id') continue;
     result[reverseMap[k] || k] = v;
   }
   return result;
@@ -92,17 +92,19 @@ function createCrudOps<T extends { id: string }>(
   setData: React.Dispatch<React.SetStateAction<T[]>>,
   history: T[][],
   setHistory: React.Dispatch<React.SetStateAction<T[][]>>,
-  cloudSync?: { tableName: string; key: string; userId: string }
+  cloudSync?: { tableName: string; key: string; userId: string; projectId: string | null }
 ) {
   const pushHistory = () => setHistory(prev => [...prev.slice(-20), data]);
 
   const syncToCloud = async (newData: T[]) => {
     if (!cloudSync) return;
-    const { tableName, key, userId } = cloudSync;
-    // Delete all user data then re-insert
-    await (supabase as any).from(tableName).delete().eq('user_id', userId);
+    const { tableName, key, userId, projectId } = cloudSync;
+    // Delete scoped data then re-insert
+    let deleteQuery = (supabase as any).from(tableName).delete().eq('user_id', userId);
+    if (projectId) deleteQuery = deleteQuery.eq('project_id', projectId);
+    await deleteQuery;
     if (newData.length > 0) {
-      const rows = newData.map(item => toSnakeCase(key, item, userId));
+      const rows = newData.map(item => toSnakeCase(key, item, userId, projectId));
       await (supabase as any).from(tableName).insert(rows);
     }
   };
@@ -173,31 +175,38 @@ function createCrudOps<T extends { id: string }>(
   };
 }
 
-// ── Hook: state with optional cloud or local persistence ──
-function useDataState<T>(key: string, fallback: T[], isCloud: boolean, userId: string | null) {
+// ── Hook: state with optional cloud or local persistence, scoped by project ──
+function useDataState<T>(key: string, fallback: T[], isCloud: boolean, userId: string | null, projectId: string | null) {
   const [data, setData] = useState<T[]>([]);
   const [history, setHistory] = useState<T[][]>([]);
   const [loaded, setLoaded] = useState(false);
 
-  // Load data
+  // Load data - re-fetch when projectId changes
   useEffect(() => {
     if (isCloud && userId) {
       const tableName = TABLE_MAP[key];
       if (!tableName) return;
-      (supabase as any).from(tableName)
-        .select('*')
-        .eq('user_id', userId)
-        .then(({ data: rows }: any) => {
-          if (rows) {
-            setData(rows.map((r: any) => toCamelCase(key, r)) as T[]);
-          }
-          setLoaded(true);
-        });
+      setLoaded(false);
+      let query = (supabase as any).from(tableName).select('*');
+      // If project is selected, filter by project_id; otherwise filter by user_id only
+      if (projectId) {
+        query = query.eq('project_id', projectId);
+      } else {
+        query = query.eq('user_id', userId).is('project_id', null);
+      }
+      query.then(({ data: rows }: any) => {
+        if (rows) {
+          setData(rows.map((r: any) => toCamelCase(key, r)) as T[]);
+        } else {
+          setData([]);
+        }
+        setLoaded(true);
+      });
     } else if (!isCloud) {
       setData(getInitial(key, fallback));
       setLoaded(true);
     }
-  }, [key, isCloud, userId]);
+  }, [key, isCloud, userId, projectId]);
 
   // Save to localStorage when in local mode
   useEffect(() => {
@@ -239,46 +248,45 @@ interface ProjectDataContextType {
 const ProjectDataContext = createContext<ProjectDataContextType | null>(null);
 
 export function ProjectDataProvider({ children }: { children: ReactNode }) {
-  const { user, storageMode, setStorageMode } = useAuth();
+  const { user, storageMode, setStorageMode, currentProjectId } = useAuth();
   const isCloud = storageMode === 'cloud';
   const userId = user?.id || null;
+  const projectId = currentProjectId;
   const showChoice = !!user && storageMode === null;
 
   const cloudSync = isCloud && userId ? (key: string) => ({
     tableName: TABLE_MAP[key],
     key,
     userId,
+    projectId,
   }) : () => undefined;
 
-  const act = useDataState<Activity>('activities', sampleActivities, isCloud, userId);
-  const boq = useDataState<BOQItem>('boqItems', sampleBOQ, isCloud, userId);
-  const inv = useDataState<InventoryItem>('inventory', sampleInventory, isCloud, userId);
-  const eq = useDataState<EquipmentEntry>('equipment', sampleEquipment, isCloud, userId);
-  const saf = useDataState<SafetyIncident>('safety', sampleSafety, isCloud, userId);
-  const del = useDataState<DelayEntry>('delays', sampleDelays, isCloud, userId);
-  const po = useDataState<PurchaseOrder>('purchaseOrders', samplePOs, isCloud, userId);
-  const mp = useDataState<any>('manpower', [], isCloud, userId);
-  const fl = useDataState<any>('fuelLog', [], isCloud, userId);
-  const cp = useDataState<any>('concretePours', [], isCloud, userId);
-  const dq = useDataState<any>('dailyQty', [], isCloud, userId);
+  const act = useDataState<Activity>('activities', sampleActivities, isCloud, userId, projectId);
+  const boq = useDataState<BOQItem>('boqItems', sampleBOQ, isCloud, userId, projectId);
+  const inv = useDataState<InventoryItem>('inventory', sampleInventory, isCloud, userId, projectId);
+  const eq = useDataState<EquipmentEntry>('equipment', sampleEquipment, isCloud, userId, projectId);
+  const saf = useDataState<SafetyIncident>('safety', sampleSafety, isCloud, userId, projectId);
+  const del = useDataState<DelayEntry>('delays', sampleDelays, isCloud, userId, projectId);
+  const po = useDataState<PurchaseOrder>('purchaseOrders', samplePOs, isCloud, userId, projectId);
+  const mp = useDataState<any>('manpower', [], isCloud, userId, projectId);
+  const fl = useDataState<any>('fuelLog', [], isCloud, userId, projectId);
+  const cp = useDataState<any>('concretePours', [], isCloud, userId, projectId);
+  const dq = useDataState<any>('dailyQty', [], isCloud, userId, projectId);
 
   const dataLoaded = act.loaded && boq.loaded;
 
   const handleStorageChoice = async (mode: 'local' | 'cloud') => {
     await setStorageMode(mode);
     if (mode === 'cloud' && userId) {
-      // Migrate any existing localStorage data to cloud
       const localData = loadState();
       for (const [key, items] of Object.entries(localData)) {
         const tableName = TABLE_MAP[key];
         if (!tableName || !items || items.length === 0) continue;
-        const rows = items.map((item: any) => toSnakeCase(key, item, userId));
+        const rows = items.map((item: any) => toSnakeCase(key, item, userId, projectId));
         await (supabase as any).from(tableName).insert(rows);
       }
-      // Clear local after migration
       localStorage.removeItem(STORAGE_KEY);
       toast({ title: 'Data migrated to cloud', description: 'Your local data has been synced to the cloud.' });
-      // Reload to fetch from cloud
       window.location.reload();
     }
   };
