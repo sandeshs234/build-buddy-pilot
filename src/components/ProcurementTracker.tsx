@@ -284,6 +284,17 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
         <Button variant="outline" size="sm" onClick={fetchItems}>
           <RefreshCw size={14} className="mr-1" /> Refresh
         </Button>
+        <Select value={selectedStatus || ''} onValueChange={(v) => setSelectedStatus(v || null)}>
+          <SelectTrigger className="w-40 h-9">
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">All Items</SelectItem>
+            {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+              <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Button size="sm" onClick={openAdd}>
           <Plus size={14} className="mr-1" /> Add Material
         </Button>
