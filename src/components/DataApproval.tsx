@@ -4,8 +4,12 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Check, X, Clock, Eye, ArrowRight } from 'lucide-react';
+import { Check, X, Clock, Eye, ArrowRight, MessageSquare } from 'lucide-react';
 import { format } from 'date-fns';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
 
 interface DataChange {
   id: string;
