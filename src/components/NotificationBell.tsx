@@ -121,8 +121,14 @@ export default function NotificationBell() {
   const getTypeColor = (type: string) => {
     switch (type) {
       case 'join_request': return 'bg-amber-500';
-      case 'approved': return 'bg-green-500';
-      case 'rejected': return 'bg-red-500';
+      case 'approved':
+      case 'data_approved': return 'bg-green-500';
+      case 'rejected':
+      case 'data_rejected': return 'bg-red-500';
+      case 'data_approval': return 'bg-blue-500';
+      case 'safety': return 'bg-orange-500';
+      case 'delay': return 'bg-yellow-500';
+      case 'low_inventory': return 'bg-rose-500';
       default: return 'bg-primary';
     }
   };
