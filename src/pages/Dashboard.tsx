@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import StatCard from '@/components/StatCard';
 import { useProjectData } from '@/context/ProjectDataContext';
 import { useAuth } from '@/context/AuthContext';
@@ -20,6 +21,7 @@ interface ProcTrackingItem {
 export default function Dashboard() {
   const { activities, boqItems, manpower, delays, equipment, purchaseOrders } = useProjectData();
   const { canApprove, currentProjectId } = useAuth();
+  const navigate = useNavigate();
   const [procItems, setProcItems] = useState<ProcTrackingItem[]>([]);
 
   useEffect(() => {
@@ -183,7 +185,7 @@ export default function Dashboard() {
                       {overdueProcItems.map((item, i) => {
                         const daysOverdue = Math.ceil((new Date().getTime() - new Date(item.expected_delivery).getTime()) / 86400000);
                         return (
-                          <div key={i} className="flex items-center justify-between p-2.5 rounded-lg bg-destructive/5 border border-destructive/10">
+                          <div key={i} className="flex items-center justify-between p-2.5 rounded-lg bg-destructive/5 border border-destructive/10 cursor-pointer hover:bg-destructive/10 transition-colors" onClick={() => navigate('/procurement-digest')}>
                             <span className="text-sm font-medium">{item.material_description}</span>
                             <span className="text-xs font-mono text-destructive font-semibold">{daysOverdue}d overdue</span>
                           </div>
