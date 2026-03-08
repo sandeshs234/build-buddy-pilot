@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Download, Upload, FolderOpen, HardDrive, Cloud, CheckCircle, AlertCircle, FileJson, FileSpreadsheet, Files, FolderUp, File } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Download, Upload, FolderOpen, HardDrive, Cloud, CheckCircle, AlertCircle, FileJson, FileSpreadsheet, Files, FolderUp, File, RotateCcw, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { useProjectData } from '@/context/ProjectDataContext';
 import * as XLSX from '@e965/xlsx';
@@ -24,6 +25,8 @@ export default function BackupRestore() {
   const data = useProjectData();
   const [restoring, setRestoring] = useState(false);
   const [lastBackup, setLastBackup] = useState<string | null>(() => localStorage.getItem('buildforge_last_backup'));
+  const [previewData, setPreviewData] = useState<Record<string, any[] | object> | null>(null);
+  const [selectedModules, setSelectedModules] = useState<Set<string>>(new Set());
   const singleFileRef = useRef<HTMLInputElement>(null);
   const multiFileRef = useRef<HTMLInputElement>(null);
   const folderRef = useRef<HTMLInputElement>(null);
@@ -146,18 +149,19 @@ export default function BackupRestore() {
     dailyQty: data.dailyQtyOps,
   });
 
-  const restoreFromJson = (jsonData: any) => {
+  const restoreFromJson = (jsonData: any, allowedKeys?: Set<string>) => {
     const ops = getOpsMap();
     let restoredCount = 0;
 
     // Restore settings
-    if (jsonData.settings && typeof jsonData.settings === 'object' && Object.keys(jsonData.settings).length > 0) {
+    if ((!allowedKeys || allowedKeys.has('settings')) && jsonData.settings && typeof jsonData.settings === 'object' && Object.keys(jsonData.settings).length > 0) {
       localStorage.setItem('buildforge-settings', JSON.stringify(jsonData.settings));
       restoredCount++;
     }
 
     // Restore module data
     for (const [key, op] of Object.entries(ops)) {
+      if (allowedKeys && !allowedKeys.has(key)) continue;
       if (jsonData[key] && Array.isArray(jsonData[key])) {
         (op as any).setAll(jsonData[key]);
         restoredCount += jsonData[key].length;
@@ -185,66 +189,121 @@ export default function BackupRestore() {
     return 0;
   };
 
-  const processFile = async (file: File): Promise<number> => {
-    if (file.name.endsWith('.zip')) {
-      const zip = await JSZip.loadAsync(file);
-
-      // Try full backup JSON first
-      const fullBackup = Object.keys(zip.files).find(f => f.endsWith('.json') && !f.includes('modules/'));
-      if (fullBackup) {
-        const content = await zip.files[fullBackup].async('string');
-        return restoreFromJson(JSON.parse(content));
-      }
-
-      // Try individual module files
-      let total = 0;
-      for (const [path, zipFile] of Object.entries(zip.files)) {
-        if (path.startsWith('modules/') && path.endsWith('.json') && !zipFile.dir) {
-          const content = await zipFile.async('string');
-          const parsed = JSON.parse(content);
-          const fname = path.split('/').pop() || '';
-          total += restoreModuleFile(fname, parsed);
+  // Extract available modules from backup data for preview
+  const extractModules = (jsonData: any): Record<string, any[] | object> => {
+    const modules: Record<string, any[] | object> = {};
+    const allKeys = [...Object.keys(TABLE_LABELS), 'settings'];
+    for (const key of allKeys) {
+      if (jsonData[key]) {
+        if (Array.isArray(jsonData[key]) && jsonData[key].length > 0) {
+          modules[key] = jsonData[key];
+        } else if (key === 'settings' && typeof jsonData[key] === 'object' && Object.keys(jsonData[key]).length > 0) {
+          modules[key] = jsonData[key];
         }
       }
-      return total;
     }
-
-    if (file.name.endsWith('.json')) {
-      const text = await file.text();
-      const parsed = JSON.parse(text);
-
-      // Check if it's a full backup (has _meta or multiple known keys)
-      if (parsed._meta || (parsed.activities && parsed.boqItems)) {
-        return restoreFromJson(parsed);
-      }
-
-      // Single module file
-      return restoreModuleFile(file.name, parsed);
-    }
-
-    return 0;
+    return modules;
   };
 
-  const handleRestore = async (files: FileList) => {
+  const parseBackupForPreview = async (files: FileList) => {
+    try {
+      let combined: Record<string, any[] | object> = {};
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.name.endsWith('.zip')) {
+          const zip = await JSZip.loadAsync(file);
+          const fullBackup = Object.keys(zip.files).find(f => f.endsWith('.json') && !f.includes('modules/'));
+          if (fullBackup) {
+            const content = await zip.files[fullBackup].async('string');
+            combined = { ...combined, ...extractModules(JSON.parse(content)) };
+          } else {
+            for (const [path, zipFile] of Object.entries(zip.files)) {
+              if (path.startsWith('modules/') && path.endsWith('.json') && !zipFile.dir) {
+                const content = await zipFile.async('string');
+                const parsed = JSON.parse(content);
+                const key = (path.split('/').pop() || '').replace('.json', '');
+                if (key && (Array.isArray(parsed) ? parsed.length > 0 : Object.keys(parsed).length > 0)) {
+                  combined[key] = parsed;
+                }
+              }
+            }
+          }
+        } else if (file.name.endsWith('.json')) {
+          const text = await file.text();
+          const parsed = JSON.parse(text);
+          if (parsed._meta || (parsed.activities && parsed.boqItems)) {
+            combined = { ...combined, ...extractModules(parsed) };
+          } else {
+            const key = file.name.replace('.json', '');
+            combined[key] = parsed;
+          }
+        }
+      }
+
+      if (Object.keys(combined).length === 0) {
+        toast({ title: 'No Data Found', description: 'No valid backup data found in the selected files', variant: 'destructive' });
+        return;
+      }
+
+      setPreviewData(combined);
+      setSelectedModules(new Set(Object.keys(combined)));
+    } catch (err) {
+      toast({ title: 'Parse Failed', description: String(err), variant: 'destructive' });
+    }
+  };
+
+  const confirmRestore = async () => {
+    if (!previewData || selectedModules.size === 0) return;
     setRestoring(true);
     try {
+      const ops = getOpsMap();
       let totalRestored = 0;
-      for (let i = 0; i < files.length; i++) {
-        totalRestored += await processFile(files[i]);
+
+      for (const key of selectedModules) {
+        const items = previewData[key];
+        if (key === 'settings' && typeof items === 'object' && !Array.isArray(items)) {
+          localStorage.setItem('buildforge-settings', JSON.stringify(items));
+          totalRestored++;
+        } else if (key in ops && Array.isArray(items)) {
+          (ops as any)[key].setAll(items);
+          totalRestored += items.length;
+        }
       }
 
       if (totalRestored === 0) {
-        toast({ title: 'No Data Found', description: 'No valid backup data found in the selected files', variant: 'destructive' });
+        toast({ title: 'No Data Restored', description: 'No valid data in selected modules', variant: 'destructive' });
       } else {
-        toast({ title: 'Restore Complete', description: `${totalRestored} records restored successfully` });
+        toast({ title: 'Restore Complete', description: `${totalRestored} records restored from ${selectedModules.size} module(s)` });
       }
     } catch (err) {
       toast({ title: 'Restore Failed', description: String(err), variant: 'destructive' });
     } finally {
       setRestoring(false);
+      setPreviewData(null);
+      setSelectedModules(new Set());
       [singleFileRef, multiFileRef, folderRef].forEach(ref => {
         if (ref.current) ref.current.value = '';
       });
+    }
+  };
+
+  const toggleModule = (key: string) => {
+    setSelectedModules(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (!previewData) return;
+    const allKeys = Object.keys(previewData);
+    if (selectedModules.size === allKeys.length) {
+      setSelectedModules(new Set());
+    } else {
+      setSelectedModules(new Set(allKeys));
     }
   };
 
@@ -315,38 +374,92 @@ export default function BackupRestore() {
       <div className="bg-card rounded-xl border shadow-sm p-6">
         <h3 className="text-sm font-semibold mb-1">Restore from Backup</h3>
         <p className="text-xs text-muted-foreground mb-4">
-          Restore data from a backup file (.zip or .json). Choose single file, multiple files, or an entire folder.
+          Select a backup file to preview available modules, then choose which ones to restore.
         </p>
 
         {/* Hidden file inputs */}
         <input ref={singleFileRef} type="file" accept=".zip,.json" className="hidden"
-          onChange={e => e.target.files && e.target.files.length > 0 && handleRestore(e.target.files)} />
+          onChange={e => e.target.files && e.target.files.length > 0 && parseBackupForPreview(e.target.files)} />
         <input ref={multiFileRef} type="file" accept=".zip,.json" multiple className="hidden"
-          onChange={e => e.target.files && e.target.files.length > 0 && handleRestore(e.target.files)} />
+          onChange={e => e.target.files && e.target.files.length > 0 && parseBackupForPreview(e.target.files)} />
         <input ref={folderRef} type="file" className="hidden"
           {...({ webkitdirectory: 'true', directory: 'true' } as any)}
-          onChange={e => e.target.files && e.target.files.length > 0 && handleRestore(e.target.files)} />
+          onChange={e => e.target.files && e.target.files.length > 0 && parseBackupForPreview(e.target.files)} />
 
-        <div className="flex items-center gap-3 flex-wrap">
-          <Button variant="outline" onClick={() => singleFileRef.current?.click()} disabled={restoring}>
-            <File size={14} className="mr-1.5" />
-            {restoring ? 'Restoring...' : 'Single File'}
-          </Button>
-          <Button variant="outline" onClick={() => multiFileRef.current?.click()} disabled={restoring}>
-            <Files size={14} className="mr-1.5" />
-            Multiple Files
-          </Button>
-          <Button variant="outline" onClick={() => folderRef.current?.click()} disabled={restoring}>
-            <FolderUp size={14} className="mr-1.5" />
-            Upload Folder
-          </Button>
-        </div>
+        {!previewData ? (
+          <>
+            <div className="flex items-center gap-3 flex-wrap">
+              <Button variant="outline" onClick={() => singleFileRef.current?.click()} disabled={restoring}>
+                <File size={14} className="mr-1.5" />
+                Single File
+              </Button>
+              <Button variant="outline" onClick={() => multiFileRef.current?.click()} disabled={restoring}>
+                <Files size={14} className="mr-1.5" />
+                Multiple Files
+              </Button>
+              <Button variant="outline" onClick={() => folderRef.current?.click()} disabled={restoring}>
+                <FolderUp size={14} className="mr-1.5" />
+                Upload Folder
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              <strong>Single File:</strong> Upload one .zip or .json backup &nbsp;·&nbsp;
+              <strong>Multiple Files:</strong> Select several module .json files &nbsp;·&nbsp;
+              <strong>Folder:</strong> Select a folder containing backup files
+            </p>
+          </>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium">Select modules to restore:</p>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={toggleAll} className="text-xs h-7 px-2">
+                  {selectedModules.size === Object.keys(previewData).length ? 'Deselect All' : 'Select All'}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => { setPreviewData(null); setSelectedModules(new Set()); }} className="text-xs h-7 px-2">
+                  <X size={12} className="mr-1" /> Cancel
+                </Button>
+              </div>
+            </div>
 
-        <p className="text-xs text-muted-foreground mt-3">
-          <strong>Single File:</strong> Upload one .zip or .json backup &nbsp;·&nbsp;
-          <strong>Multiple Files:</strong> Select several module .json files &nbsp;·&nbsp;
-          <strong>Folder:</strong> Select a folder containing backup files
-        </p>
+            <div className="grid grid-cols-2 gap-2">
+              {Object.entries(previewData).map(([key, items]) => {
+                const label = key === 'settings' ? 'Settings' : (TABLE_LABELS[key] || key);
+                const count = Array.isArray(items) ? items.length : Object.keys(items).length;
+                const checked = selectedModules.has(key);
+                return (
+                  <label
+                    key={key}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${
+                      checked ? 'border-primary bg-primary/5' : 'border-border bg-muted/20 hover:bg-muted/40'
+                    }`}
+                  >
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={() => toggleModule(key)}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-medium">{label}</span>
+                      <span className="text-xs text-muted-foreground ml-2">
+                        ({count} {Array.isArray(items) ? 'records' : 'fields'})
+                      </span>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <Button onClick={confirmRestore} disabled={restoring || selectedModules.size === 0}>
+                <RotateCcw size={14} className="mr-1.5" />
+                {restoring ? 'Restoring...' : `Restore ${selectedModules.size} Module(s)`}
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                {selectedModules.size} of {Object.keys(previewData).length} modules selected
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Data summary */}
