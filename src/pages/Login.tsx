@@ -178,11 +178,26 @@ export default function Login() {
                   <Label htmlFor="signup-password">Password</Label>
                   <div className="relative mt-1.5">
                     <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    <Input id="signup-password" type={showPw ? 'text' : 'password'} placeholder="Min. 6 characters" value={password} onChange={e => setPassword(e.target.value)} className="pl-9 pr-9" required />
+                    <Input id="signup-password" type={showPw ? 'text' : 'password'} placeholder="Strong password" value={password} onChange={e => setPassword(e.target.value)} className="pl-9 pr-9" required />
                     <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" onClick={() => setShowPw(!showPw)}>
                       {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
+                  {password.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      <div className="flex gap-1">
+                        {[hasMinLength, hasUppercase, hasNumber, hasSpecial].map((met, i) => (
+                          <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${met ? 'bg-emerald-500' : 'bg-muted'}`} />
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-2 text-[10px]">
+                        <span className={hasMinLength ? 'text-emerald-600' : 'text-muted-foreground'}>✓ 8+ characters</span>
+                        <span className={hasUppercase ? 'text-emerald-600' : 'text-muted-foreground'}>✓ Uppercase (A-Z)</span>
+                        <span className={hasNumber ? 'text-emerald-600' : 'text-muted-foreground'}>✓ Number (0-9)</span>
+                        <span className={hasSpecial ? 'text-emerald-600' : 'text-muted-foreground'}>✓ Special (!@#$)</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? 'Creating account...' : 'Create Account'}
