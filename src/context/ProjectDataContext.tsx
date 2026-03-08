@@ -92,14 +92,14 @@ function createCrudOps<T extends { id: string }>(
   setData: React.Dispatch<React.SetStateAction<T[]>>,
   history: T[][],
   setHistory: React.Dispatch<React.SetStateAction<T[][]>>,
-  cloudSync?: { tableName: string; key: string; userId: string; projectId: string | null }
+  cloudSync?: { tableName: string; key: string; userId: string; projectId: string | null },
+  approvalMode?: { enabled: boolean; userId: string; projectId: string | null; tableName: string; key: string }
 ) {
   const pushHistory = () => setHistory(prev => [...prev.slice(-20), data]);
 
   const syncToCloud = async (newData: T[]) => {
     if (!cloudSync) return;
     const { tableName, key, userId, projectId } = cloudSync;
-    // Delete scoped data then re-insert
     let deleteQuery = (supabase as any).from(tableName).delete().eq('user_id', userId);
     if (projectId) deleteQuery = deleteQuery.eq('project_id', projectId);
     await deleteQuery;
@@ -109,8 +109,34 @@ function createCrudOps<T extends { id: string }>(
     }
   };
 
+  // Submit to approval queue instead of direct write
+  const submitForApproval = async (operation: 'insert' | 'update' | 'delete', item: T) => {
+    if (!approvalMode || !approvalMode.projectId) return false;
+    const snakeData = toSnakeCase(approvalMode.key, item, approvalMode.userId, approvalMode.projectId);
+    await (supabase as any).from('data_changes').insert({
+      project_id: approvalMode.projectId,
+      user_id: approvalMode.userId,
+      table_name: approvalMode.tableName,
+      record_id: item.id || crypto.randomUUID(),
+      operation,
+      data: snakeData,
+      status: 'pending',
+    });
+    toast({ 
+      title: '📋 Submitted for Approval', 
+      description: `Your ${operation} has been sent to admin/co-admin for review.` 
+    });
+    return true;
+  };
+
+  const needsApproval = approvalMode?.enabled && approvalMode?.projectId;
+
   return {
-    add: (item: T) => {
+    add: async (item: T) => {
+      if (needsApproval) {
+        await submitForApproval('insert', item);
+        return;
+      }
       pushHistory();
       setData(prev => {
         const next = [...prev, item];
@@ -118,7 +144,11 @@ function createCrudOps<T extends { id: string }>(
         return next;
       });
     },
-    update: (item: T) => {
+    update: async (item: T) => {
+      if (needsApproval) {
+        await submitForApproval('update', item);
+        return;
+      }
       pushHistory();
       setData(prev => {
         const next = prev.map(i => i.id === item.id ? item : i);
@@ -126,7 +156,12 @@ function createCrudOps<T extends { id: string }>(
         return next;
       });
     },
-    save: (item: T) => {
+    save: async (item: T) => {
+      if (needsApproval) {
+        const existing = data.find(i => i.id === item.id);
+        await submitForApproval(existing ? 'update' : 'insert', item);
+        return;
+      }
       pushHistory();
       setData(prev => {
         const idx = prev.findIndex(i => i.id === item.id);
@@ -135,7 +170,12 @@ function createCrudOps<T extends { id: string }>(
         return next;
       });
     },
-    remove: (id: string) => {
+    remove: async (id: string) => {
+      if (needsApproval) {
+        const item = data.find(i => i.id === id);
+        if (item) await submitForApproval('delete', item);
+        return;
+      }
       pushHistory();
       setData(prev => {
         const next = prev.filter(i => i.id !== id);
@@ -143,7 +183,11 @@ function createCrudOps<T extends { id: string }>(
         return next;
       });
     },
-    bulkAdd: (items: T[]) => {
+    bulkAdd: async (items: T[]) => {
+      if (needsApproval) {
+        for (const item of items) await submitForApproval('insert', item);
+        return;
+      }
       pushHistory();
       setData(prev => {
         const next = [...prev, ...items];
