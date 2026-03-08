@@ -376,7 +376,7 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-3 bg-muted/40 rounded-lg px-4 py-2 border">
           <Checkbox
-            checked={selectedIds.size === items.length}
+            checked={selectedIds.size === filteredItems.length}
             onCheckedChange={toggleSelectAll}
             aria-label="Select all"
           />
