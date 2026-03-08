@@ -502,11 +502,76 @@ export function DelaysPage() {
 
 // ─── Purchase Orders (linked to BOQ) ───
 export function PurchaseOrdersPage() {
-  const { purchaseOrders: data, poOps: ops, boqItems } = useProjectData();
+  const { purchaseOrders: data, poOps: ops, boqItems, inventory } = useProjectData();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState<any>({});
   const u = (k: string, v: any) => setForm((p: any) => ({ ...p, [k]: v }));
+  const [generating, setGenerating] = useState(false);
+
+  const generateFromShortages = async () => {
+    setGenerating(true);
+    try {
+      // Find inventory items with shortages (requiredQty > balance)
+      const shortages = inventory.filter(item => {
+        const required = (item as any).requiredQty || item.minLevel || 0;
+        const shortage = required - item.balance;
+        return shortage > 0;
+      });
+
+      if (shortages.length === 0) {
+        toast({ title: 'No Shortages', description: 'All inventory items have sufficient stock. Run AI analysis on BOQ first to populate required quantities.' });
+        setGenerating(false);
+        return;
+      }
+
+      // Fetch procurement tracking data for supplier info
+      const { data: procData } = await supabase.from('procurement_tracking').select('*');
+      const procMap: Record<string, { supplier: string; unit_rate: number }> = {};
+      (procData || []).forEach((p: any) => {
+        procMap[p.material_code] = { supplier: p.supplier, unit_rate: p.unit_rate };
+      });
+
+      const existingCodes = new Set(data.map(po => po.itemCode));
+      const newPOs: any[] = [];
+      let poCounter = data.length + 1;
+
+      shortages.forEach(item => {
+        // Skip if PO already exists for this item code
+        if (existingCodes.has(item.code)) return;
+
+        const required = (item as any).requiredQty || item.minLevel || 0;
+        const shortage = Math.max(0, required - item.balance);
+        if (shortage <= 0) return;
+
+        const procInfo = procMap[item.code];
+        const supplier = procInfo?.supplier || '';
+        const unitRate = procInfo?.unit_rate || 0;
+
+        newPOs.push({
+          id: crypto.randomUUID(),
+          poNo: `PO-AUTO-${String(poCounter++).padStart(4, '0')}`,
+          supplier,
+          date: new Date().toISOString().split('T')[0],
+          itemCode: item.code,
+          qty: shortage,
+          price: shortage * unitRate,
+          status: 'draft' as const,
+          remarks: `Auto-generated from shortage: Need ${required}, Have ${item.balance}, Short ${shortage} ${item.unit}`,
+        });
+      });
+
+      if (newPOs.length === 0) {
+        toast({ title: 'No New POs', description: 'POs already exist for all shortage items.' });
+      } else {
+        newPOs.forEach(po => ops.save(po));
+        toast({ title: 'POs Generated', description: `${newPOs.length} purchase orders created from inventory shortages.` });
+      }
+    } catch (err) {
+      toast({ title: 'Error', description: 'Failed to generate POs.', variant: 'destructive' });
+    }
+    setGenerating(false);
+  };
 
   return (
     <>
@@ -534,13 +599,18 @@ export function PurchaseOrdersPage() {
         onDelete={item => ops.remove(item.id)}
         fileName="PurchaseOrders"
         extraToolbar={
-          <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
-            printBtn={<PrintableReport title="Purchase Orders" columns={[
-              { key: 'poNo', label: 'PO No.' }, { key: 'date', label: 'Date' }, { key: 'supplier', label: 'Supplier' },
-              { key: 'itemCode', label: 'Item Code' }, { key: 'qty', label: 'Qty' }, { key: 'price', label: 'Amount' },
-              { key: 'status', label: 'Status' }, { key: 'remarks', label: 'Remarks' },
-            ]} data={data} />}
-          />
+          <div className="flex items-center gap-1.5">
+            <Button variant="outline" size="sm" onClick={generateFromShortages} disabled={generating} className="border-primary/30 text-primary hover:bg-primary/10">
+              {generating ? <><RefreshCw size={14} className="mr-1 animate-spin" /> Generating...</> : <><ArrowDownToLine size={14} className="mr-1" /> Generate from Shortages</>}
+            </Button>
+            <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
+              printBtn={<PrintableReport title="Purchase Orders" columns={[
+                { key: 'poNo', label: 'PO No.' }, { key: 'date', label: 'Date' }, { key: 'supplier', label: 'Supplier' },
+                { key: 'itemCode', label: 'Item Code' }, { key: 'qty', label: 'Qty' }, { key: 'price', label: 'Amount' },
+                { key: 'status', label: 'Status' }, { key: 'remarks', label: 'Remarks' },
+              ]} data={data} />}
+            />
+          </div>
         }
       />
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
