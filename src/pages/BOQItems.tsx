@@ -58,7 +58,13 @@ export default function BOQItems() {
 
         toast({
           title: '✅ AI Analysis Complete',
-          description: `${matCount} materials (est. NPR ${totalCost.toLocaleString()}), ${actCount} activities, ${gapCount} inventory gaps detected. Data synced to Inventory & Activities.`,
+          description: `${matCount} materials, ${actCount} activities, ${gapCount} inventory gaps detected.`,
+          action: actCount > 0 ? (
+            <Button variant="outline" size="sm" className="ml-2 shrink-0" onClick={() => navigate('/activities')}>
+              View Activities →
+            </Button>
+          ) : undefined,
+          duration: 8000,
         });
       }
     } catch {
