@@ -18,6 +18,7 @@ import { Package, Truck, CheckCircle2, Clock, Plus, Pencil, Trash2, ArrowDownToL
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 
 interface TrackingItem {
   id: string;
