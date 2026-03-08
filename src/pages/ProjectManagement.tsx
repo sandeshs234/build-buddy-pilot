@@ -36,7 +36,7 @@ function generateCode(): string {
 }
 
 export default function ProjectManagement() {
-  const { user, refreshMemberships } = useAuth();
+  const { user, profile, refreshMemberships } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [members, setMembers] = useState<Record<string, Member[]>>({});
   const [createOpen, setCreateOpen] = useState(false);
