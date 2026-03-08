@@ -90,6 +90,8 @@ export default function NotificationBell() {
         return '/fuel';
       case 'daily_quantity':
         return '/daily-quantity';
+      case 'procurement':
+        return '/material-procurement';
       default:
         return '/dashboard';
     }
