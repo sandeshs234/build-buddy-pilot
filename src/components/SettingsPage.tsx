@@ -259,5 +259,6 @@ export default function SettingsPage() {
           <BackupRestore />
         </TabsContent>
       </Tabs>
+    </div>
   );
 }
