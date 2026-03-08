@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { Bell } from 'lucide-react';
@@ -18,6 +19,7 @@ interface Notification {
 
 export default function NotificationBell() {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
 
@@ -49,6 +51,14 @@ export default function NotificationBell() {
   }, [user]);
 
   const unreadCount = notifications.filter(n => !n.read).length;
+
+  const handleNotificationClick = (notification: Notification) => {
+    // Navigate based on notification type
+    if (notification.type === 'join_request' || notification.type === 'approved' || notification.type === 'rejected') {
+      navigate('/projects');
+    }
+    setOpen(false);
+  };
 
   const markAllRead = async () => {
     if (!user) return;
@@ -91,25 +101,29 @@ export default function NotificationBell() {
           )}
         </div>
         <ScrollArea className="max-h-80">
-          {notifications.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">No notifications yet</p>
-          ) : (
-            notifications.map(n => (
-              <div key={n.id} className={cn('px-4 py-3 border-b last:border-0', !n.read && 'bg-muted/50')}>
-                <div className="flex items-start gap-2">
-                  <div className={cn('w-2 h-2 rounded-full mt-1.5 flex-shrink-0', getTypeColor(n.type))} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">{n.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{n.message}</p>
-                    <p className="text-[10px] text-muted-foreground/60 mt-1">
-                      {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </ScrollArea>
+           {notifications.length === 0 ? (
+             <p className="text-sm text-muted-foreground text-center py-8">No notifications yet</p>
+           ) : (
+             notifications.map(n => (
+               <button
+                 key={n.id}
+                 onClick={() => handleNotificationClick(n)}
+                 className={cn('w-full text-left px-4 py-3 border-b last:border-0 hover:bg-muted transition-colors', !n.read && 'bg-muted/50')}
+               >
+                 <div className="flex items-start gap-2">
+                   <div className={cn('w-2 h-2 rounded-full mt-1.5 flex-shrink-0', getTypeColor(n.type))} />
+                   <div className="flex-1 min-w-0">
+                     <p className="text-sm font-medium">{n.title}</p>
+                     <p className="text-xs text-muted-foreground mt-0.5">{n.message}</p>
+                     <p className="text-[10px] text-muted-foreground/60 mt-1">
+                       {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                     </p>
+                   </div>
+                 </div>
+               </button>
+             ))
+           )}
+         </ScrollArea>
       </PopoverContent>
     </Popover>
   );
