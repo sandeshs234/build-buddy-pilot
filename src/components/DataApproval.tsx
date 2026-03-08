@@ -138,7 +138,7 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
     fetchCounts();
   };
 
-  useEffect(() => { fetchChanges(); }, [projectId, filter]);
+  useEffect(() => { fetchChanges(); }, [projectId, filter, dateFrom, dateTo]);
   useEffect(() => { fetchCounts(); }, [projectId]);
 
   useEffect(() => {
