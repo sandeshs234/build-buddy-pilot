@@ -508,10 +508,7 @@ export default function UserManagement() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="project_manager">Project Manager</SelectItem>
-                            <SelectItem value="engineer">Engineer</SelectItem>
-                            <SelectItem value="viewer">Viewer</SelectItem>
+                            {roleSelectItems}
                           </SelectContent>
                         </Select>
                         {!isSelf && (
