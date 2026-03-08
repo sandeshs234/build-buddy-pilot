@@ -130,7 +130,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
             <h1 className="text-sm font-bold text-sidebar-foreground">BuildForge</h1>
           </div>
-          <div className="w-10" /> {/* Spacer for centering */}
+          <NotificationBell />
         </header>
       )}
 
