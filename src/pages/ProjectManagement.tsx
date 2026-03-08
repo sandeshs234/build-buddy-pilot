@@ -118,6 +118,7 @@ export default function ProjectManagement() {
       setCreateOpen(false);
       setNewName('');
       setNewDesc('');
+      await refreshMemberships();
       fetchProjects();
     }
     setLoading(false);
