@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { toast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
@@ -44,7 +45,17 @@ export default function NotificationBell() {
         schema: 'public',
         table: 'notifications',
         filter: `user_id=eq.${user?.id}`,
-      }, () => fetchNotifications())
+      }, (payload: any) => {
+        fetchNotifications();
+        // Show real-time toast for approval notifications
+        const row = payload.new;
+        if (row && (row.type === 'approval_notification' || row.type === 'approval')) {
+          toast({
+            title: row.title || 'New Notification',
+            description: row.message || '',
+          });
+        }
+      })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
