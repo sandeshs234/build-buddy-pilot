@@ -12,6 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 import SampleTemplates from '@/components/SampleTemplates';
 import AIAssistant from '@/components/AIAssistant';
 import ProjectChat from '@/components/ProjectChat';
+import NotificationBell from '@/components/NotificationBell';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useIsMobile } from '@/hooks/use-mobile';
 
