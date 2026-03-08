@@ -307,6 +307,10 @@ export default function BackupRestore() {
     }
   };
 
+  const totalRecords = data.activities.length + data.boqItems.length + data.inventory.length +
+    data.equipment.length + data.safety.length + data.delays.length + data.purchaseOrders.length +
+    data.manpower.length + data.fuelLog.length + data.concretePours.length + data.dailyQty.length;
+
   return (
     <div className="space-y-6">
       {/* Status Cards */}
