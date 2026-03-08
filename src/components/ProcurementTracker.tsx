@@ -180,9 +180,9 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
         title: 'Deleted',
         description: 'Tracking entry removed',
         action: deletedItem ? (
-          <Button variant="outline" size="sm" onClick={() => { restoreItems([deletedItem]); dismiss(); }}>
+          <ToastAction altText="Undo delete" onClick={() => { restoreItems([deletedItem]); dismiss(); }}>
             Undo
-          </Button>
+          </ToastAction>
         ) : undefined,
         duration: 5000,
       });
