@@ -14,6 +14,7 @@ import Dashboard from "./pages/Dashboard";
 import Activities from "./pages/Activities";
 import BOQItems from "./pages/BOQItems";
 import UserManagement from "./pages/UserManagement";
+import ProjectManagement from "./pages/ProjectManagement";
 import SettingsPage from "./components/SettingsPage";
 import {
   InventoryPage, ManpowerPage, EquipmentPage, SafetyPage, DelaysPage,
@@ -44,6 +45,7 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/" element={<ProtectedPage><Dashboard /></ProtectedPage>} />
               <Route path="/dashboard" element={<ProtectedPage><Dashboard /></ProtectedPage>} />
+              <Route path="/projects" element={<ProtectedPage><ProjectManagement /></ProtectedPage>} />
               <Route path="/activities" element={<ProtectedPage><Activities /></ProtectedPage>} />
               <Route path="/boq" element={<ProtectedPage><BOQItems /></ProtectedPage>} />
               <Route path="/inventory" element={<ProtectedPage><InventoryPage /></ProtectedPage>} />

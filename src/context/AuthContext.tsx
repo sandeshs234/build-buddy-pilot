@@ -15,6 +15,13 @@ interface Profile {
   storage_mode: string | null;
 }
 
+interface ProjectMembership {
+  project_id: string;
+  role: string; // 'admin' | 'co_admin' | 'member'
+  status: string;
+  project_name?: string;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -25,6 +32,14 @@ interface AuthContextType {
   storageMode: StorageMode;
   setStorageMode: (mode: 'local' | 'cloud') => Promise<void>;
   signOut: () => Promise<void>;
+  // Project context
+  currentProjectId: string | null;
+  setCurrentProjectId: (id: string | null) => void;
+  projectRole: string | null; // 'admin' | 'co_admin' | 'member'
+  projectMemberships: ProjectMembership[];
+  isProjectAdmin: boolean;
+  isProjectCoAdmin: boolean;
+  canApprove: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -36,6 +51,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
   const [storageMode, setStorageModeState] = useState<StorageMode>(null);
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(() => {
+    try { return localStorage.getItem('buildforge_current_project'); } catch { return null; }
+  });
+  const [projectMemberships, setProjectMemberships] = useState<ProjectMembership[]>([]);
 
   const fetchProfileAndRole = async (userId: string) => {
     const [profileRes, roleRes] = await Promise.all([
@@ -48,6 +67,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setStorageModeState((p.storage_mode as StorageMode) || null);
     }
     if (roleRes.data) setRole(roleRes.data.role as AppRole);
+
+    // Fetch project memberships
+    const { data: memberships } = await (supabase as any)
+      .from('project_members')
+      .select('project_id, role, status')
+      .eq('user_id', userId)
+      .eq('status', 'approved');
+
+    if (memberships && memberships.length > 0) {
+      // Fetch project names
+      const projectIds = memberships.map((m: any) => m.project_id);
+      const { data: projects } = await (supabase as any)
+        .from('projects')
+        .select('id, name')
+        .in('id', projectIds);
+
+      const enriched = memberships.map((m: any) => ({
+        ...m,
+        project_name: projects?.find((p: any) => p.id === m.project_id)?.name || 'Unknown',
+      }));
+      setProjectMemberships(enriched);
+
+      // Auto-select first project if none selected
+      if (!currentProjectId && enriched.length > 0) {
+        setCurrentProjectId(enriched[0].project_id);
+        try { localStorage.setItem('buildforge_current_project', enriched[0].project_id); } catch {}
+      }
+    }
   };
 
   useEffect(() => {
@@ -61,6 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setProfile(null);
           setRole(null);
           setStorageModeState(null);
+          setProjectMemberships([]);
         }
         setLoading(false);
       }
@@ -78,6 +126,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  const handleSetCurrentProjectId = (id: string | null) => {
+    setCurrentProjectId(id);
+    try {
+      if (id) localStorage.setItem('buildforge_current_project', id);
+      else localStorage.removeItem('buildforge_current_project');
+    } catch {}
+  };
+
   const setStorageMode = async (mode: 'local' | 'cloud') => {
     setStorageModeState(mode);
     if (user) {
@@ -92,7 +148,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
     setRole(null);
     setStorageModeState(null);
+    setProjectMemberships([]);
   };
+
+  const currentMembership = projectMemberships.find(m => m.project_id === currentProjectId);
+  const projectRole = currentMembership?.role || null;
+  const isProjectAdmin = projectRole === 'admin';
+  const isProjectCoAdmin = projectRole === 'co_admin';
+  const canApprove = isProjectAdmin || isProjectCoAdmin;
 
   return (
     <AuthContext.Provider value={{
@@ -101,6 +164,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       storageMode,
       setStorageMode,
       signOut,
+      currentProjectId,
+      setCurrentProjectId: handleSetCurrentProjectId,
+      projectRole,
+      projectMemberships,
+      isProjectAdmin,
+      isProjectCoAdmin,
+      canApprove,
     }}>
       {children}
     </AuthContext.Provider>
