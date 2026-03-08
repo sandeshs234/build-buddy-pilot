@@ -308,6 +308,28 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
     }
   };
 
+  const exportToExcel = () => {
+    if (changes.length === 0) {
+      toast({ title: 'Nothing to export', description: 'No data in the current view.' });
+      return;
+    }
+    const rows = changes.map(c => ({
+      'Status': c.status,
+      'Operation': c.operation,
+      'Table': c.table_name.replace(/_/g, ' '),
+      'Submitted By': c.profile?.full_name || c.profile?.email || 'Unknown',
+      'Submitted At': format(new Date(c.created_at), 'yyyy-MM-dd HH:mm'),
+      'Reviewed At': c.approved_at ? format(new Date(c.approved_at), 'yyyy-MM-dd HH:mm') : '',
+      'Rejection Reason': c.rejection_reason || '',
+      'Data': JSON.stringify(c.data),
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Approval Queue');
+    XLSX.writeFile(wb, `approval_queue_${filter}_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+    toast({ title: 'Exported', description: `${rows.length} records exported` });
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
