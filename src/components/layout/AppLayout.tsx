@@ -99,6 +99,7 @@ const navGroups: NavGroup[] = [
       { label: 'Photos', path: '/photos', icon: <Camera size={18} /> },
       { label: 'Documents', path: '/documents', icon: <FileText size={18} /> },
       { label: 'Delays', path: '/delays', icon: <Clock size={18} /> },
+      { label: 'Project Summary', path: '/project-summary', icon: <FileSpreadsheet size={18} />, minRole: 'project_manager' },
       { label: 'Reports', path: '/reports', icon: <BarChart3 size={18} />, minRole: 'project_manager' },
     ],
   },
