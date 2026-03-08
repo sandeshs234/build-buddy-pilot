@@ -268,28 +268,44 @@ export default function MaterialProcurement() {
     return Object.entries(map).sort((a, b) => +a[0] - +b[0]);
   }, [materials]);
 
-  if (materials.length === 0) {
+  const hasMaterials = materials.length > 0;
+
+  if (!hasMaterials) {
     return (
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Material Procurement Plan</h1>
           <p className="text-muted-foreground">AI-powered procurement planning with Nepal market rates</p>
         </div>
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16 gap-4">
-            <Package size={48} className="text-muted-foreground/40" />
-            <h3 className="text-lg font-semibold">No Procurement Data Yet</h3>
-            <p className="text-sm text-muted-foreground max-w-md text-center">
-              Run AI analysis on your BOQ items to generate a comprehensive procurement plan with Nepal market rates, supplier suggestions, and timelines.
-            </p>
-            <Button onClick={runAnalysis} disabled={syncing} size="lg">
-              {syncing ? <><Loader2 size={16} className="mr-2 animate-spin" /> Analyzing BOQ...</> : <><Sparkles size={16} className="mr-2" /> Generate Procurement Plan</>}
-            </Button>
-            {boqItems.length === 0 && (
-              <p className="text-xs text-destructive">Add BOQ items first before generating a procurement plan.</p>
-            )}
-          </CardContent>
-        </Card>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList>
+            <TabsTrigger value="overview">Generate Plan</TabsTrigger>
+            <TabsTrigger value="tracking">Procurement Tracker</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="overview" className="mt-4">
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-16 gap-4">
+                <Package size={48} className="text-muted-foreground/40" />
+                <h3 className="text-lg font-semibold">No Procurement Data Yet</h3>
+                <p className="text-sm text-muted-foreground max-w-md text-center">
+                  Run AI analysis on your BOQ items to generate a comprehensive procurement plan with Nepal market rates, supplier suggestions, and timelines.
+                </p>
+                <Button onClick={runAnalysis} disabled={syncing} size="lg">
+                  {syncing ? <><Loader2 size={16} className="mr-2 animate-spin" /> Analyzing BOQ...</> : <><Sparkles size={16} className="mr-2" /> Generate Procurement Plan</>}
+                </Button>
+                {boqItems.length === 0 && (
+                  <p className="text-xs text-destructive">Add BOQ items first before generating a procurement plan.</p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="tracking" className="mt-4">
+            <ProcurementTracker materials={[]} />
+          </TabsContent>
+        </Tabs>
       </div>
     );
   }
