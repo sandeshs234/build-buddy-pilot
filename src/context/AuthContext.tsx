@@ -178,6 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isProjectAdmin,
       isProjectCoAdmin,
       canApprove,
+      refreshMemberships,
     }}>
       {children}
     </AuthContext.Provider>
