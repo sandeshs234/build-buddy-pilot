@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useProjectData } from '@/context/ProjectDataContext';
 import { BOQItem } from '@/types/construction';
-import ExcelImportExport from '@/components/ExcelImportExport';
+import PrintableReport from '@/components/PrintableReport';
 import PrintableReport from '@/components/PrintableReport';
 import { Button } from '@/components/ui/button';
 import { Plus, Pencil, Trash2, Undo2, Trash } from 'lucide-react';
