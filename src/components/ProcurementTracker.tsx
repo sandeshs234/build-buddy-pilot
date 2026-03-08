@@ -5,11 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Package, Truck, CheckCircle2, Clock, Plus, Pencil, Trash2, ArrowDownToLine, RefreshCw } from 'lucide-react';
+import { Package, Truck, CheckCircle2, Clock, Plus, Pencil, Trash2, ArrowDownToLine, RefreshCw, Trash } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -125,6 +129,18 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
     if (!error) {
       toast({ title: 'Deleted', description: 'Tracking entry removed' });
       fetchItems();
+    }
+  };
+
+  const clearAll = async () => {
+    if (!user || items.length === 0) return;
+    const ids = items.map(i => i.id);
+    const { error } = await supabase.from('procurement_tracking').delete().in('id', ids);
+    if (!error) {
+      toast({ title: 'Cleared', description: `All ${ids.length} tracking entries removed` });
+      setItems([]);
+    } else {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
   };
 
@@ -283,6 +299,29 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
             }
           }}
         />
+        {items.length > 0 && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-destructive">
+                <Trash size={14} className="mr-1" /> Clear All
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Clear all procurement data?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete all {items.length} tracking entries. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={clearAll} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Yes, clear all
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
 
       {/* Table */}
