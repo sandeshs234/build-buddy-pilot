@@ -116,6 +116,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { profile, role, signOut, currentProjectId, setCurrentProjectId, projectMemberships, projectRole } = useAuth();
   const location = useLocation();
   const isMobile = useIsMobile();
+  useDeliveryAlerts();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [templatesOpen, setTemplatesOpen] = useState(false);
