@@ -370,38 +370,92 @@ export default function BackupRestore() {
       <div className="bg-card rounded-xl border shadow-sm p-6">
         <h3 className="text-sm font-semibold mb-1">Restore from Backup</h3>
         <p className="text-xs text-muted-foreground mb-4">
-          Restore data from a backup file (.zip or .json). Choose single file, multiple files, or an entire folder.
+          Select a backup file to preview available modules, then choose which ones to restore.
         </p>
 
         {/* Hidden file inputs */}
         <input ref={singleFileRef} type="file" accept=".zip,.json" className="hidden"
-          onChange={e => e.target.files && e.target.files.length > 0 && handleRestore(e.target.files)} />
+          onChange={e => e.target.files && e.target.files.length > 0 && parseBackupForPreview(e.target.files)} />
         <input ref={multiFileRef} type="file" accept=".zip,.json" multiple className="hidden"
-          onChange={e => e.target.files && e.target.files.length > 0 && handleRestore(e.target.files)} />
+          onChange={e => e.target.files && e.target.files.length > 0 && parseBackupForPreview(e.target.files)} />
         <input ref={folderRef} type="file" className="hidden"
           {...({ webkitdirectory: 'true', directory: 'true' } as any)}
-          onChange={e => e.target.files && e.target.files.length > 0 && handleRestore(e.target.files)} />
+          onChange={e => e.target.files && e.target.files.length > 0 && parseBackupForPreview(e.target.files)} />
 
-        <div className="flex items-center gap-3 flex-wrap">
-          <Button variant="outline" onClick={() => singleFileRef.current?.click()} disabled={restoring}>
-            <File size={14} className="mr-1.5" />
-            {restoring ? 'Restoring...' : 'Single File'}
-          </Button>
-          <Button variant="outline" onClick={() => multiFileRef.current?.click()} disabled={restoring}>
-            <Files size={14} className="mr-1.5" />
-            Multiple Files
-          </Button>
-          <Button variant="outline" onClick={() => folderRef.current?.click()} disabled={restoring}>
-            <FolderUp size={14} className="mr-1.5" />
-            Upload Folder
-          </Button>
-        </div>
+        {!previewData ? (
+          <>
+            <div className="flex items-center gap-3 flex-wrap">
+              <Button variant="outline" onClick={() => singleFileRef.current?.click()} disabled={restoring}>
+                <File size={14} className="mr-1.5" />
+                Single File
+              </Button>
+              <Button variant="outline" onClick={() => multiFileRef.current?.click()} disabled={restoring}>
+                <Files size={14} className="mr-1.5" />
+                Multiple Files
+              </Button>
+              <Button variant="outline" onClick={() => folderRef.current?.click()} disabled={restoring}>
+                <FolderUp size={14} className="mr-1.5" />
+                Upload Folder
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              <strong>Single File:</strong> Upload one .zip or .json backup &nbsp;·&nbsp;
+              <strong>Multiple Files:</strong> Select several module .json files &nbsp;·&nbsp;
+              <strong>Folder:</strong> Select a folder containing backup files
+            </p>
+          </>
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-medium">Select modules to restore:</p>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={toggleAll} className="text-xs h-7 px-2">
+                  {selectedModules.size === Object.keys(previewData).length ? 'Deselect All' : 'Select All'}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => { setPreviewData(null); setSelectedModules(new Set()); }} className="text-xs h-7 px-2">
+                  <X size={12} className="mr-1" /> Cancel
+                </Button>
+              </div>
+            </div>
 
-        <p className="text-xs text-muted-foreground mt-3">
-          <strong>Single File:</strong> Upload one .zip or .json backup &nbsp;·&nbsp;
-          <strong>Multiple Files:</strong> Select several module .json files &nbsp;·&nbsp;
-          <strong>Folder:</strong> Select a folder containing backup files
-        </p>
+            <div className="grid grid-cols-2 gap-2">
+              {Object.entries(previewData).map(([key, items]) => {
+                const label = key === 'settings' ? 'Settings' : (TABLE_LABELS[key] || key);
+                const count = Array.isArray(items) ? items.length : Object.keys(items).length;
+                const checked = selectedModules.has(key);
+                return (
+                  <label
+                    key={key}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors ${
+                      checked ? 'border-primary bg-primary/5' : 'border-border bg-muted/20 hover:bg-muted/40'
+                    }`}
+                  >
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={() => toggleModule(key)}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-medium">{label}</span>
+                      <span className="text-xs text-muted-foreground ml-2">
+                        ({count} {Array.isArray(items) ? 'records' : 'fields'})
+                      </span>
+                    </div>
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-3 pt-2">
+              <Button onClick={confirmRestore} disabled={restoring || selectedModules.size === 0}>
+                <RotateCcw size={14} className="mr-1.5" />
+                {restoring ? 'Restoring...' : `Restore ${selectedModules.size} Module(s)`}
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                {selectedModules.size} of {Object.keys(previewData).length} modules selected
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Data summary */}
