@@ -217,11 +217,16 @@ export default function UserManagement() {
           <h1 className="text-2xl font-bold text-foreground">User Management</h1>
           <p className="text-sm text-muted-foreground mt-1">Create accounts and assign roles · {users.length} users</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          {selectedIds.size > 0 && (
+            <Button variant="destructive" onClick={() => setBulkDeleteOpen(true)}>
+              <Trash2 size={14} className="mr-1.5" /> Delete Selected ({selectedIds.size})
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setGuideOpen(!guideOpen)}>
             <Info size={14} className="mr-1.5" /> Role Guide
           </Button>
-          <Button variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/5" onClick={() => setClearAllOpen(true)} disabled={users.filter(u => u.id !== currentUser?.id).length === 0}>
+          <Button variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/5" onClick={() => setClearAllOpen(true)} disabled={selectableUsers.length === 0}>
             <Trash size={14} className="mr-1.5" /> Clear All Users
           </Button>
           <Button onClick={() => setDialogOpen(true)}>
