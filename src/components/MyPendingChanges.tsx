@@ -2,8 +2,10 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Check, X, FileText } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Clock, Check, X, FileText, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from '@/hooks/use-toast';
 
 interface MyChange {
   id: string;
@@ -19,6 +21,7 @@ export default function MyPendingChanges() {
   const { user, currentProjectId } = useAuth();
   const [changes, setChanges] = useState<MyChange[]>([]);
   const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState<string | null>(null);
 
   const fetchMyChanges = async () => {
     if (!user) return;
@@ -53,6 +56,24 @@ export default function MyPendingChanges() {
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [user, currentProjectId]);
+
+  const cancelChange = async (changeId: string) => {
+    setCancelling(changeId);
+    const { error } = await (supabase as any)
+      .from('data_changes')
+      .delete()
+      .eq('id', changeId)
+      .eq('user_id', user?.id)
+      .eq('status', 'pending');
+
+    if (error) {
+      toast({ title: '❌ Failed to cancel', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: '🗑️ Cancelled', description: 'Your pending submission has been cancelled.' });
+      setChanges(prev => prev.filter(c => c.id !== changeId));
+    }
+    setCancelling(null);
+  };
 
   const statusIcon = (status: string) => {
     switch (status) {
@@ -105,6 +126,18 @@ export default function MyPendingChanges() {
               <span className="text-[10px] text-muted-foreground">
                 {format(new Date(change.created_at), 'MMM d, HH:mm')}
               </span>
+              {change.status === 'pending' && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => cancelChange(change.id)}
+                  disabled={cancelling === change.id}
+                  title="Cancel this submission"
+                >
+                  <Trash2 size={12} />
+                </Button>
+              )}
             </div>
           </div>
         ))}
