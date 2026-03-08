@@ -18,6 +18,7 @@ import { Package, Truck, CheckCircle2, Clock, Plus, Pencil, Trash2, ArrowDownToL
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 
 interface TrackingItem {
   id: string;
@@ -160,21 +161,51 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
     fetchItems();
   };
 
+  const restoreItems = async (deletedItems: TrackingItem[]) => {
+    if (!user) return;
+    const rows = deletedItems.map(({ id, ...rest }) => ({ ...rest, id, user_id: user.id }));
+    const { error } = await supabase.from('procurement_tracking').insert(rows as any);
+    if (!error) {
+      toast({ title: '↩️ Restored', description: `${deletedItems.length} item(s) restored` });
+      fetchItems();
+    }
+  };
+
   const handleDelete = async (id: string) => {
+    const deletedItem = items.find(i => i.id === id);
     const { error } = await supabase.from('procurement_tracking').delete().eq('id', id);
     if (!error) {
-      toast({ title: 'Deleted', description: 'Tracking entry removed' });
-      fetchItems();
+      setItems(prev => prev.filter(i => i.id !== id));
+      const { dismiss } = toast({
+        title: 'Deleted',
+        description: 'Tracking entry removed',
+        action: deletedItem ? (
+          <ToastAction altText="Undo delete" onClick={() => { restoreItems([deletedItem]); dismiss(); }}>
+            Undo
+          </ToastAction>
+        ) : undefined,
+        duration: 5000,
+      });
     }
   };
 
   const clearAll = async () => {
     if (!user || items.length === 0) return;
+    const deletedItems = [...items];
     const ids = items.map(i => i.id);
     const { error } = await supabase.from('procurement_tracking').delete().in('id', ids);
     if (!error) {
-      toast({ title: 'Cleared', description: `All ${ids.length} tracking entries removed` });
       setItems([]);
+      const { dismiss } = toast({
+        title: 'Cleared',
+        description: `All ${ids.length} tracking entries removed`,
+        action: (
+          <ToastAction altText="Undo clear all" onClick={() => { restoreItems(deletedItems); dismiss(); }}>
+            Undo
+          </ToastAction>
+        ),
+        duration: 5000,
+      });
     } else {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
@@ -199,11 +230,21 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
   const deleteSelected = async () => {
     if (selectedIds.size === 0) return;
     const ids = [...selectedIds];
+    const deletedItems = items.filter(i => selectedIds.has(i.id));
     const { error } = await supabase.from('procurement_tracking').delete().in('id', ids);
     if (!error) {
-      toast({ title: 'Deleted', description: `${ids.length} entries removed` });
+      setItems(prev => prev.filter(i => !selectedIds.has(i.id)));
       setSelectedIds(new Set());
-      fetchItems();
+      const { dismiss } = toast({
+        title: 'Deleted',
+        description: `${ids.length} entries removed`,
+        action: (
+          <ToastAction altText="Undo bulk delete" onClick={() => { restoreItems(deletedItems); dismiss(); }}>
+            Undo
+          </ToastAction>
+        ),
+        duration: 5000,
+      });
     } else {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
