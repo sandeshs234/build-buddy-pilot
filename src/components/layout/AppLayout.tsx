@@ -78,6 +78,7 @@ const navGroups: NavGroup[] = [
     label: 'Procurement',
     items: [
       { label: 'Inventory', path: '/inventory', icon: <Package size={18} /> },
+      { label: 'Procurement Plan', path: '/procurement-plan', icon: <TrendingUp size={18} /> },
       { label: 'Purchase Orders', path: '/purchase-orders', icon: <ShoppingCart size={18} />, minRole: 'engineer' },
       { label: 'Bills', path: '/bills', icon: <Receipt size={18} />, minRole: 'project_manager' },
     ],
