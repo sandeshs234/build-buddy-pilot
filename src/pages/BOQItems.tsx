@@ -66,7 +66,7 @@ export default function BOQItems() {
           <Button variant="ghost" size="sm" onClick={boqOps.clearAll} disabled={items.length === 0} className="text-destructive" title="Clear all">
             <Trash size={14} className="mr-1" /> Clear All
           </Button>
-          <ExcelImportExport data={items} columns={excelColumns} fileName="BOQ_Items" onImport={handleImport} />
+          <Button size="sm" onClick={openAdd}><Plus size={14} className="mr-1" /> Add Item</Button>
           <Button size="sm" onClick={openAdd}><Plus size={14} className="mr-1" /> Add Item</Button>
         </div>
       </div>
