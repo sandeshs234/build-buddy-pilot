@@ -301,9 +301,17 @@ export default function MaterialProcurement() {
           <h1 className="text-2xl font-bold">Material Procurement Plan</h1>
           <p className="text-muted-foreground">{materials.length} materials · NPR {totalBudget.toLocaleString()} estimated budget</p>
         </div>
-        <Button variant="outline" size="sm" onClick={runAnalysis} disabled={syncing}>
-          <RefreshCw size={14} className={`mr-1 ${syncing ? 'animate-spin' : ''}`} /> Re-analyze
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={handleExportExcel}>
+            <Download size={14} className="mr-1" /> Export Excel
+          </Button>
+          <Button variant="outline" size="sm" onClick={handlePrintPDF}>
+            <Printer size={14} className="mr-1" /> Print Report
+          </Button>
+          <Button variant="outline" size="sm" onClick={runAnalysis} disabled={syncing}>
+            <RefreshCw size={14} className={`mr-1 ${syncing ? 'animate-spin' : ''}`} /> Re-analyze
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
