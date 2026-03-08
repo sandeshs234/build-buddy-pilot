@@ -36,7 +36,7 @@ function generateCode(): string {
 }
 
 export default function ProjectManagement() {
-  const { user } = useAuth();
+  const { user, refreshMemberships } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [members, setMembers] = useState<Record<string, Member[]>>({});
   const [createOpen, setCreateOpen] = useState(false);
@@ -117,6 +117,7 @@ export default function ProjectManagement() {
       setCreateOpen(false);
       setNewName('');
       setNewDesc('');
+      await refreshMemberships();
       fetchProjects();
     }
     setLoading(false);
