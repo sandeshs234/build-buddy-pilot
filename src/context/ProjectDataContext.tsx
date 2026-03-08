@@ -5,6 +5,7 @@ import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
+const CACHE_KEY = 'buildforge_offline_cache';
 const STORAGE_KEY = 'buildforge_project_data';
 
 // ── Local storage helpers ──
