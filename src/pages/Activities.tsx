@@ -98,7 +98,6 @@ export default function Activities() {
             <Bot size={14} className="mr-1" /> AI Assist
           </Button>
           <div className="flex items-center border rounded-lg overflow-hidden">
-          <div className="flex items-center border rounded-lg overflow-hidden">
             <Button variant="ghost" size="sm" onClick={() => setView('gantt')} className={cn("rounded-none", view === 'gantt' && 'bg-muted')}>
               <BarChart3 size={14} className="mr-1" /> Gantt
             </Button>
