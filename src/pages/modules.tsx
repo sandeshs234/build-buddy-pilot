@@ -275,17 +275,6 @@ export function EquipmentPage() {
         onAdd={() => { setForm({ id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0], eqId: '', equipmentName: '', description: '', operator: '', ownership: 'owned', billingBasis: 'hourly', rate: 0, hours: 0, fuel: 0, activity: '', issues: '' }); setEditing(null); setDialogOpen(true); }}
         onEdit={item => { setForm(item); setEditing(item); setDialogOpen(true); }}
         onDelete={item => ops.remove(item.id)}
-        onImport={rows => {
-          const mapped = rows.map(r => ({
-            id: crypto.randomUUID(), date: r.Date || '', eqId: r['Eq. ID'] || '', equipmentName: r.Equipment || r.equipmentName || '',
-            description: r.Description || r.description || '', operator: r.Operator || '',
-            ownership: (r.Ownership || 'owned').toLowerCase() as 'owned' | 'leased' | 'rented',
-            billingBasis: r.Billing || 'hourly', rate: +r.Rate || 0,
-            hours: +r.Hours || 0, fuel: +r['Fuel (L)'] || +r.fuel || 0,
-            activity: r.Activity || '', issues: r.Issues || '',
-          }));
-          mapped.forEach(m => ops.add(m as any));
-        }}
         fileName="Equipment"
         extraToolbar={
           <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
