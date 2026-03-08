@@ -131,16 +131,33 @@ export default function MyPendingChanges() {
                 {format(new Date(change.created_at), 'MMM d, HH:mm')}
               </span>
               {change.status === 'pending' && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
-                  onClick={() => cancelChange(change.id)}
-                  disabled={cancelling === change.id}
-                  title="Cancel this submission"
-                >
-                  <Trash2 size={12} />
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      disabled={cancelling === change.id}
+                      title="Cancel this submission"
+                    >
+                      <Trash2 size={12} />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Cancel submission?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently remove your pending {change.operation} on {change.table_name.replace(/_/g, ' ')}. This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Keep it</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => cancelChange(change.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                        Yes, cancel it
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               )}
             </div>
           </div>
