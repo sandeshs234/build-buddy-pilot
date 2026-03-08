@@ -311,7 +311,12 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <h2 className="text-lg font-semibold text-foreground">Data Approval Queue</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-foreground">Data Approval Queue</h2>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={exportToExcel}>
+            <Download size={14} /> Export
+          </Button>
+        </div>
         <div className="flex gap-1">
           {(['pending', 'approved', 'rejected', 'all'] as const).map(f => {
             const count = f === 'all'
