@@ -175,13 +175,14 @@ export default function MyPendingChanges() {
 
         <div className="space-y-2 max-h-64 overflow-y-auto">
           {changes.map(change => (
-            <div key={change.id} className="flex items-center justify-between bg-muted/30 rounded-lg px-3 py-2 border">
-              <div className="flex items-center gap-3 min-w-0">
-                {opLabel(change.operation)}
-                <span className="text-sm text-foreground capitalize truncate">
-                  {change.table_name.replace(/_/g, ' ')}
-                </span>
-              </div>
+            <div key={change.id} className="bg-muted/30 rounded-lg px-3 py-2 border space-y-1">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 min-w-0">
+                  {opLabel(change.operation)}
+                  <span className="text-sm text-foreground capitalize truncate">
+                    {change.table_name.replace(/_/g, ' ')}
+                  </span>
+                </div>
               <div className="flex items-center gap-3 flex-shrink-0">
                 {statusIcon(change.status)}
                 <span className="text-[10px] text-muted-foreground">
