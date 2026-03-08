@@ -89,9 +89,6 @@ export default function Login() {
           </div>
           <h1 className="text-2xl font-bold text-foreground">BuildForge</h1>
           <p className="text-sm text-muted-foreground mt-1">Construction Project Management</p>
-          <p className="text-xs text-muted-foreground/70 mt-2 bg-muted/50 rounded-lg px-3 py-1.5 inline-block">
-            ℹ️ First user to register becomes the Admin
-          </p>
         </div>
 
         <div className="bg-card rounded-2xl border shadow-lg p-8">
