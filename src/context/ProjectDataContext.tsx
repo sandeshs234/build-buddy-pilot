@@ -184,7 +184,7 @@ function useDataState<T>(key: string, fallback: T[], isCloud: boolean, userId: s
     if (isCloud && userId) {
       const tableName = TABLE_MAP[key];
       if (!tableName) return;
-      (supabase.from(tableName) as any)
+      (supabase as any).from(tableName)
         .select('*')
         .eq('user_id', userId)
         .then(({ data: rows }: any) => {
