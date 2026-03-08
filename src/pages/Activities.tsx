@@ -9,7 +9,7 @@ import ActivityDialog from '@/components/ActivityDialog';
 import AIAssistant from '@/components/AIAssistant';
 import { Button } from '@/components/ui/button';
 import PrintableReport from '@/components/PrintableReport';
-import { Plus, BarChart3, Table2, Pencil, Trash2, Bot, Network, Undo2, Trash, CalendarRange } from 'lucide-react';
+import { Plus, BarChart3, Table2, Pencil, Trash2, Bot, Network, Undo2, Trash, CalendarRange, GitBranch } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const statusBadge = (status: string, critical: boolean) => {
