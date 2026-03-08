@@ -23,6 +23,9 @@ export default function BOQItems() {
   const [newProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
   const [materialAnalysisOpen, setMaterialAnalysisOpen] = useState(false);
   const [autoAnalysisRunning, setAutoAnalysisRunning] = useState(false);
+  const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
+  const [projectDesc, setProjectDesc] = useState('');
+  const [generating, setGenerating] = useState(false);
 
   const totalBudget = items.reduce((sum, i) => sum + i.totalQty * i.rate, 0);
   const totalExecuted = items.reduce((sum, i) => sum + i.executedQty * i.rate, 0);
