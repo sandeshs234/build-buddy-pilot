@@ -185,14 +185,6 @@ export function ManpowerPage() {
         onAdd={() => { setForm({ id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0], location: '', trades: [{ trade: '', count: 0 }], supervisor: '' }); setEditing(null); setDialogOpen(true); }}
         onEdit={item => { setForm(item); setEditing(item); setDialogOpen(true); }}
         onDelete={item => ops.remove(item.id)}
-        onImport={rows => {
-          const mapped = rows.map(r => ({
-            id: crypto.randomUUID(), date: r.Date || '', location: r.Location || '',
-            trades: MANPOWER_TRADES.filter(t => r[t] && +r[t] > 0).map(t => ({ trade: t, count: +r[t] })),
-            supervisor: r.Supervisor || '',
-          }));
-          mapped.forEach(m => ops.add(m));
-        }}
         fileName="Manpower"
         extraToolbar={
           <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
