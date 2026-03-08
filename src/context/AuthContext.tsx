@@ -40,6 +40,7 @@ interface AuthContextType {
   isProjectAdmin: boolean;
   isProjectCoAdmin: boolean;
   canApprove: boolean;
+  refreshMemberships: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
