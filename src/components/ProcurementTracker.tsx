@@ -239,9 +239,9 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
         title: 'Deleted',
         description: `${ids.length} entries removed`,
         action: (
-          <Button variant="outline" size="sm" onClick={() => { restoreItems(deletedItems); dismiss(); }}>
+          <ToastAction altText="Undo bulk delete" onClick={() => { restoreItems(deletedItems); dismiss(); }}>
             Undo
-          </Button>
+          </ToastAction>
         ),
         duration: 5000,
       });
