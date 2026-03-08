@@ -190,6 +190,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         {/* Quick Actions */}
         <div className="px-3 py-2 border-b border-sidebar-border flex gap-1.5">
+          {!isMobile && <NotificationBell />}
           <button
             onClick={() => setAiOpen(true)}
             className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-[11px] font-medium bg-sidebar-primary/20 text-sidebar-primary hover:bg-sidebar-primary/30 transition-colors"
