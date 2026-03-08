@@ -278,8 +278,11 @@ export default function UserManagement() {
       <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="data-table">
-            <thead>
+             <thead>
               <tr>
+                <th className="w-10">
+                  <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all" />
+                </th>
                 <th>Name</th>
                 <th>Email</th>
                 <th>Company</th>
@@ -288,44 +291,52 @@ export default function UserManagement() {
               </tr>
             </thead>
             <tbody>
-              {users.map(u => (
-                <tr key={u.id}>
-                  <td className="font-medium">{u.full_name || '—'}</td>
-                  <td>{u.email}</td>
-                  <td>{u.company || '—'}</td>
-                  <td>
-                    <Badge variant="outline" className={ROLE_COLORS[u.role]}>
-                      {ROLE_LABELS[u.role]}
-                    </Badge>
-                  </td>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <Select value={u.role} onValueChange={(v) => handleChangeRole(u.id, v as AppRole)}>
-                        <SelectTrigger className="w-[160px] h-8 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="project_manager">Project Manager</SelectItem>
-                          <SelectItem value="engineer">Engineer</SelectItem>
-                          <SelectItem value="viewer">Viewer</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {u.id !== currentUser?.id && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
-                          onClick={() => { setDeleteTarget(u); setConfirmDeleteOpen(true); }}
-                          title="Delete user"
-                        >
-                          <Trash2 size={14} />
-                        </Button>
+              {users.map(u => {
+                const isSelf = u.id === currentUser?.id;
+                return (
+                  <tr key={u.id} className={selectedIds.has(u.id) ? 'bg-primary/5' : ''}>
+                    <td>
+                      {isSelf ? <span className="text-xs text-muted-foreground">You</span> : (
+                        <Checkbox checked={selectedIds.has(u.id)} onCheckedChange={() => toggleSelect(u.id)} aria-label={`Select ${u.email}`} />
                       )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="font-medium">{u.full_name || '—'}</td>
+                    <td>{u.email}</td>
+                    <td>{u.company || '—'}</td>
+                    <td>
+                      <Badge variant="outline" className={ROLE_COLORS[u.role]}>
+                        {ROLE_LABELS[u.role]}
+                      </Badge>
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-2">
+                        <Select value={u.role} onValueChange={(v) => handleChangeRole(u.id, v as AppRole)}>
+                          <SelectTrigger className="w-[160px] h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="project_manager">Project Manager</SelectItem>
+                            <SelectItem value="engineer">Engineer</SelectItem>
+                            <SelectItem value="viewer">Viewer</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {!isSelf && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
+                            onClick={() => { setDeleteTarget(u); setConfirmDeleteOpen(true); }}
+                            title="Delete user"
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
