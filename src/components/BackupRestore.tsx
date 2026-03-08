@@ -149,18 +149,19 @@ export default function BackupRestore() {
     dailyQty: data.dailyQtyOps,
   });
 
-  const restoreFromJson = (jsonData: any) => {
+  const restoreFromJson = (jsonData: any, allowedKeys?: Set<string>) => {
     const ops = getOpsMap();
     let restoredCount = 0;
 
     // Restore settings
-    if (jsonData.settings && typeof jsonData.settings === 'object' && Object.keys(jsonData.settings).length > 0) {
+    if ((!allowedKeys || allowedKeys.has('settings')) && jsonData.settings && typeof jsonData.settings === 'object' && Object.keys(jsonData.settings).length > 0) {
       localStorage.setItem('buildforge-settings', JSON.stringify(jsonData.settings));
       restoredCount++;
     }
 
     // Restore module data
     for (const [key, op] of Object.entries(ops)) {
+      if (allowedKeys && !allowedKeys.has(key)) continue;
       if (jsonData[key] && Array.isArray(jsonData[key])) {
         (op as any).setAll(jsonData[key]);
         restoredCount += jsonData[key].length;
@@ -188,72 +189,123 @@ export default function BackupRestore() {
     return 0;
   };
 
-  const processFile = async (file: File): Promise<number> => {
-    if (file.name.endsWith('.zip')) {
-      const zip = await JSZip.loadAsync(file);
-
-      // Try full backup JSON first
-      const fullBackup = Object.keys(zip.files).find(f => f.endsWith('.json') && !f.includes('modules/'));
-      if (fullBackup) {
-        const content = await zip.files[fullBackup].async('string');
-        return restoreFromJson(JSON.parse(content));
-      }
-
-      // Try individual module files
-      let total = 0;
-      for (const [path, zipFile] of Object.entries(zip.files)) {
-        if (path.startsWith('modules/') && path.endsWith('.json') && !zipFile.dir) {
-          const content = await zipFile.async('string');
-          const parsed = JSON.parse(content);
-          const fname = path.split('/').pop() || '';
-          total += restoreModuleFile(fname, parsed);
+  // Extract available modules from backup data for preview
+  const extractModules = (jsonData: any): Record<string, any[] | object> => {
+    const modules: Record<string, any[] | object> = {};
+    const allKeys = [...Object.keys(TABLE_LABELS), 'settings'];
+    for (const key of allKeys) {
+      if (jsonData[key]) {
+        if (Array.isArray(jsonData[key]) && jsonData[key].length > 0) {
+          modules[key] = jsonData[key];
+        } else if (key === 'settings' && typeof jsonData[key] === 'object' && Object.keys(jsonData[key]).length > 0) {
+          modules[key] = jsonData[key];
         }
       }
-      return total;
     }
-
-    if (file.name.endsWith('.json')) {
-      const text = await file.text();
-      const parsed = JSON.parse(text);
-
-      // Check if it's a full backup (has _meta or multiple known keys)
-      if (parsed._meta || (parsed.activities && parsed.boqItems)) {
-        return restoreFromJson(parsed);
-      }
-
-      // Single module file
-      return restoreModuleFile(file.name, parsed);
-    }
-
-    return 0;
+    return modules;
   };
 
-  const handleRestore = async (files: FileList) => {
+  const parseBackupForPreview = async (files: FileList) => {
+    try {
+      let combined: Record<string, any[] | object> = {};
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.name.endsWith('.zip')) {
+          const zip = await JSZip.loadAsync(file);
+          const fullBackup = Object.keys(zip.files).find(f => f.endsWith('.json') && !f.includes('modules/'));
+          if (fullBackup) {
+            const content = await zip.files[fullBackup].async('string');
+            combined = { ...combined, ...extractModules(JSON.parse(content)) };
+          } else {
+            for (const [path, zipFile] of Object.entries(zip.files)) {
+              if (path.startsWith('modules/') && path.endsWith('.json') && !zipFile.dir) {
+                const content = await zipFile.async('string');
+                const parsed = JSON.parse(content);
+                const key = (path.split('/').pop() || '').replace('.json', '');
+                if (key && (Array.isArray(parsed) ? parsed.length > 0 : Object.keys(parsed).length > 0)) {
+                  combined[key] = parsed;
+                }
+              }
+            }
+          }
+        } else if (file.name.endsWith('.json')) {
+          const text = await file.text();
+          const parsed = JSON.parse(text);
+          if (parsed._meta || (parsed.activities && parsed.boqItems)) {
+            combined = { ...combined, ...extractModules(parsed) };
+          } else {
+            const key = file.name.replace('.json', '');
+            combined[key] = parsed;
+          }
+        }
+      }
+
+      if (Object.keys(combined).length === 0) {
+        toast({ title: 'No Data Found', description: 'No valid backup data found in the selected files', variant: 'destructive' });
+        return;
+      }
+
+      setPreviewData(combined);
+      setSelectedModules(new Set(Object.keys(combined)));
+    } catch (err) {
+      toast({ title: 'Parse Failed', description: String(err), variant: 'destructive' });
+    }
+  };
+
+  const confirmRestore = async () => {
+    if (!previewData || selectedModules.size === 0) return;
     setRestoring(true);
     try {
+      const ops = getOpsMap();
       let totalRestored = 0;
-      for (let i = 0; i < files.length; i++) {
-        totalRestored += await processFile(files[i]);
+
+      for (const key of selectedModules) {
+        const items = previewData[key];
+        if (key === 'settings' && typeof items === 'object' && !Array.isArray(items)) {
+          localStorage.setItem('buildforge-settings', JSON.stringify(items));
+          totalRestored++;
+        } else if (key in ops && Array.isArray(items)) {
+          (ops as any)[key].setAll(items);
+          totalRestored += items.length;
+        }
       }
 
       if (totalRestored === 0) {
-        toast({ title: 'No Data Found', description: 'No valid backup data found in the selected files', variant: 'destructive' });
+        toast({ title: 'No Data Restored', description: 'No valid data in selected modules', variant: 'destructive' });
       } else {
-        toast({ title: 'Restore Complete', description: `${totalRestored} records restored successfully` });
+        toast({ title: 'Restore Complete', description: `${totalRestored} records restored from ${selectedModules.size} module(s)` });
       }
     } catch (err) {
       toast({ title: 'Restore Failed', description: String(err), variant: 'destructive' });
     } finally {
       setRestoring(false);
+      setPreviewData(null);
+      setSelectedModules(new Set());
       [singleFileRef, multiFileRef, folderRef].forEach(ref => {
         if (ref.current) ref.current.value = '';
       });
     }
   };
 
-  const totalRecords = data.activities.length + data.boqItems.length + data.inventory.length +
-    data.equipment.length + data.safety.length + data.delays.length + data.purchaseOrders.length +
-    data.manpower.length + data.fuelLog.length + data.concretePours.length + data.dailyQty.length;
+  const toggleModule = (key: string) => {
+    setSelectedModules(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (!previewData) return;
+    const allKeys = Object.keys(previewData);
+    if (selectedModules.size === allKeys.length) {
+      setSelectedModules(new Set());
+    } else {
+      setSelectedModules(new Set(allKeys));
+    }
+  };
 
   return (
     <div className="space-y-6">
