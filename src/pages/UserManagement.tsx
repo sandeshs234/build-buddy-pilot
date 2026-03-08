@@ -251,17 +251,30 @@ export default function UserManagement() {
                     </Badge>
                   </td>
                   <td>
-                    <Select value={u.role} onValueChange={(v) => handleChangeRole(u.id, v as AppRole)}>
-                      <SelectTrigger className="w-[160px] h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="project_manager">Project Manager</SelectItem>
-                        <SelectItem value="engineer">Engineer</SelectItem>
-                        <SelectItem value="viewer">Viewer</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-2">
+                      <Select value={u.role} onValueChange={(v) => handleChangeRole(u.id, v as AppRole)}>
+                        <SelectTrigger className="w-[160px] h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="project_manager">Project Manager</SelectItem>
+                          <SelectItem value="engineer">Engineer</SelectItem>
+                          <SelectItem value="viewer">Viewer</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {u.id !== currentUser?.id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
+                          onClick={() => { setDeleteTarget(u); setConfirmDeleteOpen(true); }}
+                          title="Delete user"
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
