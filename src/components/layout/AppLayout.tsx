@@ -275,6 +275,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-1">
           {navGroups.map((group) => {
+            const userLevel = ROLE_LEVEL[(role as AppRole) || 'viewer'];
+            const visibleItems = group.items.filter(item => !item.minRole || userLevel >= ROLE_LEVEL[item.minRole]);
+            if (visibleItems.length === 0) return null;
             const isCollapsed = collapsed[group.label];
 
             return (
