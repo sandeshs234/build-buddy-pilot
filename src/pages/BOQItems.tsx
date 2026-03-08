@@ -15,10 +15,12 @@ import { toast } from '@/hooks/use-toast';
 
 export default function BOQItems() {
   const { boqItems: items, boqOps } = useProjectData();
+  const { syncing: aiAnalyzing, fullSync, applyActivities, applyMaterials } = useModuleSync();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<BOQItem | null>(null);
   const [newProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
   const [materialAnalysisOpen, setMaterialAnalysisOpen] = useState(false);
+  const [autoAnalysisRunning, setAutoAnalysisRunning] = useState(false);
 
   const totalBudget = items.reduce((sum, i) => sum + i.totalQty * i.rate, 0);
   const totalExecuted = items.reduce((sum, i) => sum + i.executedQty * i.rate, 0);
