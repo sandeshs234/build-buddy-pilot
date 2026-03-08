@@ -81,12 +81,46 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
     return () => { supabase.removeChannel(channel); };
   }, [projectId, filter]);
 
+  const applyChangeToTable = async (change: DataChange) => {
+    const { table_name, operation, data, record_id } = change;
+    try {
+      if (operation === 'insert') {
+        // Remove any undefined/null fields that might cause issues
+        const cleanData = { ...data };
+        delete cleanData.id; // let DB generate if needed, or keep if valid UUID
+        if (record_id?.match(/^[0-9a-f]{8}-[0-9a-f]{4}/i)) {
+          cleanData.id = record_id;
+        }
+        const { error } = await (supabase as any).from(table_name).upsert(cleanData);
+        if (error) throw error;
+      } else if (operation === 'update') {
+        const { id, ...updateData } = data as any;
+        const { error } = await (supabase as any).from(table_name).update(updateData).eq('id', record_id);
+        if (error) throw error;
+      } else if (operation === 'delete') {
+        const { error } = await (supabase as any).from(table_name).delete().eq('id', record_id);
+        if (error) throw error;
+      }
+      return true;
+    } catch (err: any) {
+      toast({ title: 'Apply Error', description: err.message, variant: 'destructive' });
+      return false;
+    }
+  };
+
   const approveChange = async (changeId: string) => {
+    const change = changes.find(c => c.id === changeId);
+    if (!change) return;
+    
+    // First apply the data to the actual table
+    const applied = await applyChangeToTable(change);
+    if (!applied) return;
+
     await (supabase as any)
       .from('data_changes')
       .update({ status: 'approved', approved_by: user?.id, approved_at: new Date().toISOString() })
       .eq('id', changeId);
-    toast({ title: 'Change approved' });
+    toast({ title: '✅ Change approved & applied', description: `Data has been written to ${change.table_name.replace(/_/g, ' ')}` });
     fetchChanges();
   };
 
@@ -95,7 +129,7 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
       .from('data_changes')
       .update({ status: 'rejected', approved_by: user?.id, approved_at: new Date().toISOString() })
       .eq('id', changeId);
-    toast({ title: 'Change rejected' });
+    toast({ title: '❌ Change rejected', description: 'Data has been discarded and will not be applied.' });
     fetchChanges();
   };
 
