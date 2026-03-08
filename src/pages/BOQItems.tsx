@@ -82,6 +82,9 @@ export default function BOQItems() {
           <Button variant="ghost" size="sm" onClick={() => setNewProjectDialogOpen(true)} disabled={items.length === 0} className="text-destructive" title="Start fresh">
             <FolderPlus size={14} className="mr-1" /> New Project
           </Button>
+          <Button variant="outline" size="sm" onClick={() => setMaterialAnalysisOpen(true)} disabled={items.length === 0}>
+            <Sparkles size={14} className="mr-1" /> AI Analysis
+          </Button>
           <Button size="sm" onClick={openAdd}><Plus size={14} className="mr-1" /> Add Item</Button>
         </div>
       </div>
