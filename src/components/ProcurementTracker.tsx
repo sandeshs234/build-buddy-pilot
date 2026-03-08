@@ -230,15 +230,20 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
     }
   };
 
+  // Filter items
+  const filteredItems = selectedStatus 
+    ? items.filter(i => i.status === selectedStatus)
+    : items;
+
   // Stats
   const statusCounts = items.reduce((acc, i) => {
     acc[i.status] = (acc[i.status] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
 
-  const totalOrdered = items.reduce((s, i) => s + (i.ordered_qty * i.unit_rate), 0);
-  const totalReceived = items.filter(i => i.status === 'received').length;
-  const overallProgress = items.length > 0 ? Math.round((totalReceived / items.length) * 100) : 0;
+  const totalOrdered = filteredItems.reduce((s, i) => s + (i.ordered_qty * i.unit_rate), 0);
+  const totalReceived = filteredItems.filter(i => i.status === 'received').length;
+  const overallProgress = filteredItems.length > 0 ? Math.round((totalReceived / filteredItems.length) * 100) : 0;
 
   return (
     <div className="space-y-4">
