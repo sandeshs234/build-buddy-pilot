@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Clock, Check, X, FileText, Trash2, Pencil, MessageSquare } from 'lucide-react';
+import { Clock, Check, X, FileText, Trash2, Pencil, MessageSquare, RotateCcw } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 import {
