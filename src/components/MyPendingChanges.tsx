@@ -318,15 +318,28 @@ export default function MyPendingChanges() {
         </div>
       </div>
 
-      {/* Edit Pending Submission Dialog */}
+      {/* Edit / Resubmit Submission Dialog */}
       <Dialog open={!!editingChange} onOpenChange={(open) => { if (!open) setEditingChange(null); }}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Edit Pending Submission</DialogTitle>
+            <DialogTitle>
+              {editingChange?.status === 'rejected' ? 'Edit & Resubmit' : 'Edit Pending Submission'}
+            </DialogTitle>
             <DialogDescription>
-              Modify your {editingChange?.operation} on {editingChange?.table_name.replace(/_/g, ' ')} before admin reviews it.
+              {editingChange?.status === 'rejected'
+                ? `Modify your ${editingChange?.operation} on ${editingChange?.table_name.replace(/_/g, ' ')} and resubmit for approval.`
+                : `Modify your ${editingChange?.operation} on ${editingChange?.table_name.replace(/_/g, ' ')} before admin reviews it.`}
             </DialogDescription>
           </DialogHeader>
+          {editingChange?.status === 'rejected' && editingChange?.rejection_reason && (
+            <div className="flex items-start gap-2 bg-destructive/5 rounded-md px-3 py-2 border border-destructive/20">
+              <MessageSquare size={14} className="text-destructive mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-[10px] font-medium text-destructive uppercase tracking-wider">Previous Rejection Reason</p>
+                <p className="text-xs text-foreground mt-0.5">{editingChange.rejection_reason}</p>
+              </div>
+            </div>
+          )}
           <ScrollArea className="max-h-[60vh]">
             <div className="space-y-3 pr-4">
               {editingChange && getEditableFields(editData).map(([key, value]) => (
@@ -343,9 +356,16 @@ export default function MyPendingChanges() {
           </ScrollArea>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingChange(null)}>Cancel</Button>
-            <Button onClick={saveEdit} disabled={saving}>
-              {saving ? 'Saving...' : 'Save Changes'}
-            </Button>
+            {editingChange?.status === 'rejected' ? (
+              <Button onClick={resubmitChange} disabled={saving} className="gap-1.5">
+                <RotateCcw size={14} />
+                {saving ? 'Resubmitting...' : 'Resubmit for Approval'}
+              </Button>
+            ) : (
+              <Button onClick={saveEdit} disabled={saving}>
+                {saving ? 'Saving...' : 'Save Changes'}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
