@@ -23,9 +23,14 @@ export default function Dashboard() {
   const [procItems, setProcItems] = useState<ProcTrackingItem[]>([]);
 
   useEffect(() => {
-    supabase.from('procurement_tracking').select('status,total_cost,expected_delivery,actual_delivery,material_description')
-      .then(({ data }) => setProcItems((data as ProcTrackingItem[]) || []));
-  }, []);
+    let query = supabase.from('procurement_tracking').select('status,total_cost,expected_delivery,actual_delivery,material_description');
+    if (currentProjectId) {
+      query = query.eq('project_id', currentProjectId);
+    } else {
+      query = query.is('project_id', null);
+    }
+    query.then(({ data }) => setProcItems((data as ProcTrackingItem[]) || []));
+  }, [currentProjectId]);
 
   const criticalCount = activities.filter(a => a.critical && a.status !== 'completed').length;
   const completedCount = activities.filter(a => a.status === 'completed').length;
