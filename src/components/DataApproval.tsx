@@ -81,6 +81,8 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
   const [rejectReason, setRejectReason] = useState('');
   // 'single' for one item, 'batch' for multiple
   const [rejectMode, setRejectMode] = useState<'single' | 'batch'>('single');
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
 
   const pendingChanges = changes.filter(c => c.status === 'pending');
   const allPendingSelected = pendingChanges.length > 0 && pendingChanges.every(c => selectedIds.has(c.id));
