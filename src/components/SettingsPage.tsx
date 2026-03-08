@@ -4,8 +4,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Upload, Save, Image, Users, FileText } from 'lucide-react';
+import { Building2, Upload, Save, Image, Users, FileText, HardDrive } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import BackupRestore from '@/components/BackupRestore';
 
 interface ProjectSettings {
   companyName: string;
