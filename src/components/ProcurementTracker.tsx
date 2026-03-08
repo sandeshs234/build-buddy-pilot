@@ -132,6 +132,18 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
     }
   };
 
+  const clearAll = async () => {
+    if (!user || items.length === 0) return;
+    const ids = items.map(i => i.id);
+    const { error } = await supabase.from('procurement_tracking').delete().in('id', ids);
+    if (!error) {
+      toast({ title: 'Cleared', description: `All ${ids.length} tracking entries removed` });
+      setItems([]);
+    } else {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
   const handleStatusChange = async (item: TrackingItem, newStatus: string) => {
     const updates: any = { status: newStatus };
     if (newStatus === 'received') {
