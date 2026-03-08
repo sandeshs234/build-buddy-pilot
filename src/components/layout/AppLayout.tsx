@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import SampleTemplates from '@/components/SampleTemplates';
 import AIAssistant from '@/components/AIAssistant';
 import ProjectChat from '@/components/ProjectChat';
@@ -99,6 +100,54 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+  const [pendingMembersCount, setPendingMembersCount] = useState(0);
+  const [pendingChangesCount, setPendingChangesCount] = useState(0);
+
+  // Fetch pending member requests and unapproved data changes
+  useEffect(() => {
+    const fetchCounts = async () => {
+      // Fetch pending member requests for all projects user is admin of
+      const { data: memberData } = await supabase
+        .from('project_members')
+        .select('id')
+        .eq('status', 'pending');
+      setPendingMembersCount(memberData?.length || 0);
+
+      // Fetch unapproved data changes
+      const { data: changesData } = await supabase
+        .from('data_changes')
+        .select('id')
+        .eq('status', 'pending');
+      setPendingChangesCount(changesData?.length || 0);
+    };
+
+    fetchCounts();
+
+    // Subscribe to realtime updates for project_members
+    const membersSub = supabase
+      .channel('project_members_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'project_members' },
+        () => fetchCounts()
+      )
+      .subscribe();
+
+    // Subscribe to realtime updates for data_changes
+    const changesSub = supabase
+      .channel('data_changes_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'data_changes' },
+        () => fetchCounts()
+      )
+      .subscribe();
+
+    return () => {
+      membersSub.unsubscribe();
+      changesSub.unsubscribe();
+    };
+  }, []);
 
   // Close sidebar on route change for mobile/tablet
   useEffect(() => {
@@ -222,21 +271,36 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 {!isCollapsed && (
                   <div className="space-y-0.5 mt-0.5 mb-2">
                     {group.items.map((item) => {
-                      const active = location.pathname === item.path;
-                      return (
-                        <Link
-                          key={item.path}
-                          to={item.path}
-                          className={cn(
-                            'sidebar-item',
-                            active ? 'sidebar-item-active' : 'sidebar-item-inactive'
-                          )}
-                        >
-                          {item.icon}
-                          <span>{item.label}</span>
-                        </Link>
-                      );
-                    })}
+                       const active = location.pathname === item.path;
+                       let badge: number | null = null;
+                       
+                       if (item.path === '/projects') {
+                         badge = pendingMembersCount;
+                       } else if (item.path === '/dashboard') {
+                         badge = pendingChangesCount;
+                       }
+
+                       return (
+                         <Link
+                           key={item.path}
+                           to={item.path}
+                           className={cn(
+                             'sidebar-item',
+                             active ? 'sidebar-item-active' : 'sidebar-item-inactive'
+                           )}
+                         >
+                           <div className="flex items-center gap-3">
+                             {item.icon}
+                             <span>{item.label}</span>
+                           </div>
+                           {badge !== null && badge > 0 && (
+                             <span className="flex items-center justify-center w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex-shrink-0">
+                               {badge > 99 ? '99+' : badge}
+                             </span>
+                           )}
+                         </Link>
+                       );
+                      })}
                   </div>
                 )}
               </div>
