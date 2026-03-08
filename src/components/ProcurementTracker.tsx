@@ -160,21 +160,51 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
     fetchItems();
   };
 
+  const restoreItems = async (deletedItems: TrackingItem[]) => {
+    if (!user) return;
+    const rows = deletedItems.map(({ id, ...rest }) => ({ ...rest, id, user_id: user.id }));
+    const { error } = await supabase.from('procurement_tracking').insert(rows as any);
+    if (!error) {
+      toast({ title: '↩️ Restored', description: `${deletedItems.length} item(s) restored` });
+      fetchItems();
+    }
+  };
+
   const handleDelete = async (id: string) => {
+    const deletedItem = items.find(i => i.id === id);
     const { error } = await supabase.from('procurement_tracking').delete().eq('id', id);
     if (!error) {
-      toast({ title: 'Deleted', description: 'Tracking entry removed' });
-      fetchItems();
+      setItems(prev => prev.filter(i => i.id !== id));
+      const { dismiss } = toast({
+        title: 'Deleted',
+        description: 'Tracking entry removed',
+        action: deletedItem ? (
+          <Button variant="outline" size="sm" onClick={() => { restoreItems([deletedItem]); dismiss(); }}>
+            Undo
+          </Button>
+        ) : undefined,
+        duration: 5000,
+      });
     }
   };
 
   const clearAll = async () => {
     if (!user || items.length === 0) return;
+    const deletedItems = [...items];
     const ids = items.map(i => i.id);
     const { error } = await supabase.from('procurement_tracking').delete().in('id', ids);
     if (!error) {
-      toast({ title: 'Cleared', description: `All ${ids.length} tracking entries removed` });
       setItems([]);
+      const { dismiss } = toast({
+        title: 'Cleared',
+        description: `All ${ids.length} tracking entries removed`,
+        action: (
+          <Button variant="outline" size="sm" onClick={() => { restoreItems(deletedItems); dismiss(); }}>
+            Undo
+          </Button>
+        ),
+        duration: 5000,
+      });
     } else {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
