@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 
-type AppRole = 'admin' | 'project_manager' | 'engineer' | 'viewer';
+type AppRole = 'admin' | 'project_manager' | 'engineer' | 'viewer' | 'accountant' | 'safety_officer' | 'store_keeper' | 'surveyor';
 
 interface ProjectMembership {
   project_id: string;
@@ -40,6 +40,10 @@ const ROLE_LABELS: Record<AppRole, string> = {
   project_manager: 'Project Manager',
   engineer: 'Engineer',
   viewer: 'Viewer',
+  accountant: 'Accountant',
+  safety_officer: 'Safety Officer',
+  store_keeper: 'Store Keeper',
+  surveyor: 'Surveyor',
 };
 
 const ROLE_COLORS: Record<AppRole, string> = {
@@ -47,6 +51,10 @@ const ROLE_COLORS: Record<AppRole, string> = {
   project_manager: 'bg-primary/10 text-primary border-primary/20',
   engineer: 'bg-accent/10 text-accent-foreground border-accent/20',
   viewer: 'bg-muted text-muted-foreground border-muted',
+  accountant: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+  safety_officer: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+  store_keeper: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+  surveyor: 'bg-violet-500/10 text-violet-600 border-violet-500/20',
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -314,14 +322,39 @@ export default function UserManagement() {
   }
 
   const permissions = [
-    { action: 'View project data', admin: true, pm: true, eng: true, viewer: true },
-    { action: 'Add/edit own entries', admin: true, pm: true, eng: true, viewer: false },
-    { action: 'Approve/reject entries', admin: true, pm: true, eng: false, viewer: false },
-    { action: 'Manage project members', admin: true, pm: false, eng: false, viewer: false },
-    { action: 'Create/delete projects', admin: true, pm: false, eng: false, viewer: false },
-    { action: 'Manage users & roles', admin: true, pm: false, eng: false, viewer: false },
-    { action: 'Access settings & backup', admin: true, pm: true, eng: false, viewer: false },
+    { action: 'View project data', roles: ['admin', 'pm', 'eng', 'acct', 'safety', 'store', 'surv', 'viewer'] },
+    { action: 'Add/edit own entries', roles: ['admin', 'pm', 'eng', 'acct', 'safety', 'store', 'surv'] },
+    { action: 'Finance & Bills', roles: ['admin', 'pm', 'acct'] },
+    { action: 'Safety & Quality', roles: ['admin', 'pm', 'eng', 'safety'] },
+    { action: 'Inventory & Procurement', roles: ['admin', 'pm', 'store', 'acct'] },
+    { action: 'Measurements & Quantities', roles: ['admin', 'pm', 'eng', 'surv'] },
+    { action: 'Approve/reject entries', roles: ['admin', 'pm'] },
+    { action: 'Manage users & roles', roles: ['admin'] },
   ];
+
+  const permRoleHeaders = [
+    { key: 'admin', label: 'Admin', color: ROLE_COLORS.admin },
+    { key: 'pm', label: 'PM', color: ROLE_COLORS.project_manager },
+    { key: 'eng', label: 'Eng', color: ROLE_COLORS.engineer },
+    { key: 'acct', label: 'Acct', color: ROLE_COLORS.accountant },
+    { key: 'safety', label: 'Safety', color: ROLE_COLORS.safety_officer },
+    { key: 'store', label: 'Store', color: ROLE_COLORS.store_keeper },
+    { key: 'surv', label: 'Surv', color: ROLE_COLORS.surveyor },
+    { key: 'viewer', label: 'View', color: ROLE_COLORS.viewer },
+  ];
+
+  const roleSelectItems = (
+    <>
+      <SelectItem value="admin">Admin</SelectItem>
+      <SelectItem value="project_manager">Project Manager</SelectItem>
+      <SelectItem value="engineer">Engineer</SelectItem>
+      <SelectItem value="accountant">Accountant</SelectItem>
+      <SelectItem value="safety_officer">Safety Officer</SelectItem>
+      <SelectItem value="store_keeper">Store Keeper</SelectItem>
+      <SelectItem value="surveyor">Surveyor</SelectItem>
+      <SelectItem value="viewer">Viewer</SelectItem>
+    </>
+  );
 
   return (
     <div>
@@ -366,19 +399,20 @@ export default function UserManagement() {
                 <thead>
                   <tr className="border-b">
                     <th className="text-left py-2 pr-4 font-medium text-muted-foreground">Permission</th>
-                    <th className="text-center py-2 px-3 font-medium"><Badge variant="outline" className={ROLE_COLORS.admin}>Admin</Badge></th>
-                    <th className="text-center py-2 px-3 font-medium"><Badge variant="outline" className={ROLE_COLORS.project_manager}>PM</Badge></th>
-                    <th className="text-center py-2 px-3 font-medium"><Badge variant="outline" className={ROLE_COLORS.engineer}>Engineer</Badge></th>
-                    <th className="text-center py-2 px-3 font-medium"><Badge variant="outline" className={ROLE_COLORS.viewer}>Viewer</Badge></th>
+                    {permRoleHeaders.map(r => (
+                      <th key={r.key} className="text-center py-2 px-2 font-medium">
+                        <Badge variant="outline" className={r.color}>{r.label}</Badge>
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
                   {permissions.map((p) => (
                     <tr key={p.action} className="border-b last:border-0">
                       <td className="py-2 pr-4 text-foreground">{p.action}</td>
-                      {[p.admin, p.pm, p.eng, p.viewer].map((allowed, i) => (
-                        <td key={i} className="text-center py-2 px-3">
-                          {allowed
+                      {permRoleHeaders.map(r => (
+                        <td key={r.key} className="text-center py-2 px-2">
+                          {p.roles.includes(r.key)
                             ? <CheckCircle2 size={15} className="inline text-emerald-500" />
                             : <XCircle size={15} className="inline text-muted-foreground/40" />}
                         </td>
@@ -474,10 +508,7 @@ export default function UserManagement() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="admin">Admin</SelectItem>
-                            <SelectItem value="project_manager">Project Manager</SelectItem>
-                            <SelectItem value="engineer">Engineer</SelectItem>
-                            <SelectItem value="viewer">Viewer</SelectItem>
+                            {roleSelectItems}
                           </SelectContent>
                         </Select>
                         {!isSelf && (
@@ -536,10 +567,7 @@ export default function UserManagement() {
               <Select value={newRole} onValueChange={v => setNewRole(v as AppRole)}>
                 <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="project_manager">Project Manager</SelectItem>
-                  <SelectItem value="engineer">Engineer</SelectItem>
-                  <SelectItem value="viewer">Viewer</SelectItem>
+                  {roleSelectItems}
                 </SelectContent>
               </Select>
             </div>

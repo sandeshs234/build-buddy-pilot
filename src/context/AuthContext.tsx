@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 
-type AppRole = 'admin' | 'project_manager' | 'engineer' | 'viewer';
+type AppRole = 'admin' | 'project_manager' | 'engineer' | 'viewer' | 'accountant' | 'safety_officer' | 'store_keeper' | 'surveyor';
 type StorageMode = 'local' | 'cloud' | null;
 
 interface Profile {
