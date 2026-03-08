@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine, Legend } from 'recharts';
 import { useProjectData } from '@/context/ProjectDataContext';
 import ModulePage from '@/components/ModulePage';
 import PrintableReport from '@/components/PrintableReport';
