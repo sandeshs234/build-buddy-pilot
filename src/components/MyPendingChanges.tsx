@@ -100,9 +100,14 @@ export default function MyPendingChanges() {
   const saveEdit = async () => {
     if (!editingChange) return;
     setSaving(true);
+    // Save original_data only on the first edit (preserve the very first version)
+    const updatePayload: any = { data: editData };
+    if (!editingChange.original_data) {
+      updatePayload.original_data = editingChange.data;
+    }
     const { error } = await (supabase as any)
       .from('data_changes')
-      .update({ data: editData })
+      .update(updatePayload)
       .eq('id', editingChange.id)
       .eq('user_id', user?.id)
       .eq('status', 'pending');
