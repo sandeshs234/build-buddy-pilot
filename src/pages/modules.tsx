@@ -111,15 +111,6 @@ export function InventoryPage() {
         onAdd={() => { setForm({ id: crypto.randomUUID(), code: '', description: '', unit: '', opening: 0, receipts: 0, issues: 0, balance: 0, minLevel: 0, location: '' }); setEditing(null); setDialogOpen(true); }}
         onEdit={item => { setForm(item); setEditing(item); setDialogOpen(true); }}
         onDelete={item => ops.remove(item.id)}
-        onImport={rows => {
-          const mapped = rows.map(r => ({
-            id: crypto.randomUUID(), code: r.Code || r.code || '', description: r.Description || r.description || '',
-            unit: r.Unit || r.unit || '', opening: Number(r.Opening || r.opening || 0), receipts: Number(r.Receipts || r.receipts || 0),
-            issues: Number(r.Issues || r.issues || 0), balance: Number(r.Balance || r.balance || 0),
-            minLevel: Number(r['Min Level'] || r.minLevel || 0), location: r.Location || r.location || '',
-          }));
-          mapped.forEach(m => ops.add(m as any));
-        }}
         fileName="Inventory"
         extraToolbar={
           <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
@@ -194,14 +185,6 @@ export function ManpowerPage() {
         onAdd={() => { setForm({ id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0], location: '', trades: [{ trade: '', count: 0 }], supervisor: '' }); setEditing(null); setDialogOpen(true); }}
         onEdit={item => { setForm(item); setEditing(item); setDialogOpen(true); }}
         onDelete={item => ops.remove(item.id)}
-        onImport={rows => {
-          const mapped = rows.map(r => ({
-            id: crypto.randomUUID(), date: r.Date || '', location: r.Location || '',
-            trades: MANPOWER_TRADES.filter(t => r[t] && +r[t] > 0).map(t => ({ trade: t, count: +r[t] })),
-            supervisor: r.Supervisor || '',
-          }));
-          mapped.forEach(m => ops.add(m));
-        }}
         fileName="Manpower"
         extraToolbar={
           <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
@@ -292,17 +275,6 @@ export function EquipmentPage() {
         onAdd={() => { setForm({ id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0], eqId: '', equipmentName: '', description: '', operator: '', ownership: 'owned', billingBasis: 'hourly', rate: 0, hours: 0, fuel: 0, activity: '', issues: '' }); setEditing(null); setDialogOpen(true); }}
         onEdit={item => { setForm(item); setEditing(item); setDialogOpen(true); }}
         onDelete={item => ops.remove(item.id)}
-        onImport={rows => {
-          const mapped = rows.map(r => ({
-            id: crypto.randomUUID(), date: r.Date || '', eqId: r['Eq. ID'] || '', equipmentName: r.Equipment || r.equipmentName || '',
-            description: r.Description || r.description || '', operator: r.Operator || '',
-            ownership: (r.Ownership || 'owned').toLowerCase() as 'owned' | 'leased' | 'rented',
-            billingBasis: r.Billing || 'hourly', rate: +r.Rate || 0,
-            hours: +r.Hours || 0, fuel: +r['Fuel (L)'] || +r.fuel || 0,
-            activity: r.Activity || '', issues: r.Issues || '',
-          }));
-          mapped.forEach(m => ops.add(m as any));
-        }}
         fileName="Equipment"
         extraToolbar={
           <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
@@ -397,11 +369,6 @@ export function SafetyPage() {
         onAdd={() => { setForm({ id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0], type: 'observation', location: '', description: '', injured: '', cause: '', preventive: '', reporter: '' }); setEditing(null); setDialogOpen(true); }}
         onEdit={item => { setForm(item); setEditing(item); setDialogOpen(true); }}
         onDelete={item => ops.remove(item.id)}
-        onImport={rows => rows.forEach(r => ops.add({
-          id: crypto.randomUUID(), date: r.Date || '', type: (r.Type || 'observation').toLowerCase(),
-          location: r.Location || '', description: r.Description || '', injured: r.Injured || '',
-          cause: r['Root Cause'] || r.cause || '', preventive: r['Preventive Action'] || r.preventive || '', reporter: r.Reporter || '',
-        } as any))}
         fileName="Safety"
         extraToolbar={
           <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
@@ -476,11 +443,6 @@ export function DelaysPage() {
         onAdd={() => { setForm({ id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0], activity: '', description: '', cause: '', duration: 0, impact: '', recovery: '', status: 'open' }); setEditing(null); setDialogOpen(true); }}
         onEdit={item => { setForm(item); setEditing(item); setDialogOpen(true); }}
         onDelete={item => ops.remove(item.id)}
-        onImport={rows => rows.forEach(r => ops.add({
-          id: crypto.randomUUID(), date: r.Date || '', activity: r.Activity || '', description: r.Description || '',
-          cause: r.Cause || '', duration: +r.Days || +r.duration || 0, impact: r.Impact || '',
-          recovery: r['Recovery Action'] || r.recovery || '', status: (r.Status || 'open').toLowerCase(),
-        } as any))}
         fileName="Delays"
         extraToolbar={
           <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
@@ -557,11 +519,6 @@ export function PurchaseOrdersPage() {
         onAdd={() => { setForm({ id: crypto.randomUUID(), poNo: '', supplier: '', date: new Date().toISOString().split('T')[0], itemCode: '', qty: 0, price: 0, status: 'draft', remarks: '' }); setEditing(null); setDialogOpen(true); }}
         onEdit={item => { setForm(item); setEditing(item); setDialogOpen(true); }}
         onDelete={item => ops.remove(item.id)}
-        onImport={rows => rows.forEach(r => ops.add({
-          id: crypto.randomUUID(), poNo: r['PO No.'] || r.poNo || '', supplier: r.Supplier || '',
-          date: r.Date || '', itemCode: r['Item Code'] || '', qty: +r.Qty || 0, price: +r.Amount || +r.price || 0,
-          status: (r.Status || 'draft').toLowerCase(), remarks: r.Remarks || '',
-        } as any))}
         fileName="PurchaseOrders"
         extraToolbar={
           <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
@@ -659,7 +616,6 @@ function GenericModule({ title, description, fields }: { title: string; descript
         onAdd={openAdd}
         onEdit={openEdit}
         onDelete={item => { pushHistory(data); setData(prev => prev.filter(i => i.id !== item.id)); }}
-        onImport={rows => { pushHistory(data); setData(prev => [...prev, ...rows.map(r => ({ id: crypto.randomUUID(), ...r }))]); }}
         fileName={title.replace(/\s+/g, '_')}
         extraToolbar={
           <CrudToolbar canUndo={history.length > 0} onUndo={undo} onClear={clearAll} dataLength={data.length}
@@ -890,11 +846,120 @@ export const DocumentsPage = () => <GenericModule title="Documents" description=
   { key: 'linkedTo', label: 'Linked To' },
 ]} />;
 
-export const ReportsPage = () => <GenericModule title="Reports" description="Generate printable reports for each module" fields={[
-  { key: 'reportName', label: 'Report Name' }, { key: 'date', label: 'Date', type: 'date' }, { key: 'module', label: 'Module' },
-  { key: 'generatedBy', label: 'Generated By' },
-  { key: 'status', label: 'Status', options: [{ value: 'draft', label: 'Draft' }, { value: 'final', label: 'Final' }] },
-]} />;
+export function ReportsPage() {
+  const { activities, boqItems, inventory, equipment, safety, delays, purchaseOrders, manpower, fuelLog, concretePours, dailyQty } = useProjectData();
+
+  const totalWorkers = (item: any) => (item.trades || []).reduce((s: number, t: any) => s + (t.count || 0), 0);
+
+  const reportSections = [
+    {
+      title: 'Activities Schedule',
+      columns: [
+        { key: 'wbs', label: 'WBS' }, { key: 'name', label: 'Activity' }, { key: 'plannedStart', label: 'Plan Start' },
+        { key: 'plannedEnd', label: 'Plan End' }, { key: 'percentComplete', label: 'Progress %' }, { key: 'status', label: 'Status' },
+      ],
+      data: activities.map(a => ({ ...a, critical: a.critical ? 'Yes' : 'No', actualStart: a.actualStart || '—', actualEnd: a.actualEnd || '—' })),
+    },
+    {
+      title: 'BOQ / Item Master',
+      columns: [
+        { key: 'code', label: 'Code' }, { key: 'description', label: 'Description' }, { key: 'unit', label: 'Unit' },
+        { key: 'totalQty', label: 'Total Qty' }, { key: 'executedQty', label: 'Executed' }, { key: 'rate', label: 'Rate' },
+        { key: 'amount', label: 'Amount' },
+      ],
+      data: boqItems.map(b => ({ ...b, amount: (b.totalQty * b.rate).toLocaleString() })),
+    },
+    {
+      title: 'Inventory',
+      columns: [
+        { key: 'code', label: 'Code' }, { key: 'description', label: 'Description' }, { key: 'unit', label: 'Unit' },
+        { key: 'opening', label: 'Opening' }, { key: 'receipts', label: 'Receipts' }, { key: 'issues', label: 'Issues' },
+        { key: 'balance', label: 'Balance' }, { key: 'location', label: 'Location' },
+      ],
+      data: inventory,
+    },
+    {
+      title: 'Equipment Log',
+      columns: [
+        { key: 'date', label: 'Date' }, { key: 'eqId', label: 'Eq ID' }, { key: 'equipmentName', label: 'Equipment' },
+        { key: 'operator', label: 'Operator' }, { key: 'hours', label: 'Hours' }, { key: 'fuel', label: 'Fuel (L)' },
+        { key: 'activity', label: 'Activity' },
+      ],
+      data: equipment,
+    },
+    {
+      title: 'Daily Manpower',
+      columns: [
+        { key: 'date', label: 'Date' }, { key: 'location', label: 'Location' },
+        { key: 'tradesText', label: 'Trades' }, { key: 'total', label: 'Total' }, { key: 'supervisor', label: 'Supervisor' },
+      ],
+      data: manpower.map((i: any) => ({
+        ...i,
+        tradesText: (i.trades || []).map((t: any) => `${t.trade}: ${t.count}`).join(', '),
+        total: totalWorkers(i),
+      })),
+    },
+    {
+      title: 'Safety Incidents',
+      columns: [
+        { key: 'date', label: 'Date' }, { key: 'type', label: 'Type' }, { key: 'location', label: 'Location' },
+        { key: 'description', label: 'Description' }, { key: 'cause', label: 'Root Cause' }, { key: 'preventive', label: 'Preventive Action' },
+      ],
+      data: safety,
+    },
+    {
+      title: 'Delays Register',
+      columns: [
+        { key: 'date', label: 'Date' }, { key: 'activity', label: 'Activity' }, { key: 'description', label: 'Description' },
+        { key: 'cause', label: 'Cause' }, { key: 'duration', label: 'Days' }, { key: 'status', label: 'Status' },
+      ],
+      data: delays,
+    },
+    {
+      title: 'Purchase Orders',
+      columns: [
+        { key: 'poNo', label: 'PO No.' }, { key: 'date', label: 'Date' }, { key: 'supplier', label: 'Supplier' },
+        { key: 'itemCode', label: 'Item' }, { key: 'qty', label: 'Qty' }, { key: 'price', label: 'Amount' }, { key: 'status', label: 'Status' },
+      ],
+      data: purchaseOrders,
+    },
+  ];
+
+  return (
+    <div>
+      <div className="page-header">
+        <h1 className="text-2xl font-bold text-foreground">📊 Compiled Reports</h1>
+        <p className="text-sm text-muted-foreground mt-1">Print international-standard A4 reports from any module below</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {reportSections.map(section => (
+          <div key={section.title} className="bg-card rounded-xl border shadow-sm p-5 flex flex-col justify-between">
+            <div>
+              <h3 className="font-semibold text-foreground text-sm">{section.title}</h3>
+              <p className="text-xs text-muted-foreground mt-1">{section.data.length} records available</p>
+            </div>
+            <div className="mt-4">
+              <PrintableReport title={section.title} columns={section.columns} data={section.data} />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-6 bg-muted/50 rounded-xl border p-5">
+        <h3 className="text-sm font-semibold text-foreground mb-2">Report Format</h3>
+        <ul className="text-xs text-muted-foreground space-y-1">
+          <li>• <strong>A4 Landscape</strong> – International standard print format</li>
+          <li>• <strong>Bold Centered Letterhead</strong> – Company name, logo, contact details</li>
+          <li>• <strong>Project Details</strong> – Client, contractor, contract number, report date</li>
+          <li>• <strong>Signature Blocks</strong> – Prepared By / Checked By / Approved By</li>
+          <li>• <strong>Company Stamp</strong> – Configure in Settings → Upload stamp image</li>
+          <li>• Go to <strong>Settings</strong> to configure company logo, stamp, and project details</li>
+        </ul>
+      </div>
+    </div>
+  );
+}
 
 export const BackupPage = () => <GenericModule title="Backup / Restore" description="Export and import project data" fields={[
   { key: 'date', label: 'Date', type: 'date' },

@@ -5,7 +5,6 @@ import GanttChart from '@/components/GanttChart';
 import CPMDiagram from '@/components/CPMDiagram';
 import PrimaveraSchedule from '@/components/PrimaveraSchedule';
 import ActivityDialog from '@/components/ActivityDialog';
-import ExcelImportExport from '@/components/ExcelImportExport';
 import AIAssistant from '@/components/AIAssistant';
 import { Button } from '@/components/ui/button';
 import PrintableReport from '@/components/PrintableReport';
@@ -97,7 +96,6 @@ export default function Activities() {
           <Button variant="outline" size="sm" onClick={() => setAiOpen(true)} className="border-primary/30 text-primary hover:bg-primary/5">
             <Bot size={14} className="mr-1" /> AI Assist
           </Button>
-          <ExcelImportExport data={activities} columns={excelColumns} fileName="Activities_CPM" onImport={handleImport} />
           <div className="flex items-center border rounded-lg overflow-hidden">
             <Button variant="ghost" size="sm" onClick={() => setView('gantt')} className={cn("rounded-none", view === 'gantt' && 'bg-muted')}>
               <BarChart3 size={14} className="mr-1" /> Gantt

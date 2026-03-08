@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useProjectData } from '@/context/ProjectDataContext';
 import { BOQItem } from '@/types/construction';
-import ExcelImportExport from '@/components/ExcelImportExport';
 import PrintableReport from '@/components/PrintableReport';
 import { Button } from '@/components/ui/button';
 import { Plus, Pencil, Trash2, Undo2, Trash } from 'lucide-react';
@@ -66,7 +65,7 @@ export default function BOQItems() {
           <Button variant="ghost" size="sm" onClick={boqOps.clearAll} disabled={items.length === 0} className="text-destructive" title="Clear all">
             <Trash size={14} className="mr-1" /> Clear All
           </Button>
-          <ExcelImportExport data={items} columns={excelColumns} fileName="BOQ_Items" onImport={handleImport} />
+          <Button size="sm" onClick={openAdd}><Plus size={14} className="mr-1" /> Add Item</Button>
           <Button size="sm" onClick={openAdd}><Plus size={14} className="mr-1" /> Add Item</Button>
         </div>
       </div>
