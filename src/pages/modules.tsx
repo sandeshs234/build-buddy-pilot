@@ -8,8 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { Undo2, Trash2, ImagePlus, X, HelpCircle, ChevronDown } from 'lucide-react';
+import { Undo2, Trash2, ImagePlus, X, HelpCircle, ChevronDown, Printer } from 'lucide-react';
 import { EquipmentEntry } from '@/types/construction';
+import { cn } from '@/lib/utils';
 
 // ─── Constants ───
 const MANPOWER_TRADES = [
