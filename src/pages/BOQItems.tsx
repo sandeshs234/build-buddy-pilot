@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useProjectData } from '@/context/ProjectDataContext';
 import { BOQItem } from '@/types/construction';
 import PrintableReport from '@/components/PrintableReport';
 import ExcelImportExport from '@/components/ExcelImportExport';
 import MaterialAnalysis from '@/components/MaterialAnalysis';
+import { useModuleSync } from '@/hooks/useModuleSync';
 import { Button } from '@/components/ui/button';
-import { Plus, Pencil, Trash2, Undo2, Trash, FolderPlus, Sparkles } from 'lucide-react';
+import { Plus, Pencil, Trash2, Undo2, Trash, FolderPlus, Sparkles, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
