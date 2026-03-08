@@ -87,6 +87,7 @@ const navGroups: NavGroup[] = [
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const { profile, role, signOut } = useAuth();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [templatesOpen, setTemplatesOpen] = useState(false);
