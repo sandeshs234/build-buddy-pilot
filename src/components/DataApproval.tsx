@@ -3,8 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
-import { Check, X, Clock, Eye, ArrowRight, MessageSquare } from 'lucide-react';
+import { Check, X, Clock, Eye, ArrowRight, MessageSquare, CheckCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -69,9 +70,16 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [batchProcessing, setBatchProcessing] = useState(false);
 
   const [rejectDialogId, setRejectDialogId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
+  // 'single' for one item, 'batch' for multiple
+  const [rejectMode, setRejectMode] = useState<'single' | 'batch'>('single');
+
+  const pendingChanges = changes.filter(c => c.status === 'pending');
+  const allPendingSelected = pendingChanges.length > 0 && pendingChanges.every(c => selectedIds.has(c.id));
 
   const fetchChanges = async () => {
     setLoading(true);
@@ -100,6 +108,7 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
       }));
       setChanges(enriched);
     }
+    setSelectedIds(new Set());
     setLoading(false);
   };
 
@@ -120,6 +129,22 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
 
     return () => { supabase.removeChannel(channel); };
   }, [projectId, filter]);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (allPendingSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(pendingChanges.map(c => c.id)));
+    }
+  };
 
   const applyChangeToTable = async (change: DataChange) => {
     const { table_name, operation, data, record_id } = change;
@@ -142,7 +167,6 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
       }
       return true;
     } catch (err: any) {
-      toast({ title: 'Apply Error', description: err.message, variant: 'destructive' });
       return false;
     }
   };
@@ -152,7 +176,10 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
     if (!change) return;
 
     const applied = await applyChangeToTable(change);
-    if (!applied) return;
+    if (!applied) {
+      toast({ title: 'Apply Error', description: `Failed to apply ${change.operation} on ${change.table_name}`, variant: 'destructive' });
+      return false;
+    }
 
     await (supabase as any)
       .from('data_changes')
@@ -167,8 +194,7 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
       type: 'approval_notification',
     });
 
-    toast({ title: '✅ Change approved & applied', description: `Data has been written to ${change.table_name.replace(/_/g, ' ')}` });
-    fetchChanges();
+    return true;
   };
 
   const rejectChange = async (changeId: string, reason: string) => {
@@ -192,11 +218,48 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
       message: `Your ${change.operation} on ${change.table_name.replace(/_/g, ' ')} has been rejected.${reason ? ` Reason: ${reason}` : ''}`,
       type: 'approval_notification',
     });
+  };
 
-    toast({ title: '❌ Change rejected', description: 'Data has been discarded and will not be applied.' });
+  const batchApprove = async () => {
+    setBatchProcessing(true);
+    let success = 0;
+    let failed = 0;
+    for (const id of selectedIds) {
+      const result = await approveChange(id);
+      if (result) success++; else failed++;
+    }
+    toast({
+      title: `✅ Batch approved`,
+      description: `${success} approved${failed > 0 ? `, ${failed} failed` : ''}`,
+    });
+    setBatchProcessing(false);
+    fetchChanges();
+  };
+
+  const batchReject = async (reason: string) => {
+    setBatchProcessing(true);
+    for (const id of selectedIds) {
+      await rejectChange(id, reason);
+    }
+    toast({
+      title: `❌ Batch rejected`,
+      description: `${selectedIds.size} submissions rejected`,
+    });
     setRejectDialogId(null);
     setRejectReason('');
+    setBatchProcessing(false);
     fetchChanges();
+  };
+
+  const handleRejectConfirm = () => {
+    if (rejectMode === 'batch') {
+      batchReject(rejectReason);
+    } else if (rejectDialogId) {
+      rejectChange(rejectDialogId, rejectReason);
+      setRejectDialogId(null);
+      setRejectReason('');
+      fetchChanges();
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -219,7 +282,7 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h2 className="text-lg font-semibold text-foreground">Data Approval Queue</h2>
         <div className="flex gap-1">
           {(['pending', 'approved', 'rejected', 'all'] as const).map(f => (
@@ -235,6 +298,42 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
           ))}
         </div>
       </div>
+
+      {/* Batch action bar */}
+      {pendingChanges.length > 0 && (
+        <div className="flex items-center gap-3 bg-muted/40 rounded-lg px-4 py-2 border">
+          <Checkbox
+            checked={allPendingSelected}
+            onCheckedChange={toggleSelectAll}
+            aria-label="Select all pending"
+          />
+          <span className="text-xs text-muted-foreground">
+            {selectedIds.size > 0 ? `${selectedIds.size} selected` : 'Select all'}
+          </span>
+          {selectedIds.size > 0 && (
+            <div className="flex gap-2 ml-auto">
+              <Button
+                size="sm"
+                onClick={batchApprove}
+                disabled={batchProcessing}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                <CheckCheck size={14} className="mr-1" />
+                Approve {selectedIds.size}
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                disabled={batchProcessing}
+                onClick={() => { setRejectMode('batch'); setRejectDialogId('batch'); setRejectReason(''); }}
+              >
+                <X size={14} className="mr-1" />
+                Reject {selectedIds.size}
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
 
       {loading && <p className="text-sm text-muted-foreground">Loading...</p>}
 
@@ -253,6 +352,14 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
               onClick={() => setExpandedId(expandedId === change.id ? null : change.id)}
             >
               <div className="flex items-center gap-2">
+                {change.status === 'pending' && (
+                  <Checkbox
+                    checked={selectedIds.has(change.id)}
+                    onCheckedChange={(e) => { e; toggleSelect(change.id); }}
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label={`Select ${change.table_name}`}
+                  />
+                )}
                 {getOperationBadge(change.operation)}
                 <span className="text-sm font-medium text-foreground capitalize">{change.table_name.replace(/_/g, ' ')}</span>
                 {getStatusBadge(change.status)}
@@ -270,12 +377,10 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
 
             {expandedId === change.id && (
               <div className="space-y-3">
-                {/* Show diff if original_data exists */}
                 {change.original_data ? (
                   <DataDiff original={change.original_data} current={change.data} />
                 ) : null}
 
-                {/* Always show current data */}
                 <div>
                   <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
                     {change.original_data ? 'Current Data' : 'Submitted Data'}
@@ -305,10 +410,10 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
 
             {change.status === 'pending' && (
               <div className="flex gap-2 pt-1">
-                <Button size="sm" onClick={() => approveChange(change.id)} className="bg-green-600 hover:bg-green-700">
+                <Button size="sm" onClick={() => approveChange(change.id).then(() => fetchChanges())} className="bg-green-600 hover:bg-green-700">
                   <Check size={14} className="mr-1" /> Approve
                 </Button>
-                <Button size="sm" variant="destructive" onClick={() => { setRejectDialogId(change.id); setRejectReason(''); }}>
+                <Button size="sm" variant="destructive" onClick={() => { setRejectMode('single'); setRejectDialogId(change.id); setRejectReason(''); }}>
                   <X size={14} className="mr-1" /> Reject
                 </Button>
               </div>
@@ -321,9 +426,11 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
       <Dialog open={!!rejectDialogId} onOpenChange={(open) => { if (!open) { setRejectDialogId(null); setRejectReason(''); } }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Reject Submission</DialogTitle>
+            <DialogTitle>
+              {rejectMode === 'batch' ? `Reject ${selectedIds.size} Submissions` : 'Reject Submission'}
+            </DialogTitle>
             <DialogDescription>
-              Provide a reason for rejection so the user understands why their change was not accepted.
+              Provide a reason for rejection so {rejectMode === 'batch' ? 'users understand' : 'the user understands'} why {rejectMode === 'batch' ? 'their changes were' : 'their change was'} not accepted.
             </DialogDescription>
           </DialogHeader>
           <Textarea
@@ -334,8 +441,8 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => { setRejectDialogId(null); setRejectReason(''); }}>Cancel</Button>
-            <Button variant="destructive" onClick={() => rejectDialogId && rejectChange(rejectDialogId, rejectReason)}>
-              <X size={14} className="mr-1" /> Reject
+            <Button variant="destructive" onClick={handleRejectConfirm} disabled={batchProcessing}>
+              <X size={14} className="mr-1" /> {rejectMode === 'batch' ? `Reject ${selectedIds.size}` : 'Reject'}
             </Button>
           </DialogFooter>
         </DialogContent>
