@@ -22,7 +22,7 @@ const statusBadge = (status: string, critical: boolean) => {
 
 export default function Activities() {
   const { activities, activitiesOps } = useProjectData();
-  const [view, setView] = useState<'gantt' | 'table' | 'cpm' | 'primavera'>('gantt');
+  const [view, setView] = useState<'gantt' | 'table' | 'cpm' | 'primavera' | 'flow'>('gantt');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [aiOpen, setAiOpen] = useState(false);
