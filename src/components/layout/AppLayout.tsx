@@ -5,9 +5,10 @@ import {
   Receipt, Users, UserCog, Truck, Droplets, ShieldCheck, AlertTriangle, 
   HardHat, Flame, Wrench, Building2, Camera, Clock, Settings, Database, 
   BarChart3, HelpCircle, FileText, FileDiff, ChevronDown, ChevronRight,
-  Construction, FileSpreadsheet, Bot
+  Construction, FileSpreadsheet, Bot, LogOut, Shield
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/context/AuthContext';
 import SampleTemplates from '@/components/SampleTemplates';
 import AIAssistant from '@/components/AIAssistant';
 
