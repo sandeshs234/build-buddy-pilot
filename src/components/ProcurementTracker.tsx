@@ -235,11 +235,6 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
     }
   };
 
-  // Filter items
-  const filteredItems = selectedStatus 
-    ? items.filter(i => i.status === selectedStatus)
-    : items;
-
   // Stats
   const statusCounts = items.reduce((acc, i) => {
     acc[i.status] = (acc[i.status] || 0) + 1;
