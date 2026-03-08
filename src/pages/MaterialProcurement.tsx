@@ -211,12 +211,18 @@ export default function MaterialProcurement() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="tracking">Tracking</TabsTrigger>
           <TabsTrigger value="timeline">Timeline</TabsTrigger>
           <TabsTrigger value="suppliers">Suppliers</TabsTrigger>
           <TabsTrigger value="costs">Cost Breakdown</TabsTrigger>
         </TabsList>
+
+        {/* Tracking Tab */}
+        <TabsContent value="tracking" className="mt-4">
+          <ProcurementTracker materials={materials} />
+        </TabsContent>
 
         {/* Overview Tab */}
         <TabsContent value="overview" className="mt-4">
