@@ -25,6 +25,8 @@ export default function BackupRestore() {
   const data = useProjectData();
   const [restoring, setRestoring] = useState(false);
   const [lastBackup, setLastBackup] = useState<string | null>(() => localStorage.getItem('buildforge_last_backup'));
+  const [previewData, setPreviewData] = useState<Record<string, any[] | object> | null>(null);
+  const [selectedModules, setSelectedModules] = useState<Set<string>>(new Set());
   const singleFileRef = useRef<HTMLInputElement>(null);
   const multiFileRef = useRef<HTMLInputElement>(null);
   const folderRef = useRef<HTMLInputElement>(null);
