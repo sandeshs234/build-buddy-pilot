@@ -3,6 +3,7 @@ import { useProjectData } from '@/context/ProjectDataContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Activity, BOQItem, InventoryItem } from '@/types/construction';
+import { useAuth } from '@/context/AuthContext';
 
 interface SyncResult {
   materials: any[];
@@ -13,6 +14,7 @@ interface SyncResult {
 
 export function useModuleSync() {
   const projectData = useProjectData();
+  const { user, currentProjectId } = useAuth();
   const [syncing, setSyncing] = useState(false);
   const [lastSyncResult, setLastSyncResult] = useState<SyncResult | null>(null);
 
@@ -79,7 +81,7 @@ export function useModuleSync() {
     }
   }, [projectData.boqItems, projectData.activities, projectData.inventory]);
 
-  const applyActivities = useCallback((activities: any[]) => {
+  const applyActivities = useCallback(async (activities: any[]) => {
     const today = new Date();
     const newActivities: Activity[] = activities.map((a: any, idx: number) => {
       const start = new Date(today);
@@ -99,8 +101,19 @@ export function useModuleSync() {
       };
     });
     projectData.activitiesOps.bulkAdd(newActivities);
-    toast({ title: 'Activities Created', description: `${newActivities.length} activities added from BOQ analysis` });
-  }, [projectData.activitiesOps]);
+    toast({ title: '📋 Activities Created', description: `${newActivities.length} activities added from BOQ analysis` });
+
+    // Persist notification to database
+    if (user?.id) {
+      await (supabase as any).from('notifications').insert({
+        user_id: user.id,
+        project_id: currentProjectId || undefined,
+        title: '📋 Activities Ready',
+        message: `${newActivities.length} activities were auto-generated from BOQ analysis. View them on the Activities page (CPM/Flow views) to check the critical path.`,
+        type: 'info',
+      });
+    }
+  }, [projectData.activitiesOps, user, currentProjectId]);
 
   const applyMaterials = useCallback((materials: any[]) => {
     const existingCodes = new Set(projectData.inventory.map(i => i.code));
