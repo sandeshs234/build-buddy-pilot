@@ -299,6 +299,29 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
             }
           }}
         />
+        {items.length > 0 && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="text-destructive">
+                <Trash size={14} className="mr-1" /> Clear All
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Clear all procurement data?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete all {items.length} tracking entries. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={clearAll} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Yes, clear all
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
 
       {/* Table */}
