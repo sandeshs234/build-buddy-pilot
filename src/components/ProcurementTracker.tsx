@@ -229,11 +229,21 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
   const deleteSelected = async () => {
     if (selectedIds.size === 0) return;
     const ids = [...selectedIds];
+    const deletedItems = items.filter(i => selectedIds.has(i.id));
     const { error } = await supabase.from('procurement_tracking').delete().in('id', ids);
     if (!error) {
-      toast({ title: 'Deleted', description: `${ids.length} entries removed` });
+      setItems(prev => prev.filter(i => !selectedIds.has(i.id)));
       setSelectedIds(new Set());
-      fetchItems();
+      const { dismiss } = toast({
+        title: 'Deleted',
+        description: `${ids.length} entries removed`,
+        action: (
+          <Button variant="outline" size="sm" onClick={() => { restoreItems(deletedItems); dismiss(); }}>
+            Undo
+          </Button>
+        ),
+        duration: 5000,
+      });
     } else {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
