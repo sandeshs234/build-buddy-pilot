@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
 
 type AppRole = 'admin' | 'project_manager' | 'engineer' | 'viewer';
+type StorageMode = 'local' | 'cloud' | null;
 
 interface Profile {
   id: string;
@@ -11,6 +12,7 @@ interface Profile {
   phone: string;
   company: string;
   avatar_url: string;
+  storage_mode: string | null;
 }
 
 interface AuthContextType {
@@ -20,6 +22,8 @@ interface AuthContextType {
   role: AppRole | null;
   loading: boolean;
   isAdmin: boolean;
+  storageMode: StorageMode;
+  setStorageMode: (mode: 'local' | 'cloud') => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -31,13 +35,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const [storageMode, setStorageModeState] = useState<StorageMode>(null);
 
   const fetchProfileAndRole = async (userId: string) => {
     const [profileRes, roleRes] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', userId).single(),
       supabase.from('user_roles').select('role').eq('user_id', userId).single(),
     ]);
-    if (profileRes.data) setProfile(profileRes.data as Profile);
+    if (profileRes.data) {
+      const p = profileRes.data as Profile;
+      setProfile(p);
+      setStorageModeState((p.storage_mode as StorageMode) || null);
+    }
     if (roleRes.data) setRole(roleRes.data.role as AppRole);
   };
 
@@ -47,11 +56,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          // Use setTimeout to avoid Supabase auth deadlock
           setTimeout(() => fetchProfileAndRole(session.user.id), 0);
         } else {
           setProfile(null);
           setRole(null);
+          setStorageModeState(null);
         }
         setLoading(false);
       }
@@ -69,18 +78,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  const setStorageMode = async (mode: 'local' | 'cloud') => {
+    setStorageModeState(mode);
+    if (user) {
+      await supabase.from('profiles').update({ storage_mode: mode } as any).eq('id', user.id);
+    }
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
     setProfile(null);
     setRole(null);
+    setStorageModeState(null);
   };
 
   return (
     <AuthContext.Provider value={{
       user, session, profile, role, loading,
       isAdmin: role === 'admin',
+      storageMode,
+      setStorageMode,
       signOut,
     }}>
       {children}
