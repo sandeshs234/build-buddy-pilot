@@ -285,20 +285,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                            key={item.path}
                            to={item.path}
                            className={cn(
-                             'sidebar-item relative',
+                             'sidebar-item',
                              active ? 'sidebar-item-active' : 'sidebar-item-inactive'
                            )}
                          >
-                           {item.icon}
-                           <span>{item.label}</span>
+                           <div className="flex items-center gap-3">
+                             {item.icon}
+                             <span>{item.label}</span>
+                           </div>
                            {badge !== null && badge > 0 && (
-                             <span className="ml-auto flex items-center justify-center w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold">
+                             <span className="flex items-center justify-center w-5 h-5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex-shrink-0">
                                {badge > 99 ? '99+' : badge}
                              </span>
                            )}
                          </Link>
                        );
-                     })}
+                      })}
                   </div>
                 )}
               </div>
