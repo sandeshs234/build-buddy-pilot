@@ -124,10 +124,10 @@ export default function SettingsPage() {
           <div className="bg-card rounded-xl border shadow-sm p-6">
             <h3 className="text-sm font-semibold mb-4">Company Information</h3>
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Company Name" field="companyName" span />
-              <Field label="Address" field="companyAddress" span />
-              <Field label="Phone" field="companyPhone" />
-              <Field label="Email" field="companyEmail" type="email" />
+              {renderField("Company Name", "companyName", "text", true)}
+              {renderField("Address", "companyAddress", "text", true)}
+              {renderField("Phone", "companyPhone")}
+              {renderField("Email", "companyEmail", "email")}
             </div>
           </div>
         </TabsContent>
