@@ -111,6 +111,13 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
       query = query.eq('status', filter);
     }
 
+    if (dateFrom) {
+      query = query.gte('created_at', startOfDay(dateFrom).toISOString());
+    }
+    if (dateTo) {
+      query = query.lte('created_at', endOfDay(dateTo).toISOString());
+    }
+
     const { data } = await query;
 
     if (data) {
