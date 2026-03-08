@@ -1,11 +1,14 @@
 import StatCard from '@/components/StatCard';
 import { useProjectData } from '@/context/ProjectDataContext';
+import { useAuth } from '@/context/AuthContext';
 import { projectInfo } from '@/data/sampleData';
 import { CalendarClock, Users, AlertTriangle, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, Legend } from 'recharts';
+import DataApproval from '@/components/DataApproval';
 
 export default function Dashboard() {
   const { activities, boqItems, manpower, delays, equipment } = useProjectData();
+  const { canApprove, currentProjectId } = useAuth();
 
   const criticalCount = activities.filter(a => a.critical && a.status !== 'completed').length;
   const completedCount = activities.filter(a => a.status === 'completed').length;
