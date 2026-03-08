@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useProjectData } from '@/context/ProjectDataContext';
 import { BOQItem } from '@/types/construction';
 import PrintableReport from '@/components/PrintableReport';
 import ExcelImportExport from '@/components/ExcelImportExport';
 import MaterialAnalysis from '@/components/MaterialAnalysis';
+import { useModuleSync } from '@/hooks/useModuleSync';
 import { Button } from '@/components/ui/button';
-import { Plus, Pencil, Trash2, Undo2, Trash, FolderPlus, Sparkles } from 'lucide-react';
+import { Plus, Pencil, Trash2, Undo2, Trash, FolderPlus, Sparkles, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,10 +15,12 @@ import { toast } from '@/hooks/use-toast';
 
 export default function BOQItems() {
   const { boqItems: items, boqOps } = useProjectData();
+  const { syncing: aiAnalyzing, fullSync, applyActivities, applyMaterials } = useModuleSync();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<BOQItem | null>(null);
   const [newProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
   const [materialAnalysisOpen, setMaterialAnalysisOpen] = useState(false);
+  const [autoAnalysisRunning, setAutoAnalysisRunning] = useState(false);
 
   const totalBudget = items.reduce((sum, i) => sum + i.totalQty * i.rate, 0);
   const totalExecuted = items.reduce((sum, i) => sum + i.executedQty * i.rate, 0);
@@ -31,6 +34,33 @@ export default function BOQItems() {
   const handleSave = () => { boqOps.save(form); setDialogOpen(false); };
   const handleDelete = (id: string) => boqOps.remove(id);
 
+  const runAutoAnalysis = useCallback(async () => {
+    setAutoAnalysisRunning(true);
+    toast({ title: '🤖 AI Analysis Started', description: 'Analyzing imported BOQ items for materials, activities & inventory gaps...' });
+    try {
+      const result = await fullSync();
+      if (result) {
+        const matCount = result.materials?.length || 0;
+        const actCount = result.activities?.length || 0;
+        const gapCount = result.inventoryGaps?.length || 0;
+        const totalCost = (result.materials || []).reduce((s: number, m: any) => s + (m.totalWithWaste || 0) * (m.unitRate || 0), 0);
+
+        // Auto-apply materials to inventory and activities to schedule
+        if (result.materials?.length) applyMaterials(result.materials);
+        if (result.activities?.length) applyActivities(result.activities);
+
+        toast({
+          title: '✅ AI Analysis Complete',
+          description: `${matCount} materials (est. NPR ${totalCost.toLocaleString()}), ${actCount} activities, ${gapCount} inventory gaps detected. Data synced to Inventory & Activities.`,
+        });
+      }
+    } catch {
+      toast({ title: 'Analysis Error', description: 'Auto-analysis failed. You can run it manually.', variant: 'destructive' });
+    } finally {
+      setAutoAnalysisRunning(false);
+    }
+  }, [fullSync, applyMaterials, applyActivities]);
+
   const handleImport = (data: Record<string, any>[]) => {
     const mapped: BOQItem[] = data.map(row => ({
       id: crypto.randomUUID(),
@@ -43,6 +73,9 @@ export default function BOQItems() {
       rate: Number(row.rate || row.Rate || row['Unit Rate'] || 0),
     }));
     boqOps.bulkAdd(mapped);
+
+    // Auto-trigger AI analysis after import
+    setTimeout(() => runAutoAnalysis(), 500);
   };
 
   const excelColumns = [
@@ -82,8 +115,8 @@ export default function BOQItems() {
           <Button variant="ghost" size="sm" onClick={() => setNewProjectDialogOpen(true)} disabled={items.length === 0} className="text-destructive" title="Start fresh">
             <FolderPlus size={14} className="mr-1" /> New Project
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setMaterialAnalysisOpen(true)} disabled={items.length === 0}>
-            <Sparkles size={14} className="mr-1" /> AI Analysis
+          <Button variant="outline" size="sm" onClick={() => setMaterialAnalysisOpen(true)} disabled={items.length === 0 || autoAnalysisRunning}>
+            {autoAnalysisRunning ? <><Loader2 size={14} className="mr-1 animate-spin" /> Analyzing...</> : <><Sparkles size={14} className="mr-1" /> AI Analysis</>}
           </Button>
           <Button size="sm" onClick={openAdd}><Plus size={14} className="mr-1" /> Add Item</Button>
         </div>
