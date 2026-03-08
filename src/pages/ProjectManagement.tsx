@@ -290,10 +290,10 @@ export default function ProjectManagement() {
                         <p className="text-xs text-muted-foreground">{m.profile?.email}</p>
                       </div>
                       <div className="flex gap-1">
-                        <Button size="sm" variant="ghost" onClick={() => approveMember(m.id)} className="text-green-600 hover:text-green-700 hover:bg-green-50">
+                        <Button size="sm" variant="ghost" onClick={() => approveMember(m, project.name)} className="text-green-600 hover:text-green-700 hover:bg-green-50">
                           <Check size={16} />
                         </Button>
-                        <Button size="sm" variant="ghost" onClick={() => rejectMember(m.id)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
+                        <Button size="sm" variant="ghost" onClick={() => rejectMember(m, project.name)} className="text-red-600 hover:text-red-700 hover:bg-red-50">
                           <X size={16} />
                         </Button>
                       </div>
