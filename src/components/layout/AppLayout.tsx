@@ -291,7 +291,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </button>
                 {!isCollapsed && (
                   <div className="space-y-0.5 mt-0.5 mb-2">
-                    {group.items.map((item) => {
+                    {visibleItems.map((item) => {
                        const active = location.pathname === item.path;
                        let badge: number | null = null;
                        
