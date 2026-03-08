@@ -14,6 +14,399 @@ export type Database = {
   }
   public: {
     Tables: {
+      activities: {
+        Row: {
+          actual_end: string | null
+          actual_start: string | null
+          created_at: string
+          critical: boolean
+          id: string
+          name: string
+          percent_complete: number
+          planned_end: string
+          planned_start: string
+          predecessors: string | null
+          status: string
+          user_id: string
+          wbs: string
+        }
+        Insert: {
+          actual_end?: string | null
+          actual_start?: string | null
+          created_at?: string
+          critical?: boolean
+          id?: string
+          name?: string
+          percent_complete?: number
+          planned_end?: string
+          planned_start?: string
+          predecessors?: string | null
+          status?: string
+          user_id: string
+          wbs?: string
+        }
+        Update: {
+          actual_end?: string | null
+          actual_start?: string | null
+          created_at?: string
+          critical?: boolean
+          id?: string
+          name?: string
+          percent_complete?: number
+          planned_end?: string
+          planned_start?: string
+          predecessors?: string | null
+          status?: string
+          user_id?: string
+          wbs?: string
+        }
+        Relationships: []
+      }
+      boq_items: {
+        Row: {
+          code: string
+          created_at: string
+          description: string
+          executed_qty: number
+          id: string
+          measure_type: string
+          rate: number
+          total_qty: number
+          unit: string
+          user_id: string
+        }
+        Insert: {
+          code?: string
+          created_at?: string
+          description?: string
+          executed_qty?: number
+          id?: string
+          measure_type?: string
+          rate?: number
+          total_qty?: number
+          unit?: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string
+          executed_qty?: number
+          id?: string
+          measure_type?: string
+          rate?: number
+          total_qty?: number
+          unit?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      concrete_pours: {
+        Row: {
+          created_at: string
+          date: string
+          grade: string
+          id: string
+          location: string
+          remarks: string
+          slump: number
+          supplier: string
+          temperature: number
+          user_id: string
+          volume: number
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          grade?: string
+          id?: string
+          location?: string
+          remarks?: string
+          slump?: number
+          supplier?: string
+          temperature?: number
+          user_id: string
+          volume?: number
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          grade?: string
+          id?: string
+          location?: string
+          remarks?: string
+          slump?: number
+          supplier?: string
+          temperature?: number
+          user_id?: string
+          volume?: number
+        }
+        Relationships: []
+      }
+      daily_quantity: {
+        Row: {
+          boq_code: string
+          created_at: string
+          date: string
+          description: string
+          id: string
+          location: string
+          qty: number
+          remarks: string
+          unit: string
+          user_id: string
+        }
+        Insert: {
+          boq_code?: string
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+          location?: string
+          qty?: number
+          remarks?: string
+          unit?: string
+          user_id: string
+        }
+        Update: {
+          boq_code?: string
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+          location?: string
+          qty?: number
+          remarks?: string
+          unit?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      delays: {
+        Row: {
+          activity: string
+          cause: string
+          created_at: string
+          date: string
+          description: string
+          duration: number
+          id: string
+          impact: string
+          recovery: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          activity?: string
+          cause?: string
+          created_at?: string
+          date?: string
+          description?: string
+          duration?: number
+          id?: string
+          impact?: string
+          recovery?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          activity?: string
+          cause?: string
+          created_at?: string
+          date?: string
+          description?: string
+          duration?: number
+          id?: string
+          impact?: string
+          recovery?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      equipment: {
+        Row: {
+          activity: string
+          created_at: string
+          date: string
+          description: string
+          eq_id: string
+          equipment_name: string
+          fuel: number
+          hours: number
+          id: string
+          issues: string
+          operator: string
+          ownership: string
+          user_id: string
+        }
+        Insert: {
+          activity?: string
+          created_at?: string
+          date?: string
+          description?: string
+          eq_id?: string
+          equipment_name?: string
+          fuel?: number
+          hours?: number
+          id?: string
+          issues?: string
+          operator?: string
+          ownership?: string
+          user_id: string
+        }
+        Update: {
+          activity?: string
+          created_at?: string
+          date?: string
+          description?: string
+          eq_id?: string
+          equipment_name?: string
+          fuel?: number
+          hours?: number
+          id?: string
+          issues?: string
+          operator?: string
+          ownership?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      fuel_log: {
+        Row: {
+          cost: number
+          created_at: string
+          date: string
+          equipment: string
+          id: string
+          liters: number
+          odometer: number
+          remarks: string
+          user_id: string
+        }
+        Insert: {
+          cost?: number
+          created_at?: string
+          date?: string
+          equipment?: string
+          id?: string
+          liters?: number
+          odometer?: number
+          remarks?: string
+          user_id: string
+        }
+        Update: {
+          cost?: number
+          created_at?: string
+          date?: string
+          equipment?: string
+          id?: string
+          liters?: number
+          odometer?: number
+          remarks?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      inventory: {
+        Row: {
+          balance: number
+          code: string
+          created_at: string
+          description: string
+          id: string
+          issues: number
+          location: string
+          min_level: number
+          opening: number
+          receipts: number
+          unit: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          code?: string
+          created_at?: string
+          description?: string
+          id?: string
+          issues?: number
+          location?: string
+          min_level?: number
+          opening?: number
+          receipts?: number
+          unit?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          code?: string
+          created_at?: string
+          description?: string
+          id?: string
+          issues?: number
+          location?: string
+          min_level?: number
+          opening?: number
+          receipts?: number
+          unit?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      manpower: {
+        Row: {
+          carpenter: number
+          created_at: string
+          date: string
+          electrician: number
+          fitter: number
+          id: string
+          location: string
+          mason: number
+          operator: number
+          skilled: number
+          steel: number
+          supervisor: string
+          unskilled: number
+          user_id: string
+          welder: number
+        }
+        Insert: {
+          carpenter?: number
+          created_at?: string
+          date?: string
+          electrician?: number
+          fitter?: number
+          id?: string
+          location?: string
+          mason?: number
+          operator?: number
+          skilled?: number
+          steel?: number
+          supervisor?: string
+          unskilled?: number
+          user_id: string
+          welder?: number
+        }
+        Update: {
+          carpenter?: number
+          created_at?: string
+          date?: string
+          electrician?: number
+          fitter?: number
+          id?: string
+          location?: string
+          mason?: number
+          operator?: number
+          skilled?: number
+          steel?: number
+          supervisor?: string
+          unskilled?: number
+          user_id?: string
+          welder?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -23,6 +416,7 @@ export type Database = {
           full_name: string
           id: string
           phone: string | null
+          storage_mode: string | null
           updated_at: string
         }
         Insert: {
@@ -33,6 +427,7 @@ export type Database = {
           full_name?: string
           id: string
           phone?: string | null
+          storage_mode?: string | null
           updated_at?: string
         }
         Update: {
@@ -43,7 +438,92 @@ export type Database = {
           full_name?: string
           id?: string
           phone?: string | null
+          storage_mode?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      purchase_orders: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          item_code: string
+          po_no: string
+          price: number
+          qty: number
+          remarks: string
+          status: string
+          supplier: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          id?: string
+          item_code?: string
+          po_no?: string
+          price?: number
+          qty?: number
+          remarks?: string
+          status?: string
+          supplier?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          item_code?: string
+          po_no?: string
+          price?: number
+          qty?: number
+          remarks?: string
+          status?: string
+          supplier?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      safety_incidents: {
+        Row: {
+          cause: string
+          created_at: string
+          date: string
+          description: string
+          id: string
+          injured: string
+          location: string
+          preventive: string
+          reporter: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          cause?: string
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+          injured?: string
+          location?: string
+          preventive?: string
+          reporter?: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          cause?: string
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+          injured?: string
+          location?: string
+          preventive?: string
+          reporter?: string
+          type?: string
+          user_id?: string
         }
         Relationships: []
       }
