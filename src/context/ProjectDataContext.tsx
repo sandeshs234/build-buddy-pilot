@@ -175,45 +175,55 @@ function createCrudOps<T extends { id: string }>(
   };
 }
 
-// ── Hook: state with optional cloud or local persistence, scoped by project ──
-function useDataState<T>(key: string, fallback: T[], isCloud: boolean, userId: string | null, projectId: string | null) {
+// ── Hook: state with cloud persistence + local cache for offline ──
+function useDataState<T>(key: string, fallback: T[], userId: string | null, projectId: string | null) {
   const [data, setData] = useState<T[]>([]);
   const [history, setHistory] = useState<T[][]>([]);
   const [loaded, setLoaded] = useState(false);
 
-  // Load data - re-fetch when projectId changes
+  // Load from cloud, cache locally for offline
   useEffect(() => {
-    if (isCloud && userId) {
+    if (userId) {
       const tableName = TABLE_MAP[key];
       if (!tableName) return;
       setLoaded(false);
       let query = (supabase as any).from(tableName).select('*');
-      // If project is selected, filter by project_id; otherwise filter by user_id only
       if (projectId) {
         query = query.eq('project_id', projectId);
       } else {
         query = query.eq('user_id', userId).is('project_id', null);
       }
-      query.then(({ data: rows }: any) => {
-        if (rows) {
-          setData(rows.map((r: any) => toCamelCase(key, r)) as T[]);
+      query.then(({ data: rows, error }: any) => {
+        if (rows && !error) {
+          const mapped = rows.map((r: any) => toCamelCase(key, r)) as T[];
+          setData(mapped);
+          // Cache for offline
+          try {
+            const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+            cache[`${projectId || 'default'}_${key}`] = mapped;
+            localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+          } catch {}
         } else {
-          setData([]);
+          // Offline fallback: load from cache
+          try {
+            const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+            const cached = cache[`${projectId || 'default'}_${key}`];
+            if (cached) {
+              setData(cached as T[]);
+            } else {
+              setData([]);
+            }
+          } catch {
+            setData([]);
+          }
         }
         setLoaded(true);
       });
-    } else if (!isCloud) {
+    } else {
       setData(getInitial(key, fallback));
       setLoaded(true);
     }
-  }, [key, isCloud, userId, projectId]);
-
-  // Save to localStorage when in local mode
-  useEffect(() => {
-    if (!isCloud && loaded) {
-      saveState(key, data);
-    }
-  }, [key, data, isCloud, loaded]);
+  }, [key, userId, projectId]);
 
   return { data, setData, history, setHistory, loaded };
 }
