@@ -100,6 +100,54 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [templatesOpen, setTemplatesOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+  const [pendingMembersCount, setPendingMembersCount] = useState(0);
+  const [pendingChangesCount, setPendingChangesCount] = useState(0);
+
+  // Fetch pending member requests and unapproved data changes
+  useEffect(() => {
+    const fetchCounts = async () => {
+      // Fetch pending member requests for all projects user is admin of
+      const { data: memberData } = await supabase
+        .from('project_members')
+        .select('id')
+        .eq('status', 'pending');
+      setPendingMembersCount(memberData?.length || 0);
+
+      // Fetch unapproved data changes
+      const { data: changesData } = await supabase
+        .from('data_changes')
+        .select('id')
+        .eq('status', 'pending');
+      setPendingChangesCount(changesData?.length || 0);
+    };
+
+    fetchCounts();
+
+    // Subscribe to realtime updates for project_members
+    const membersSub = supabase
+      .channel('project_members_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'project_members' },
+        () => fetchCounts()
+      )
+      .subscribe();
+
+    // Subscribe to realtime updates for data_changes
+    const changesSub = supabase
+      .channel('data_changes_changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'data_changes' },
+        () => fetchCounts()
+      )
+      .subscribe();
+
+    return () => {
+      membersSub.unsubscribe();
+      changesSub.unsubscribe();
+    };
+  }, []);
 
   // Close sidebar on route change for mobile/tablet
   useEffect(() => {
