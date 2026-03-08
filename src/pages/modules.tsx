@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine, Legend } from 'recharts';
 import { useProjectData } from '@/context/ProjectDataContext';
 import ModulePage from '@/components/ModulePage';
 import PrintableReport from '@/components/PrintableReport';
@@ -115,6 +116,35 @@ export function InventoryPage() {
           </div>
         </div>
       )}
+      {totalItems > 0 && (() => {
+        const chartData = data
+          .filter(i => i.minLevel > 0)
+          .slice(0, 15)
+          .map(i => ({
+            name: i.code || i.description.slice(0, 12),
+            balance: i.balance,
+            minLevel: i.minLevel,
+          }));
+        return chartData.length > 0 ? (
+          <div className="bg-card rounded-xl border shadow-sm p-5 mb-6">
+            <h2 className="text-sm font-semibold text-card-foreground mb-4">Balance vs Minimum Level</h2>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={chartData} layout="vertical" margin={{ left: 10, right: 20 }}>
+                <XAxis type="number" fontSize={11} />
+                <YAxis type="category" dataKey="name" width={80} fontSize={10} />
+                <Tooltip />
+                <Legend iconSize={10} wrapperStyle={{ fontSize: 11 }} />
+                <Bar dataKey="balance" name="Balance" radius={[0, 3, 3, 0]}>
+                  {chartData.map((entry, i) => (
+                    <Cell key={i} fill={entry.balance <= entry.minLevel ? 'hsl(0, 84%, 60%)' : 'hsl(152, 60%, 42%)'} />
+                  ))}
+                </Bar>
+                <Bar dataKey="minLevel" name="Min Level" fill="hsl(220, 14%, 80%)" radius={[0, 3, 3, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        ) : null;
+      })()}
       <ModulePage
         title="Inventory"
         description={`Track stock levels, receipts, and issues · ${data.length} items`}
