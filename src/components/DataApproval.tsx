@@ -5,9 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
-import { Check, X, Clock, Eye, ArrowRight, MessageSquare, CheckCheck } from 'lucide-react';
-import { format } from 'date-fns';
+import { Check, X, Clock, Eye, ArrowRight, MessageSquare, CheckCheck, CalendarIcon, XCircle } from 'lucide-react';
+import { format, startOfDay, endOfDay } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
@@ -78,6 +81,8 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
   const [rejectReason, setRejectReason] = useState('');
   // 'single' for one item, 'batch' for multiple
   const [rejectMode, setRejectMode] = useState<'single' | 'batch'>('single');
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
 
   const pendingChanges = changes.filter(c => c.status === 'pending');
   const allPendingSelected = pendingChanges.length > 0 && pendingChanges.every(c => selectedIds.has(c.id));
@@ -106,6 +111,13 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
       query = query.eq('status', filter);
     }
 
+    if (dateFrom) {
+      query = query.gte('created_at', startOfDay(dateFrom).toISOString());
+    }
+    if (dateTo) {
+      query = query.lte('created_at', endOfDay(dateTo).toISOString());
+    }
+
     const { data } = await query;
 
     if (data) {
@@ -126,7 +138,7 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
     fetchCounts();
   };
 
-  useEffect(() => { fetchChanges(); }, [projectId, filter]);
+  useEffect(() => { fetchChanges(); }, [projectId, filter, dateFrom, dateTo]);
   useEffect(() => { fetchCounts(); }, [projectId]);
 
   useEffect(() => {
@@ -322,6 +334,50 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
             );
           })}
         </div>
+      </div>
+
+      {/* Date range filter */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className={cn("gap-1.5 text-xs", !dateFrom && "text-muted-foreground")}>
+              <CalendarIcon size={14} />
+              {dateFrom ? format(dateFrom, 'MMM d, yyyy') : 'From'}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={dateFrom}
+              onSelect={setDateFrom}
+              initialFocus
+              className={cn("p-3 pointer-events-auto")}
+            />
+          </PopoverContent>
+        </Popover>
+        <span className="text-xs text-muted-foreground">→</span>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className={cn("gap-1.5 text-xs", !dateTo && "text-muted-foreground")}>
+              <CalendarIcon size={14} />
+              {dateTo ? format(dateTo, 'MMM d, yyyy') : 'To'}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={dateTo}
+              onSelect={setDateTo}
+              initialFocus
+              className={cn("p-3 pointer-events-auto")}
+            />
+          </PopoverContent>
+        </Popover>
+        {(dateFrom || dateTo) && (
+          <Button variant="ghost" size="sm" className="text-xs gap-1 text-muted-foreground" onClick={() => { setDateFrom(undefined); setDateTo(undefined); }}>
+            <XCircle size={14} /> Clear dates
+          </Button>
+        )}
       </div>
 
       {/* Batch action bar */}
