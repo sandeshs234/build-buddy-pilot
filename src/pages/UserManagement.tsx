@@ -103,6 +103,49 @@ export default function UserManagement() {
     }
   };
 
+  const handleDeleteUser = async (user: UserRow) => {
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+        body: { user_ids: [user.id] },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: 'User Deleted', description: `${user.email} has been removed.` });
+      setConfirmDeleteOpen(false);
+      setDeleteTarget(null);
+      fetchUsers();
+    } catch (err: any) {
+      toast({ title: 'Delete Failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleClearAll = async () => {
+    const nonAdminUsers = users.filter(u => u.id !== currentUser?.id);
+    if (nonAdminUsers.length === 0) {
+      toast({ title: 'No users to remove', description: 'Only your admin account exists.' });
+      setClearAllOpen(false);
+      return;
+    }
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+        body: { user_ids: nonAdminUsers.map(u => u.id) },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: 'Users Removed', description: `${data.deleted} user(s) deleted. Your admin account is preserved.` });
+      setClearAllOpen(false);
+      fetchUsers();
+    } catch (err: any) {
+      toast({ title: 'Clear Failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (!isAdmin) {
     return (
       <div className="p-12 text-center">
