@@ -179,6 +179,9 @@ export default function BOQItems() {
           <Button variant="outline" size="sm" onClick={() => setMaterialAnalysisOpen(true)} disabled={items.length === 0 || autoAnalysisRunning}>
             {autoAnalysisRunning ? <><Loader2 size={14} className="mr-1 animate-spin" /> Analyzing...</> : <><Sparkles size={14} className="mr-1" /> AI Analysis</>}
           </Button>
+          <Button variant="outline" size="sm" onClick={() => setGenerateDialogOpen(true)} disabled={generating}>
+            {generating ? <><Loader2 size={14} className="mr-1 animate-spin" /> Generating...</> : <><Wand2 size={14} className="mr-1" /> AI Generate BOQ</>}
+          </Button>
           <Button size="sm" onClick={openAdd}><Plus size={14} className="mr-1" /> Add Item</Button>
         </div>
       </div>
