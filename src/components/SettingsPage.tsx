@@ -4,8 +4,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Upload, Save, Image, Users, FileText } from 'lucide-react';
+import { Building2, Upload, Save, Image, Users, FileText, HardDrive } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import BackupRestore from '@/components/BackupRestore';
 
 interface ProjectSettings {
   companyName: string;
@@ -113,11 +114,12 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="company" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="company" className="text-xs"><Building2 size={14} className="mr-1.5" /> Company</TabsTrigger>
           <TabsTrigger value="project" className="text-xs"><FileText size={14} className="mr-1.5" /> Project</TabsTrigger>
           <TabsTrigger value="parties" className="text-xs"><Users size={14} className="mr-1.5" /> Parties</TabsTrigger>
           <TabsTrigger value="branding" className="text-xs"><Image size={14} className="mr-1.5" /> Branding</TabsTrigger>
+          <TabsTrigger value="backup" className="text-xs"><HardDrive size={14} className="mr-1.5" /> Backup</TabsTrigger>
         </TabsList>
 
         <TabsContent value="company">
@@ -252,6 +254,9 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
+        </TabsContent>
+        <TabsContent value="backup">
+          <BackupRestore />
         </TabsContent>
       </Tabs>
     </div>
