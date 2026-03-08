@@ -90,6 +90,43 @@ export default function MyPendingChanges() {
     setCancelling(null);
   };
 
+  const deleteRejected = async (changeId: string) => {
+    setCancelling(changeId);
+    const { error } = await (supabase as any)
+      .from('data_changes')
+      .delete()
+      .eq('id', changeId)
+      .eq('user_id', user?.id)
+      .eq('status', 'rejected');
+
+    if (error) {
+      toast({ title: '❌ Failed to delete', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: '🗑️ Deleted', description: 'Rejected submission removed.' });
+      setChanges(prev => prev.filter(c => c.id !== changeId));
+    }
+    setCancelling(null);
+  };
+
+  const resubmitChange = async () => {
+    if (!editingChange) return;
+    setSaving(true);
+    const { error } = await (supabase as any)
+      .from('data_changes')
+      .update({ data: editData, status: 'pending', rejection_reason: null, approved_at: null, approved_by: null })
+      .eq('id', editingChange.id)
+      .eq('user_id', user?.id);
+
+    if (error) {
+      toast({ title: '❌ Failed to resubmit', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: '🔄 Resubmitted', description: 'Your change has been resubmitted for approval.' });
+      setChanges(prev => prev.map(c => c.id === editingChange.id ? { ...c, data: editData, status: 'pending', rejection_reason: null } : c));
+      setEditingChange(null);
+    }
+    setSaving(false);
+  };
+
   const openEdit = (change: MyChange) => {
     setEditingChange(change);
     setEditData({ ...(typeof change.data === 'object' ? change.data : {}) });
