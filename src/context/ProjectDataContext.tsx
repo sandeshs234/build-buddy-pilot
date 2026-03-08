@@ -273,7 +273,7 @@ export function ProjectDataProvider({ children }: { children: ReactNode }) {
         const tableName = TABLE_MAP[key];
         if (!tableName || !items || items.length === 0) continue;
         const rows = items.map((item: any) => toSnakeCase(key, item, userId));
-        await (supabase.from(tableName) as any).insert(rows);
+        await (supabase as any).from(tableName).insert(rows);
       }
       // Clear local after migration
       localStorage.removeItem(STORAGE_KEY);
