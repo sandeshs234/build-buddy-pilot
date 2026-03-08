@@ -95,8 +95,8 @@ export default function SettingsPage() {
     toast({ title: 'Settings Saved', description: 'Project settings updated successfully' });
   };
 
-  const Field = ({ label, field, type = 'text', span = false }: { label: string; field: keyof ProjectSettings; type?: string; span?: boolean }) => (
-    <div className={span ? 'col-span-2 space-y-1.5' : 'space-y-1.5'}>
+  const renderField = (label: string, field: keyof ProjectSettings, type = 'text', span = false) => (
+    <div key={field} className={span ? 'col-span-2 space-y-1.5' : 'space-y-1.5'}>
       <Label className="text-xs font-medium">{label}</Label>
       <Input type={type} value={settings[field]} onChange={e => u(field, e.target.value)} />
     </div>
@@ -124,10 +124,10 @@ export default function SettingsPage() {
           <div className="bg-card rounded-xl border shadow-sm p-6">
             <h3 className="text-sm font-semibold mb-4">Company Information</h3>
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Company Name" field="companyName" span />
-              <Field label="Address" field="companyAddress" span />
-              <Field label="Phone" field="companyPhone" />
-              <Field label="Email" field="companyEmail" type="email" />
+              {renderField("Company Name", "companyName", "text", true)}
+              {renderField("Address", "companyAddress", "text", true)}
+              {renderField("Phone", "companyPhone")}
+              {renderField("Email", "companyEmail", "email")}
             </div>
           </div>
         </TabsContent>
@@ -136,12 +136,12 @@ export default function SettingsPage() {
           <div className="bg-card rounded-xl border shadow-sm p-6">
             <h3 className="text-sm font-semibold mb-4">Project Details</h3>
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Project Name" field="projectName" span />
-              <Field label="Location" field="projectLocation" span />
-              <Field label="Start Date" field="projectStartDate" type="date" />
-              <Field label="End Date" field="projectEndDate" type="date" />
-              <Field label="Contract Value" field="contractValue" />
-              <Field label="Currency" field="currency" />
+              {renderField("Project Name", "projectName", "text", true)}
+              {renderField("Location", "projectLocation", "text", true)}
+              {renderField("Start Date", "projectStartDate", "date")}
+              {renderField("End Date", "projectEndDate", "date")}
+              {renderField("Contract Value", "contractValue")}
+              {renderField("Currency", "currency")}
             </div>
           </div>
         </TabsContent>
@@ -151,31 +151,31 @@ export default function SettingsPage() {
             <div className="bg-card rounded-xl border shadow-sm p-6">
               <h3 className="text-sm font-semibold mb-4">Client Details</h3>
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Client Name" field="clientName" span />
-                <Field label="Address" field="clientAddress" span />
-                <Field label="Phone" field="clientPhone" />
-                <Field label="Email" field="clientEmail" type="email" />
-                <Field label="Representative" field="clientRepresentative" span />
+                {renderField("Client Name", "clientName", "text", true)}
+                {renderField("Address", "clientAddress", "text", true)}
+                {renderField("Phone", "clientPhone")}
+                {renderField("Email", "clientEmail", "email")}
+                {renderField("Representative", "clientRepresentative", "text", true)}
               </div>
             </div>
             <div className="bg-card rounded-xl border shadow-sm p-6">
               <h3 className="text-sm font-semibold mb-4">Contractor Details</h3>
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Contractor Name" field="contractorName" span />
-                <Field label="Address" field="contractorAddress" span />
-                <Field label="Phone" field="contractorPhone" />
-                <Field label="Email" field="contractorEmail" type="email" />
-                <Field label="Representative" field="contractorRepresentative" />
-                <Field label="License No." field="contractorLicense" />
+                {renderField("Contractor Name", "contractorName", "text", true)}
+                {renderField("Address", "contractorAddress", "text", true)}
+                {renderField("Phone", "contractorPhone")}
+                {renderField("Email", "contractorEmail", "email")}
+                {renderField("Representative", "contractorRepresentative")}
+                {renderField("License No.", "contractorLicense")}
               </div>
             </div>
             <div className="bg-card rounded-xl border shadow-sm p-6">
               <h3 className="text-sm font-semibold mb-4">Consultant Details</h3>
               <div className="grid grid-cols-2 gap-4">
-                <Field label="Consultant Name" field="consultantName" span />
-                <Field label="Address" field="consultantAddress" span />
-                <Field label="Phone" field="consultantPhone" />
-                <Field label="Email" field="consultantEmail" type="email" />
+                {renderField("Consultant Name", "consultantName", "text", true)}
+                {renderField("Address", "consultantAddress", "text", true)}
+                {renderField("Phone", "consultantPhone")}
+                {renderField("Email", "consultantEmail", "email")}
               </div>
             </div>
           </div>
