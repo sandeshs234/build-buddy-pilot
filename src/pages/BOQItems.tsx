@@ -2,17 +2,20 @@ import { useState } from 'react';
 import { useProjectData } from '@/context/ProjectDataContext';
 import { BOQItem } from '@/types/construction';
 import PrintableReport from '@/components/PrintableReport';
+import ExcelImportExport from '@/components/ExcelImportExport';
 import { Button } from '@/components/ui/button';
-import { Plus, Pencil, Trash2, Undo2, Trash } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Plus, Pencil, Trash2, Undo2, Trash, FolderPlus } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from '@/hooks/use-toast';
 
 export default function BOQItems() {
   const { boqItems: items, boqOps } = useProjectData();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<BOQItem | null>(null);
+  const [newProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
 
   const totalBudget = items.reduce((sum, i) => sum + i.totalQty * i.rate, 0);
   const totalExecuted = items.reduce((sum, i) => sum + i.executedQty * i.rate, 0);
@@ -46,6 +49,12 @@ export default function BOQItems() {
     { key: 'executedQty', label: 'Executed Qty' }, { key: 'rate', label: 'Rate' },
   ];
 
+  const handleStartNewProject = () => {
+    boqOps.clearAll();
+    setNewProjectDialogOpen(false);
+    toast({ title: 'Fresh Start', description: 'Default data cleared. You can now add your own BOQ items or import from Excel.' });
+  };
+
   const update = (field: keyof BOQItem, value: any) => setForm(prev => ({ ...prev, [field]: value }));
 
   return (
@@ -58,21 +67,29 @@ export default function BOQItems() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <ExcelImportExport
+            data={items}
+            columns={excelColumns}
+            fileName="BOQ_Items"
+            onImport={handleImport}
+          />
           <PrintableReport title="BOQ / Item Master" columns={excelColumns} data={items} />
           <Button variant="ghost" size="sm" onClick={boqOps.undo} disabled={!boqOps.canUndo} title="Undo">
             <Undo2 size={14} className="mr-1" /> Undo
           </Button>
-          <Button variant="ghost" size="sm" onClick={boqOps.clearAll} disabled={items.length === 0} className="text-destructive" title="Clear all">
-            <Trash size={14} className="mr-1" /> Clear All
+          <Button variant="ghost" size="sm" onClick={() => setNewProjectDialogOpen(true)} disabled={items.length === 0} className="text-destructive" title="Start fresh">
+            <FolderPlus size={14} className="mr-1" /> New Project
           </Button>
-          <Button size="sm" onClick={openAdd}><Plus size={14} className="mr-1" /> Add Item</Button>
           <Button size="sm" onClick={openAdd}><Plus size={14} className="mr-1" /> Add Item</Button>
         </div>
       </div>
 
       <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
         {items.length === 0 ? (
-          <div className="p-12 text-center text-muted-foreground">No BOQ items. Click "Add Item" or import from Excel.</div>
+          <div className="p-12 text-center text-muted-foreground">
+            <p className="text-lg font-medium mb-2">No BOQ items</p>
+            <p className="text-sm">Click "Add Item" to add manually or use "Import XLS" to upload your Excel sheet.</p>
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="data-table">
@@ -126,6 +143,7 @@ export default function BOQItems() {
         )}
       </div>
 
+      {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>{editing ? 'Edit BOQ Item' : 'Add BOQ Item'}</DialogTitle></DialogHeader>
@@ -152,6 +170,25 @@ export default function BOQItems() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleSave}>{editing ? 'Save Changes' : 'Add Item'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Project Confirmation Dialog */}
+      <Dialog open={newProjectDialogOpen} onOpenChange={setNewProjectDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Start New Project?</DialogTitle>
+            <DialogDescription>
+              This will clear all existing BOQ data including any default/sample items. You can then add your own items manually or import from an Excel sheet.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-sm text-destructive">
+            ⚠️ This action will remove {items.length} items. Use "Undo" immediately after if needed.
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setNewProjectDialogOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleStartNewProject}>Clear & Start Fresh</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
