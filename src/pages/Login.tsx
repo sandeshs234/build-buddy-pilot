@@ -29,10 +29,16 @@ export default function Login() {
     }
   };
 
+  const hasMinLength = password.length >= 8;
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const isPasswordStrong = hasMinLength && hasUppercase && hasSpecial && hasNumber;
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.length < 6) {
-      toast({ title: 'Password too short', description: 'Minimum 6 characters', variant: 'destructive' });
+    if (!isPasswordStrong) {
+      toast({ title: 'Weak password', description: 'Must include 8+ chars, uppercase, number & special character', variant: 'destructive' });
       return;
     }
     setLoading(true);
@@ -89,9 +95,6 @@ export default function Login() {
           </div>
           <h1 className="text-2xl font-bold text-foreground">BuildForge</h1>
           <p className="text-sm text-muted-foreground mt-1">Construction Project Management</p>
-          <p className="text-xs text-muted-foreground/70 mt-2 bg-muted/50 rounded-lg px-3 py-1.5 inline-block">
-            ℹ️ First user to register becomes the Admin
-          </p>
         </div>
 
         <div className="bg-card rounded-2xl border shadow-lg p-8">
@@ -175,11 +178,26 @@ export default function Login() {
                   <Label htmlFor="signup-password">Password</Label>
                   <div className="relative mt-1.5">
                     <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                    <Input id="signup-password" type={showPw ? 'text' : 'password'} placeholder="Min. 6 characters" value={password} onChange={e => setPassword(e.target.value)} className="pl-9 pr-9" required />
+                    <Input id="signup-password" type={showPw ? 'text' : 'password'} placeholder="Strong password" value={password} onChange={e => setPassword(e.target.value)} className="pl-9 pr-9" required />
                     <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" onClick={() => setShowPw(!showPw)}>
                       {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
+                  {password.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      <div className="flex gap-1">
+                        {[hasMinLength, hasUppercase, hasNumber, hasSpecial].map((met, i) => (
+                          <div key={i} className={`h-1 flex-1 rounded-full transition-colors ${met ? 'bg-emerald-500' : 'bg-muted'}`} />
+                        ))}
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-2 text-[10px]">
+                        <span className={hasMinLength ? 'text-emerald-600' : 'text-muted-foreground'}>✓ 8+ characters</span>
+                        <span className={hasUppercase ? 'text-emerald-600' : 'text-muted-foreground'}>✓ Uppercase (A-Z)</span>
+                        <span className={hasNumber ? 'text-emerald-600' : 'text-muted-foreground'}>✓ Number (0-9)</span>
+                        <span className={hasSpecial ? 'text-emerald-600' : 'text-muted-foreground'}>✓ Special (!@#$)</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? 'Creating account...' : 'Create Account'}
