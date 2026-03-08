@@ -18,6 +18,7 @@ import ProjectManagement from "./pages/ProjectManagement";
 import SettingsPage from "./components/SettingsPage";
 import MaterialProcurement from "./pages/MaterialProcurement";
 import ProcurementDigest from "./pages/ProcurementDigest";
+import ProcurementTrackerPage from "./pages/ProcurementTrackerPage";
 import ProjectSummaryReport from "./pages/ProjectSummaryReport";
 import {
   InventoryPage, ManpowerPage, EquipmentPage, SafetyPage, DelaysPage,
