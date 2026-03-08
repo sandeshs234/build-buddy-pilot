@@ -200,9 +200,9 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
         title: 'Cleared',
         description: `All ${ids.length} tracking entries removed`,
         action: (
-          <Button variant="outline" size="sm" onClick={() => { restoreItems(deletedItems); dismiss(); }}>
+          <ToastAction altText="Undo clear all" onClick={() => { restoreItems(deletedItems); dismiss(); }}>
             Undo
-          </Button>
+          </ToastAction>
         ),
         duration: 5000,
       });
