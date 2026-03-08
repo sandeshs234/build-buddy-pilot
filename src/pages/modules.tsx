@@ -8,8 +8,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/hooks/use-toast';
-import { Undo2, Trash2, ImagePlus, X, HelpCircle, ChevronDown } from 'lucide-react';
+import { Undo2, Trash2, ImagePlus, X, HelpCircle, ChevronDown, Printer } from 'lucide-react';
 import { EquipmentEntry } from '@/types/construction';
+import { cn } from '@/lib/utils';
 
 // ─── Constants ───
 const MANPOWER_TRADES = [
@@ -848,6 +849,7 @@ export const DocumentsPage = () => <GenericModule title="Documents" description=
 
 export function ReportsPage() {
   const { activities, boqItems, inventory, equipment, safety, delays, purchaseOrders, manpower, fuelLog, concretePours, dailyQty } = useProjectData();
+  const [selectedReports, setSelectedReports] = useState<Record<string, boolean>>({});
 
   const totalWorkers = (item: any) => (item.trades || []).reduce((s: number, t: any) => s + (t.count || 0), 0);
 
@@ -923,23 +925,187 @@ export function ReportsPage() {
       ],
       data: purchaseOrders,
     },
+    {
+      title: 'Daily Quantity',
+      columns: [
+        { key: 'date', label: 'Date' }, { key: 'boqCode', label: 'BOQ Code' }, { key: 'description', label: 'Description' },
+        { key: 'qty', label: 'Qty' }, { key: 'unit', label: 'Unit' }, { key: 'location', label: 'Location' },
+      ],
+      data: dailyQty,
+    },
+    {
+      title: 'Fuel Log',
+      columns: [
+        { key: 'date', label: 'Date' }, { key: 'equipment', label: 'Equipment' }, { key: 'liters', label: 'Liters' },
+        { key: 'cost', label: 'Cost' }, { key: 'odometer', label: 'Odometer' }, { key: 'remarks', label: 'Remarks' },
+      ],
+      data: fuelLog,
+    },
+    {
+      title: 'Concrete Pours',
+      columns: [
+        { key: 'date', label: 'Date' }, { key: 'location', label: 'Location' }, { key: 'grade', label: 'Grade' },
+        { key: 'volume', label: 'Volume (m³)' }, { key: 'supplier', label: 'Supplier' }, { key: 'slump', label: 'Slump' },
+      ],
+      data: concretePours,
+    },
   ];
+
+  const selectedCount = Object.values(selectedReports).filter(Boolean).length;
+  const allSelected = selectedCount === reportSections.length;
+
+  const toggleReport = (title: string) => {
+    setSelectedReports(prev => ({ ...prev, [title]: !prev[title] }));
+  };
+
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelectedReports({});
+    } else {
+      const all: Record<string, boolean> = {};
+      reportSections.forEach(s => { all[s.title] = true; });
+      setSelectedReports(all);
+    }
+  };
+
+  const handlePrintSelected = () => {
+    const sections = reportSections.filter(s => selectedReports[s.title] && s.data.length > 0);
+    if (sections.length === 0) {
+      toast({ title: 'No reports selected', description: 'Please select at least one report with data to print.', variant: 'destructive' });
+      return;
+    }
+
+    const settings = JSON.parse(localStorage.getItem('buildforge-settings') || '{}');
+    const logo = localStorage.getItem('buildforge-logo') || '';
+    const stamp = localStorage.getItem('buildforge-stamp') || '';
+    const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const docRef = `COMPILED-${Date.now().toString(36).toUpperCase()}`;
+
+    const buildTable = (section: typeof sections[0]) => `
+      <div class="report-section" style="page-break-before: always;">
+        <div class="report-title">${section.title}</div>
+        <div class="report-subtitle">Total Records: ${section.data.length} · Generated: ${new Date().toLocaleString('en-GB')}</div>
+        <table>
+          <thead><tr><th style="width:30px">#</th>${section.columns.map(c => `<th>${c.label}</th>`).join('')}</tr></thead>
+          <tbody>${section.data.map((row, i) => `<tr><td style="text-align:center;color:#888;font-size:7pt">${i + 1}</td>${section.columns.map(c => `<td>${row[c.key] ?? '—'}</td>`).join('')}</tr>`).join('')}</tbody>
+        </table>
+        <div class="summary-row"><span>End of ${section.title} — ${section.data.length} record(s)</span></div>
+      </div>`;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    printWindow.document.write(`<!DOCTYPE html><html><head><title>Compiled Reports</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; color: #1a1a2e; padding: 12mm 15mm; font-size: 9pt; }
+  .header { text-align: center; padding-bottom: 10px; margin-bottom: 8px; }
+  .header-logo img { max-height: 60px; max-width: 160px; }
+  .company-name { font-size: 20pt; font-weight: 900; text-transform: uppercase; letter-spacing: 3px; color: #1a1a2e; }
+  .company-tagline { font-size: 9pt; font-weight: 600; color: #444; letter-spacing: 1px; margin-top: 2px; }
+  .company-contact { font-size: 7.5pt; color: #666; margin-top: 4px; }
+  .header-line { height: 2px; background: linear-gradient(90deg, transparent, #1a1a2e, transparent); margin: 8px 0; }
+  .project-info { display: flex; justify-content: space-between; font-size: 8pt; color: #444; margin-bottom: 6px; padding: 6px 0; }
+  .project-info .left, .project-info .right { display: flex; flex-direction: column; gap: 2px; }
+  .project-info .right { text-align: right; }
+  .project-info strong { color: #1a1a2e; font-weight: 700; }
+  .report-title { font-size: 13pt; font-weight: 800; text-align: center; text-transform: uppercase; letter-spacing: 2px; color: #1a1a2e; margin: 6px 0 4px; }
+  .report-subtitle { text-align: center; font-size: 8pt; color: #666; margin-bottom: 8px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+  th { background: #1a1a2e; color: #fff; font-size: 7.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 5px 6px; text-align: left; }
+  th:first-child { border-radius: 3px 0 0 0; } th:last-child { border-radius: 0 3px 0 0; }
+  td { padding: 4px 6px; font-size: 8pt; border-bottom: 0.5px solid #e8e8e8; }
+  tr:nth-child(even) { background: #f9fafb; }
+  .summary-row { margin-top: 8px; font-size: 8pt; color: #555; display: flex; justify-content: space-between; }
+  .signatures { display: flex; justify-content: space-between; margin-top: 40px; padding: 0 20px; }
+  .sig-block { text-align: center; min-width: 120px; }
+  .sig-line { border-top: 1px solid #333; margin-top: 50px; padding-top: 4px; font-size: 7.5pt; font-weight: 600; color: #444; text-transform: uppercase; }
+  .sig-role { font-size: 7pt; color: #888; margin-top: 1px; }
+  .footer { margin-top: 20px; padding-top: 8px; display: flex; justify-content: space-between; align-items: flex-end; }
+  .footer-left { font-size: 7pt; color: #888; }
+  .footer-stamp img { max-height: 55px; opacity: 0.6; }
+  .report-section:first-of-type { page-break-before: avoid; }
+  @media print { body { padding: 8mm 12mm; } @page { size: A4 landscape; margin: 8mm; } }
+</style></head><body>
+  <div class="header">
+    ${logo ? `<div class="header-logo"><img src="${logo}" /></div>` : ''}
+    <div class="company-name">${settings.companyName || 'BuildForge Engineering'}</div>
+    <div class="company-tagline">${settings.companyTagline || 'Construction Project Management'}</div>
+    <div class="company-contact">${[settings.companyAddress, settings.companyPhone, settings.companyEmail].filter(Boolean).join('  ·  ')}</div>
+    <div class="header-line"></div>
+  </div>
+  <div class="project-info">
+    <div class="left">
+      <div><strong>Project:</strong> ${settings.projectName || 'Construction Project'}</div>
+      <div><strong>Client:</strong> ${settings.clientName || '—'}</div>
+      <div><strong>Contractor:</strong> ${settings.contractorName || settings.companyName || '—'}</div>
+    </div>
+    <div class="right">
+      <div><strong>Contract No:</strong> ${settings.contractNo || '—'}</div>
+      <div><strong>Report Date:</strong> ${today}</div>
+      <div><strong>Doc Ref:</strong> ${docRef}</div>
+      <div><strong>Reports:</strong> ${sections.length} of ${reportSections.length}</div>
+    </div>
+  </div>
+  ${sections.map(s => buildTable(s)).join('')}
+  <div class="signatures" style="page-break-before: always; margin-top: 60px;">
+    <div class="sig-block"><div class="sig-line">Prepared By</div><div class="sig-role">Name / Date / Signature</div></div>
+    <div class="sig-block"><div class="sig-line">Checked By</div><div class="sig-role">Name / Date / Signature</div></div>
+    <div class="sig-block"><div class="sig-line">Approved By</div><div class="sig-role">Name / Date / Signature</div></div>
+  </div>
+  <div class="footer">
+    <div class="footer-left">
+      <div>${settings.companyName || 'BuildForge Engineering'} — Confidential</div>
+      <div>${docRef}</div>
+    </div>
+    ${stamp ? `<div class="footer-stamp"><img src="${stamp}" /></div>` : ''}
+  </div>
+</body></html>`);
+    printWindow.document.close();
+    setTimeout(() => { printWindow.print(); }, 300);
+  };
 
   return (
     <div>
-      <div className="page-header">
-        <h1 className="text-2xl font-bold text-foreground">📊 Compiled Reports</h1>
-        <p className="text-sm text-muted-foreground mt-1">Print international-standard A4 reports from any module below</p>
+      <div className="page-header flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">📊 Compiled Reports</h1>
+          <p className="text-sm text-muted-foreground mt-1">Select reports and print individually or as a combined document</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={toggleAll}>
+            {allSelected ? 'Deselect All' : 'Select All'}
+          </Button>
+          <Button size="sm" onClick={handlePrintSelected} disabled={selectedCount === 0}>
+            <Printer size={14} className="mr-1.5" />
+            {selectedCount === 0 ? 'Print Selected' : selectedCount === reportSections.length ? 'Print All Reports' : `Print ${selectedCount} Report${selectedCount > 1 ? 's' : ''}`}
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {reportSections.map(section => (
-          <div key={section.title} className="bg-card rounded-xl border shadow-sm p-5 flex flex-col justify-between">
-            <div>
-              <h3 className="font-semibold text-foreground text-sm">{section.title}</h3>
-              <p className="text-xs text-muted-foreground mt-1">{section.data.length} records available</p>
+          <div
+            key={section.title}
+            className={cn(
+              'bg-card rounded-xl border shadow-sm p-5 flex flex-col justify-between cursor-pointer transition-all',
+              selectedReports[section.title] ? 'ring-2 ring-primary border-primary' : 'hover:border-muted-foreground/30'
+            )}
+            onClick={() => toggleReport(section.title)}
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="font-semibold text-foreground text-sm">{section.title}</h3>
+                <p className="text-xs text-muted-foreground mt-1">{section.data.length} records available</p>
+              </div>
+              <div className={cn(
+                'w-5 h-5 rounded border-2 flex items-center justify-center transition-colors flex-shrink-0',
+                selectedReports[section.title] ? 'bg-primary border-primary text-primary-foreground' : 'border-muted-foreground/30'
+              )}>
+                {selectedReports[section.title] && <span className="text-xs font-bold">✓</span>}
+              </div>
             </div>
-            <div className="mt-4">
+            <div className="mt-4" onClick={(e) => e.stopPropagation()}>
               <PrintableReport title={section.title} columns={section.columns} data={section.data} />
             </div>
           </div>
