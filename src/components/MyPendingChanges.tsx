@@ -236,6 +236,17 @@ export default function MyPendingChanges() {
                     <Pencil size={12} />
                   </Button>
                 )}
+                {change.status === 'rejected' && change.operation !== 'delete' && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-primary hover:text-primary hover:bg-primary/10"
+                    onClick={() => openEdit(change)}
+                    title="Edit & resubmit"
+                  >
+                    <RotateCcw size={12} />
+                  </Button>
+                )}
                 {change.status === 'pending' && (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
@@ -260,6 +271,35 @@ export default function MyPendingChanges() {
                         <AlertDialogCancel>Keep it</AlertDialogCancel>
                         <AlertDialogAction onClick={() => cancelChange(change.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                           Yes, cancel it
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+                {change.status === 'rejected' && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        disabled={cancelling === change.id}
+                        title="Delete rejected submission"
+                      >
+                        <Trash2 size={12} />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete rejected submission?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently remove this rejected submission. This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Keep it</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => deleteRejected(change.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          Yes, delete it
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
