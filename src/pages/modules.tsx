@@ -1,19 +1,17 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useRef } from 'react';
+import { useProjectData } from '@/context/ProjectDataContext';
 import ModulePage from '@/components/ModulePage';
 import PrintableReport from '@/components/PrintableReport';
-import { sampleInventory, sampleManpower, sampleEquipment, sampleSafety, sampleDelays, samplePOs, sampleBOQ } from '@/data/sampleData';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
-import { Undo2, Trash2, Printer, ImagePlus, X } from 'lucide-react';
-import { EquipmentEntry, BOQItem } from '@/types/construction';
+import { Undo2, Trash2, ImagePlus, X, HelpCircle, ChevronDown } from 'lucide-react';
+import { EquipmentEntry } from '@/types/construction';
 
 // ─── Constants ───
-
 const MANPOWER_TRADES = [
   'Mason', 'Carpenter', 'Steel Fixer / Rebar', 'Welder', 'Pipe Fitter', 'Electrician',
   'Plumber', 'Painter', 'Plasterer', 'Tiler', 'Scaffolder', 'Rigger',
@@ -57,64 +55,7 @@ const CONCRETE_GRADES = [
   'Flowable Fill', 'Grout',
 ];
 
-// ─── Generic CRUD wrapper with undo ───
-function useCrudState<T extends { id: string }>(initial: T[]) {
-  const [data, setData] = useState<T[]>(initial);
-  const [history, setHistory] = useState<T[][]>([]);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<T | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-
-  const pushHistory = (current: T[]) => setHistory(prev => [...prev.slice(-20), current]);
-
-  const openAdd = () => { setEditing(null); setDialogOpen(true); };
-  const openEdit = (item: T) => { setEditing(item); setDialogOpen(true); };
-  const handleDelete = (item: T) => { pushHistory(data); setData(prev => prev.filter(i => i.id !== item.id)); };
-  const save = (item: T) => {
-    pushHistory(data);
-    setData(prev => {
-      const idx = prev.findIndex(i => i.id === item.id);
-      if (idx >= 0) { const copy = [...prev]; copy[idx] = item; return copy; }
-      return [...prev, item];
-    });
-    setDialogOpen(false);
-  };
-  const handleImport = (rows: Record<string, any>[], mapper: (row: Record<string, any>) => T) => {
-    pushHistory(data);
-    const mapped = rows.map(mapper);
-    setData(prev => [...prev, ...mapped]);
-  };
-  const undo = () => {
-    if (history.length === 0) return;
-    setData(history[history.length - 1]);
-    setHistory(prev => prev.slice(0, -1));
-    toast({ title: 'Undone', description: 'Last action reverted' });
-  };
-  const clearAll = () => {
-    if (data.length === 0) return;
-    pushHistory(data);
-    setData([]);
-    toast({ title: 'Cleared', description: 'All data cleared. Use Undo to restore.' });
-  };
-  const toggleSelect = (id: string) => {
-    setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
-  };
-  const selectAll = () => {
-    if (selected.size === data.length) setSelected(new Set());
-    else setSelected(new Set(data.map(d => d.id)));
-  };
-  const deleteSelected = () => {
-    if (selected.size === 0) return;
-    pushHistory(data);
-    setData(prev => prev.filter(i => !selected.has(i.id)));
-    setSelected(new Set());
-    toast({ title: 'Deleted', description: `${selected.size} items removed` });
-  };
-
-  return { data, dialogOpen, setDialogOpen, editing, openAdd, openEdit, handleDelete, save, handleImport, undo, clearAll, canUndo: history.length > 0, selected, toggleSelect, selectAll, deleteSelected };
-}
-
-// ─── Shared toolbar buttons ───
+// ─── Shared toolbar ───
 function CrudToolbar({ canUndo, onUndo, onClear, dataLength, selectedCount, onDeleteSelected, printBtn }: {
   canUndo: boolean; onUndo: () => void; onClear: () => void; dataLength: number;
   selectedCount?: number; onDeleteSelected?: () => void; printBtn?: React.ReactNode;
@@ -139,7 +80,9 @@ function CrudToolbar({ canUndo, onUndo, onClear, dataLength, selectedCount, onDe
 
 // ─── Inventory ───
 export function InventoryPage() {
-  const crud = useCrudState(sampleInventory);
+  const { inventory: data, inventoryOps: ops } = useProjectData();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState<any>({});
   const u = (k: string, v: any) => setForm((p: any) => ({ ...p, [k]: v }));
 
@@ -147,7 +90,7 @@ export function InventoryPage() {
     <>
       <ModulePage
         title="Inventory"
-        description={`Track stock levels, receipts, and issues · ${crud.data.length} items`}
+        description={`Track stock levels, receipts, and issues · ${data.length} items`}
         columns={[
           { key: 'code', label: 'Code', render: i => <span className="font-mono text-xs font-medium">{i.code}</span> },
           { key: 'description', label: 'Description', render: i => <span className="font-medium">{i.description}</span> },
@@ -164,30 +107,33 @@ export function InventoryPage() {
           )},
           { key: 'location', label: 'Location' },
         ]}
-        data={crud.data}
-        onAdd={() => { setForm({ id: crypto.randomUUID(), code: '', description: '', unit: '', opening: 0, receipts: 0, issues: 0, balance: 0, minLevel: 0, location: '' }); crud.openAdd(); }}
-        onEdit={item => { setForm(item); crud.openEdit(item); }}
-        onDelete={crud.handleDelete}
-        onImport={rows => crud.handleImport(rows, r => ({
-          id: crypto.randomUUID(), code: r.Code || r.code || '', description: r.Description || r.description || '',
-          unit: r.Unit || r.unit || '', opening: Number(r.Opening || r.opening || 0), receipts: Number(r.Receipts || r.receipts || 0),
-          issues: Number(r.Issues || r.issues || 0), balance: Number(r.Balance || r.balance || 0),
-          minLevel: Number(r['Min Level'] || r.minLevel || 0), location: r.Location || r.location || '',
-        }))}
+        data={data}
+        onAdd={() => { setForm({ id: crypto.randomUUID(), code: '', description: '', unit: '', opening: 0, receipts: 0, issues: 0, balance: 0, minLevel: 0, location: '' }); setEditing(null); setDialogOpen(true); }}
+        onEdit={item => { setForm(item); setEditing(item); setDialogOpen(true); }}
+        onDelete={item => ops.remove(item.id)}
+        onImport={rows => {
+          const mapped = rows.map(r => ({
+            id: crypto.randomUUID(), code: r.Code || r.code || '', description: r.Description || r.description || '',
+            unit: r.Unit || r.unit || '', opening: Number(r.Opening || r.opening || 0), receipts: Number(r.Receipts || r.receipts || 0),
+            issues: Number(r.Issues || r.issues || 0), balance: Number(r.Balance || r.balance || 0),
+            minLevel: Number(r['Min Level'] || r.minLevel || 0), location: r.Location || r.location || '',
+          }));
+          mapped.forEach(m => ops.add(m as any));
+        }}
         fileName="Inventory"
         extraToolbar={
-          <CrudToolbar canUndo={crud.canUndo} onUndo={crud.undo} onClear={crud.clearAll} dataLength={crud.data.length}
+          <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
             printBtn={<PrintableReport title="Inventory" columns={[
               { key: 'code', label: 'Code' }, { key: 'description', label: 'Description' }, { key: 'unit', label: 'Unit' },
               { key: 'opening', label: 'Opening' }, { key: 'receipts', label: 'Receipts' }, { key: 'issues', label: 'Issues' },
               { key: 'balance', label: 'Balance' }, { key: 'minLevel', label: 'Min Level' }, { key: 'location', label: 'Location' },
-            ]} data={crud.data} />}
+            ]} data={data} />}
           />
         }
       />
-      <Dialog open={crud.dialogOpen} onOpenChange={crud.setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>{crud.editing ? 'Edit' : 'Add'} Inventory Item</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editing ? 'Edit' : 'Add'} Inventory Item</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-4">
             <div className="space-y-1.5"><Label>Code</Label><Input value={form.code || ''} onChange={e => u('code', e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Unit</Label><Input value={form.unit || ''} onChange={e => u('unit', e.target.value)} /></div>
@@ -199,8 +145,8 @@ export function InventoryPage() {
             <div className="space-y-1.5"><Label>Location</Label><Input value={form.location || ''} onChange={e => u('location', e.target.value)} /></div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => crud.setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={() => { const bal = (form.opening || 0) + (form.receipts || 0) - (form.issues || 0); crud.save({ ...form, balance: bal }); }}>Save</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button onClick={() => { const bal = (form.opening || 0) + (form.receipts || 0) - (form.issues || 0); ops.save({ ...form, balance: bal }); setDialogOpen(false); }}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -208,32 +154,28 @@ export function InventoryPage() {
   );
 }
 
-// ─── Manpower (Enhanced with comprehensive trade dropdowns) ───
+// ─── Manpower ───
 export function ManpowerPage() {
-  const crud = useCrudState<any>([]);
+  const { manpower: data, manpowerOps: ops } = useProjectData();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState<any>({});
   const u = (k: string, v: any) => setForm((p: any) => ({ ...p, [k]: v }));
 
-  const addTradeRow = () => {
-    const trades = form.trades || [];
-    u('trades', [...trades, { trade: '', count: 0 }]);
-  };
+  const addTradeRow = () => u('trades', [...(form.trades || []), { trade: '', count: 0 }]);
   const updateTrade = (idx: number, field: string, val: any) => {
     const trades = [...(form.trades || [])];
     trades[idx] = { ...trades[idx], [field]: val };
     u('trades', trades);
   };
-  const removeTrade = (idx: number) => {
-    u('trades', (form.trades || []).filter((_: any, i: number) => i !== idx));
-  };
-
+  const removeTrade = (idx: number) => u('trades', (form.trades || []).filter((_: any, i: number) => i !== idx));
   const totalWorkers = (item: any) => (item.trades || []).reduce((s: number, t: any) => s + (t.count || 0), 0);
 
   return (
     <>
       <ModulePage
         title="Daily Manpower"
-        description={`Track labor by trade and location · ${crud.data.length} entries`}
+        description={`Track labor by trade and location · ${data.length} entries`}
         columns={[
           { key: 'date', label: 'Date' },
           { key: 'location', label: 'Location', render: i => <span className="font-medium">{i.location}</span> },
@@ -248,31 +190,33 @@ export function ManpowerPage() {
           { key: 'total', label: 'Total', render: i => <span className="font-mono font-bold">{totalWorkers(i)}</span> },
           { key: 'supervisor', label: 'Supervisor' },
         ]}
-        data={crud.data}
-        onAdd={() => { setForm({ id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0], location: '', trades: [{ trade: '', count: 0 }], supervisor: '' }); crud.openAdd(); }}
-        onEdit={item => { setForm(item); crud.openEdit(item); }}
-        onDelete={crud.handleDelete}
-        onImport={rows => crud.handleImport(rows, r => ({
-          id: crypto.randomUUID(), date: r.Date || '', location: r.Location || '',
-          trades: MANPOWER_TRADES.filter(t => r[t] && +r[t] > 0).map(t => ({ trade: t, count: +r[t] })),
-          supervisor: r.Supervisor || '',
-        }))}
+        data={data}
+        onAdd={() => { setForm({ id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0], location: '', trades: [{ trade: '', count: 0 }], supervisor: '' }); setEditing(null); setDialogOpen(true); }}
+        onEdit={item => { setForm(item); setEditing(item); setDialogOpen(true); }}
+        onDelete={item => ops.remove(item.id)}
+        onImport={rows => {
+          const mapped = rows.map(r => ({
+            id: crypto.randomUUID(), date: r.Date || '', location: r.Location || '',
+            trades: MANPOWER_TRADES.filter(t => r[t] && +r[t] > 0).map(t => ({ trade: t, count: +r[t] })),
+            supervisor: r.Supervisor || '',
+          }));
+          mapped.forEach(m => ops.add(m));
+        }}
         fileName="Manpower"
         extraToolbar={
-          <CrudToolbar canUndo={crud.canUndo} onUndo={crud.undo} onClear={crud.clearAll} dataLength={crud.data.length}
-            selectedCount={crud.selected.size} onDeleteSelected={crud.deleteSelected}
+          <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
             printBtn={<PrintableReport title="Daily Manpower" columns={[
               { key: 'date', label: 'Date' }, { key: 'location', label: 'Location' },
               { key: 'tradesText', label: 'Trades & Count' }, { key: 'total', label: 'Total' }, { key: 'supervisor', label: 'Supervisor' },
-            ]} data={crud.data.map(i => ({
+            ]} data={data.map(i => ({
               ...i, tradesText: (i.trades || []).map((t: any) => `${t.trade}: ${t.count}`).join(', '), total: totalWorkers(i),
             }))} />}
           />
         }
       />
-      <Dialog open={crud.dialogOpen} onOpenChange={crud.setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>{crud.editing ? 'Edit' : 'Add'} Manpower Entry</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editing ? 'Edit' : 'Add'} Manpower Entry</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-4">
             <div className="space-y-1.5"><Label>Date</Label><Input type="date" value={form.date || ''} onChange={e => u('date', e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Location</Label><Input value={form.location || ''} onChange={e => u('location', e.target.value)} /></div>
@@ -286,26 +230,20 @@ export function ManpowerPage() {
                   <div key={idx} className="flex items-center gap-2">
                     <Select value={t.trade} onValueChange={v => updateTrade(idx, 'trade', v)}>
                       <SelectTrigger className="flex-1"><SelectValue placeholder="Select trade" /></SelectTrigger>
-                      <SelectContent>
-                        {MANPOWER_TRADES.map(tr => <SelectItem key={tr} value={tr}>{tr}</SelectItem>)}
-                      </SelectContent>
+                      <SelectContent>{MANPOWER_TRADES.map(tr => <SelectItem key={tr} value={tr}>{tr}</SelectItem>)}</SelectContent>
                     </Select>
-                    <Input type="number" className="w-20" value={t.count || 0} onChange={e => updateTrade(idx, 'count', +e.target.value)} placeholder="Count" />
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => removeTrade(idx)}>
-                      <X size={14} />
-                    </Button>
+                    <Input type="number" className="w-20" value={t.count || 0} onChange={e => updateTrade(idx, 'count', +e.target.value)} />
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive" onClick={() => removeTrade(idx)}><X size={14} /></Button>
                   </div>
                 ))}
               </div>
-              <div className="mt-2 text-sm font-medium text-muted-foreground">
-                Total: <span className="text-foreground font-bold">{totalWorkers(form)}</span> workers
-              </div>
+              <div className="mt-2 text-sm font-medium text-muted-foreground">Total: <span className="text-foreground font-bold">{totalWorkers(form)}</span> workers</div>
             </div>
             <div className="col-span-2 space-y-1.5"><Label>Supervisor</Label><Input value={form.supervisor || ''} onChange={e => u('supervisor', e.target.value)} /></div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => crud.setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={() => crud.save(form)}>Save</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button onClick={() => { ops.save(form); setDialogOpen(false); }}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -313,25 +251,25 @@ export function ManpowerPage() {
   );
 }
 
-// ─── Equipment (Enhanced with type dropdown, billing basis, rate) ───
+// ─── Equipment ───
 export function EquipmentPage() {
-  const crud = useCrudState(sampleEquipment);
+  const { equipment: data, equipmentOps: ops } = useProjectData();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState<any>({});
   const u = (k: string, v: any) => setForm((p: any) => ({ ...p, [k]: v }));
 
   const totalCost = (i: any) => {
     const rate = i.rate || 0;
-    const hrs = i.hours || 0;
-    if (i.billingBasis === 'daily') return rate;
-    if (i.billingBasis === 'monthly') return rate;
-    return rate * hrs; // hourly
+    if (i.billingBasis === 'daily' || i.billingBasis === 'monthly') return rate;
+    return rate * (i.hours || 0);
   };
 
   return (
     <>
       <ModulePage
         title="Equipment Log"
-        description={`Record equipment usage, hours, fuel · ${crud.data.length} entries`}
+        description={`Record equipment usage, hours, fuel · ${data.length} entries`}
         columns={[
           { key: 'date', label: 'Date' },
           { key: 'eqId', label: 'Eq. ID', render: i => <span className="font-mono text-xs font-medium">{i.eqId}</span> },
@@ -350,34 +288,36 @@ export function EquipmentPage() {
           { key: 'activity', label: 'Activity' },
           { key: 'issues', label: 'Issues', render: i => i.issues ? <span className="badge-warning">{i.issues}</span> : <span className="text-muted-foreground">—</span> },
         ]}
-        data={crud.data}
-        onAdd={() => { setForm({ id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0], eqId: '', equipmentName: '', description: '', operator: '', ownership: 'owned', billingBasis: 'hourly', rate: 0, hours: 0, fuel: 0, activity: '', issues: '' }); crud.openAdd(); }}
-        onEdit={item => { setForm(item); crud.openEdit(item); }}
-        onDelete={crud.handleDelete}
-        onImport={rows => crud.handleImport(rows, r => ({
-          id: crypto.randomUUID(), date: r.Date || '', eqId: r['Eq. ID'] || '', equipmentName: r.Equipment || r.equipmentName || '',
-          description: r.Description || r.description || '',
-          operator: r.Operator || '', ownership: (r.Ownership || 'owned').toLowerCase() as 'owned' | 'leased' | 'rented',
-          billingBasis: r.Billing || 'hourly', rate: +r.Rate || 0,
-          hours: +r.Hours || 0, fuel: +r['Fuel (L)'] || +r.fuel || 0,
-          activity: r.Activity || '', issues: r.Issues || '',
-        }))}
+        data={data}
+        onAdd={() => { setForm({ id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0], eqId: '', equipmentName: '', description: '', operator: '', ownership: 'owned', billingBasis: 'hourly', rate: 0, hours: 0, fuel: 0, activity: '', issues: '' }); setEditing(null); setDialogOpen(true); }}
+        onEdit={item => { setForm(item); setEditing(item); setDialogOpen(true); }}
+        onDelete={item => ops.remove(item.id)}
+        onImport={rows => {
+          const mapped = rows.map(r => ({
+            id: crypto.randomUUID(), date: r.Date || '', eqId: r['Eq. ID'] || '', equipmentName: r.Equipment || r.equipmentName || '',
+            description: r.Description || r.description || '', operator: r.Operator || '',
+            ownership: (r.Ownership || 'owned').toLowerCase() as 'owned' | 'leased' | 'rented',
+            billingBasis: r.Billing || 'hourly', rate: +r.Rate || 0,
+            hours: +r.Hours || 0, fuel: +r['Fuel (L)'] || +r.fuel || 0,
+            activity: r.Activity || '', issues: r.Issues || '',
+          }));
+          mapped.forEach(m => ops.add(m as any));
+        }}
         fileName="Equipment"
         extraToolbar={
-          <CrudToolbar canUndo={crud.canUndo} onUndo={crud.undo} onClear={crud.clearAll} dataLength={crud.data.length}
-            selectedCount={crud.selected.size} onDeleteSelected={crud.deleteSelected}
+          <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
             printBtn={<PrintableReport title="Equipment Log" columns={[
               { key: 'date', label: 'Date' }, { key: 'eqId', label: 'Eq ID' }, { key: 'equipmentName', label: 'Equipment' },
               { key: 'operator', label: 'Operator' }, { key: 'ownership', label: 'Ownership' },
               { key: 'billingBasis', label: 'Billing' }, { key: 'rate', label: 'Rate' },
               { key: 'hours', label: 'Hours' }, { key: 'fuel', label: 'Fuel (L)' }, { key: 'activity', label: 'Activity' },
-            ]} data={crud.data} />}
+            ]} data={data} />}
           />
         }
       />
-      <Dialog open={crud.dialogOpen} onOpenChange={crud.setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>{crud.editing ? 'Edit' : 'Add'} Equipment Entry</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editing ? 'Edit' : 'Add'} Equipment Entry</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-4">
             <div className="space-y-1.5"><Label>Date</Label><Input type="date" value={form.date || ''} onChange={e => u('date', e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Equipment ID</Label><Input value={form.eqId || ''} onChange={e => u('eqId', e.target.value)} placeholder="e.g. EQ-005" /></div>
@@ -385,9 +325,7 @@ export function EquipmentPage() {
               <Label>Equipment Type</Label>
               <Select value={form.equipmentName || ''} onValueChange={v => u('equipmentName', v)}>
                 <SelectTrigger><SelectValue placeholder="Select equipment type" /></SelectTrigger>
-                <SelectContent className="max-h-60">
-                  {EQUIPMENT_TYPES.map(eq => <SelectItem key={eq} value={eq}>{eq}</SelectItem>)}
-                </SelectContent>
+                <SelectContent className="max-h-60">{EQUIPMENT_TYPES.map(eq => <SelectItem key={eq} value={eq}>{eq}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
@@ -420,8 +358,8 @@ export function EquipmentPage() {
             <div className="col-span-2 space-y-1.5"><Label>Issues</Label><Input value={form.issues || ''} onChange={e => u('issues', e.target.value)} /></div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => crud.setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={() => crud.save(form)}>Save</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button onClick={() => { ops.save(form); setDialogOpen(false); }}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -431,7 +369,9 @@ export function EquipmentPage() {
 
 // ─── Safety ───
 export function SafetyPage() {
-  const crud = useCrudState(sampleSafety);
+  const { safety: data, safetyOps: ops } = useProjectData();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState<any>({});
   const u = (k: string, v: any) => setForm((p: any) => ({ ...p, [k]: v }));
 
@@ -439,7 +379,7 @@ export function SafetyPage() {
     <>
       <ModulePage
         title="Safety Incidents"
-        description={`Record incidents, near-misses, and observations · ${crud.data.length} records`}
+        description={`Record incidents, near-misses, and observations · ${data.length} records`}
         columns={[
           { key: 'date', label: 'Date' },
           { key: 'type', label: 'Type', render: i => (
@@ -453,30 +393,29 @@ export function SafetyPage() {
           { key: 'preventive', label: 'Preventive Action' },
           { key: 'reporter', label: 'Reporter' },
         ]}
-        data={crud.data}
-        onAdd={() => { setForm({ id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0], type: 'observation', location: '', description: '', injured: '', cause: '', preventive: '', reporter: '' }); crud.openAdd(); }}
-        onEdit={item => { setForm(item); crud.openEdit(item); }}
-        onDelete={crud.handleDelete}
-        onImport={rows => crud.handleImport(rows, r => ({
+        data={data}
+        onAdd={() => { setForm({ id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0], type: 'observation', location: '', description: '', injured: '', cause: '', preventive: '', reporter: '' }); setEditing(null); setDialogOpen(true); }}
+        onEdit={item => { setForm(item); setEditing(item); setDialogOpen(true); }}
+        onDelete={item => ops.remove(item.id)}
+        onImport={rows => rows.forEach(r => ops.add({
           id: crypto.randomUUID(), date: r.Date || '', type: (r.Type || 'observation').toLowerCase(),
           location: r.Location || '', description: r.Description || '', injured: r.Injured || '',
-          cause: r['Root Cause'] || r.cause || '', preventive: r['Preventive Action'] || r.preventive || '',
-          reporter: r.Reporter || '',
-        }))}
+          cause: r['Root Cause'] || r.cause || '', preventive: r['Preventive Action'] || r.preventive || '', reporter: r.Reporter || '',
+        } as any))}
         fileName="Safety"
         extraToolbar={
-          <CrudToolbar canUndo={crud.canUndo} onUndo={crud.undo} onClear={crud.clearAll} dataLength={crud.data.length}
+          <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
             printBtn={<PrintableReport title="Safety Incidents" columns={[
               { key: 'date', label: 'Date' }, { key: 'type', label: 'Type' }, { key: 'location', label: 'Location' },
               { key: 'description', label: 'Description' }, { key: 'cause', label: 'Root Cause' },
               { key: 'preventive', label: 'Preventive Action' }, { key: 'reporter', label: 'Reporter' },
-            ]} data={crud.data} />}
+            ]} data={data} />}
           />
         }
       />
-      <Dialog open={crud.dialogOpen} onOpenChange={crud.setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>{crud.editing ? 'Edit' : 'Add'} Safety Record</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editing ? 'Edit' : 'Add'} Safety Record</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-4">
             <div className="space-y-1.5"><Label>Date</Label><Input type="date" value={form.date || ''} onChange={e => u('date', e.target.value)} /></div>
             <div className="space-y-1.5">
@@ -497,8 +436,8 @@ export function SafetyPage() {
             <div className="col-span-2 space-y-1.5"><Label>Preventive Action</Label><Input value={form.preventive || ''} onChange={e => u('preventive', e.target.value)} /></div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => crud.setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={() => crud.save(form)}>Save</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button onClick={() => { ops.save(form); setDialogOpen(false); }}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -508,7 +447,9 @@ export function SafetyPage() {
 
 // ─── Delays ───
 export function DelaysPage() {
-  const crud = useCrudState(sampleDelays);
+  const { delays: data, delaysOps: ops } = useProjectData();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState<any>({});
   const u = (k: string, v: any) => setForm((p: any) => ({ ...p, [k]: v }));
 
@@ -516,7 +457,7 @@ export function DelaysPage() {
     <>
       <ModulePage
         title="Delays Register"
-        description={`Track delays, causes, and recovery · ${crud.data.length} entries`}
+        description={`Track delays, causes, and recovery · ${data.length} entries`}
         columns={[
           { key: 'date', label: 'Date' },
           { key: 'activity', label: 'Activity', render: i => <span className="font-medium">{i.activity}</span> },
@@ -531,29 +472,29 @@ export function DelaysPage() {
             <span className="badge-success">Closed</span>
           )},
         ]}
-        data={crud.data}
-        onAdd={() => { setForm({ id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0], activity: '', description: '', cause: '', duration: 0, impact: '', recovery: '', status: 'open' }); crud.openAdd(); }}
-        onEdit={item => { setForm(item); crud.openEdit(item); }}
-        onDelete={crud.handleDelete}
-        onImport={rows => crud.handleImport(rows, r => ({
+        data={data}
+        onAdd={() => { setForm({ id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0], activity: '', description: '', cause: '', duration: 0, impact: '', recovery: '', status: 'open' }); setEditing(null); setDialogOpen(true); }}
+        onEdit={item => { setForm(item); setEditing(item); setDialogOpen(true); }}
+        onDelete={item => ops.remove(item.id)}
+        onImport={rows => rows.forEach(r => ops.add({
           id: crypto.randomUUID(), date: r.Date || '', activity: r.Activity || '', description: r.Description || '',
           cause: r.Cause || '', duration: +r.Days || +r.duration || 0, impact: r.Impact || '',
           recovery: r['Recovery Action'] || r.recovery || '', status: (r.Status || 'open').toLowerCase(),
-        }))}
+        } as any))}
         fileName="Delays"
         extraToolbar={
-          <CrudToolbar canUndo={crud.canUndo} onUndo={crud.undo} onClear={crud.clearAll} dataLength={crud.data.length}
+          <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
             printBtn={<PrintableReport title="Delays Register" columns={[
               { key: 'date', label: 'Date' }, { key: 'activity', label: 'Activity' }, { key: 'description', label: 'Description' },
               { key: 'cause', label: 'Cause' }, { key: 'duration', label: 'Days' }, { key: 'impact', label: 'Impact' },
               { key: 'recovery', label: 'Recovery' }, { key: 'status', label: 'Status' },
-            ]} data={crud.data} />}
+            ]} data={data} />}
           />
         }
       />
-      <Dialog open={crud.dialogOpen} onOpenChange={crud.setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>{crud.editing ? 'Edit' : 'Add'} Delay Entry</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editing ? 'Edit' : 'Add'} Delay Entry</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-4">
             <div className="space-y-1.5"><Label>Date</Label><Input type="date" value={form.date || ''} onChange={e => u('date', e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Activity</Label><Input value={form.activity || ''} onChange={e => u('activity', e.target.value)} /></div>
@@ -575,8 +516,8 @@ export function DelaysPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => crud.setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={() => crud.save(form)}>Save</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button onClick={() => { ops.save(form); setDialogOpen(false); }}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -584,9 +525,11 @@ export function DelaysPage() {
   );
 }
 
-// ─── Purchase Orders (with BOQ item dropdown) ───
+// ─── Purchase Orders (linked to BOQ) ───
 export function PurchaseOrdersPage() {
-  const crud = useCrudState(samplePOs);
+  const { purchaseOrders: data, poOps: ops, boqItems } = useProjectData();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState<any>({});
   const u = (k: string, v: any) => setForm((p: any) => ({ ...p, [k]: v }));
 
@@ -594,7 +537,7 @@ export function PurchaseOrdersPage() {
     <>
       <ModulePage
         title="Purchase Orders"
-        description={`Track POs, suppliers, and delivery · ${crud.data.length} orders`}
+        description={`Track POs, suppliers, and delivery · ${data.length} orders`}
         columns={[
           { key: 'poNo', label: 'PO No.', render: i => <span className="font-mono text-xs font-medium">{i.poNo}</span> },
           { key: 'date', label: 'Date' },
@@ -610,29 +553,29 @@ export function PurchaseOrdersPage() {
           )},
           { key: 'remarks', label: 'Remarks' },
         ]}
-        data={crud.data}
-        onAdd={() => { setForm({ id: crypto.randomUUID(), poNo: '', supplier: '', date: new Date().toISOString().split('T')[0], itemCode: '', qty: 0, price: 0, status: 'draft', remarks: '' }); crud.openAdd(); }}
-        onEdit={item => { setForm(item); crud.openEdit(item); }}
-        onDelete={crud.handleDelete}
-        onImport={rows => crud.handleImport(rows, r => ({
+        data={data}
+        onAdd={() => { setForm({ id: crypto.randomUUID(), poNo: '', supplier: '', date: new Date().toISOString().split('T')[0], itemCode: '', qty: 0, price: 0, status: 'draft', remarks: '' }); setEditing(null); setDialogOpen(true); }}
+        onEdit={item => { setForm(item); setEditing(item); setDialogOpen(true); }}
+        onDelete={item => ops.remove(item.id)}
+        onImport={rows => rows.forEach(r => ops.add({
           id: crypto.randomUUID(), poNo: r['PO No.'] || r.poNo || '', supplier: r.Supplier || '',
           date: r.Date || '', itemCode: r['Item Code'] || '', qty: +r.Qty || 0, price: +r.Amount || +r.price || 0,
           status: (r.Status || 'draft').toLowerCase(), remarks: r.Remarks || '',
-        }))}
+        } as any))}
         fileName="PurchaseOrders"
         extraToolbar={
-          <CrudToolbar canUndo={crud.canUndo} onUndo={crud.undo} onClear={crud.clearAll} dataLength={crud.data.length}
+          <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
             printBtn={<PrintableReport title="Purchase Orders" columns={[
               { key: 'poNo', label: 'PO No.' }, { key: 'date', label: 'Date' }, { key: 'supplier', label: 'Supplier' },
               { key: 'itemCode', label: 'Item Code' }, { key: 'qty', label: 'Qty' }, { key: 'price', label: 'Amount' },
               { key: 'status', label: 'Status' }, { key: 'remarks', label: 'Remarks' },
-            ]} data={crud.data} />}
+            ]} data={data} />}
           />
         }
       />
-      <Dialog open={crud.dialogOpen} onOpenChange={crud.setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>{crud.editing ? 'Edit' : 'Add'} Purchase Order</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{editing ? 'Edit' : 'Add'} Purchase Order</DialogTitle></DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-4">
             <div className="space-y-1.5"><Label>PO Number</Label><Input value={form.poNo || ''} onChange={e => u('poNo', e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Date</Label><Input type="date" value={form.date || ''} onChange={e => u('date', e.target.value)} /></div>
@@ -641,11 +584,9 @@ export function PurchaseOrdersPage() {
               <Label>BOQ Item Code</Label>
               <Select value={form.itemCode || ''} onValueChange={v => u('itemCode', v)}>
                 <SelectTrigger><SelectValue placeholder="Select BOQ item" /></SelectTrigger>
-                <SelectContent>
-                  {sampleBOQ.map(b => (
-                    <SelectItem key={b.id} value={b.code}>{b.code} – {b.description}</SelectItem>
-                  ))}
-                </SelectContent>
+                <SelectContent>{boqItems.map(b => (
+                  <SelectItem key={b.id} value={b.code}>{b.code} – {b.description}</SelectItem>
+                ))}</SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5"><Label>Quantity</Label><Input type="number" value={form.qty || 0} onChange={e => u('qty', +e.target.value)} /></div>
@@ -665,8 +606,8 @@ export function PurchaseOrdersPage() {
             <div className="col-span-2 space-y-1.5"><Label>Remarks</Label><Input value={form.remarks || ''} onChange={e => u('remarks', e.target.value)} /></div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => crud.setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={() => crud.save(form)}>Save</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button onClick={() => { ops.save(form); setDialogOpen(false); }}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -674,8 +615,8 @@ export function PurchaseOrdersPage() {
   );
 }
 
-// ─── Remaining modules with Add/Edit/Export ───
-function GenericModule({ title, description, fields, extraToolbar }: { title: string; description: string; fields: { key: string; label: string; type?: string; options?: { value: string; label: string }[] }[]; extraToolbar?: React.ReactNode }) {
+// ─── Generic Module (for remaining tabs) ───
+function GenericModule({ title, description, fields }: { title: string; description: string; fields: { key: string; label: string; type?: string; options?: { value: string; label: string }[] }[] }) {
   const [data, setData] = useState<Record<string, any>[]>([]);
   const [history, setHistory] = useState<Record<string, any>[][]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -684,15 +625,8 @@ function GenericModule({ title, description, fields, extraToolbar }: { title: st
   const u = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }));
 
   const pushHistory = (current: Record<string, any>[]) => setHistory(prev => [...prev.slice(-20), current]);
-
-  const openAdd = () => {
-    setEditing(null);
-    setForm({ id: crypto.randomUUID(), ...Object.fromEntries(fields.map(f => [f.key, ''])) });
-    setDialogOpen(true);
-  };
-
+  const openAdd = () => { setEditing(null); setForm({ id: crypto.randomUUID(), ...Object.fromEntries(fields.map(f => [f.key, ''])) }); setDialogOpen(true); };
   const openEdit = (item: Record<string, any>) => { setEditing(item); setForm(item); setDialogOpen(true); };
-
   const save = () => {
     pushHistory(data);
     setData(prev => {
@@ -702,14 +636,12 @@ function GenericModule({ title, description, fields, extraToolbar }: { title: st
     });
     setDialogOpen(false);
   };
-
   const undo = () => {
     if (history.length === 0) return;
     setData(history[history.length - 1]);
     setHistory(prev => prev.slice(0, -1));
-    toast({ title: 'Undone', description: 'Last action reverted' });
+    toast({ title: 'Undone' });
   };
-
   const clearAll = () => {
     if (data.length === 0) return;
     pushHistory(data);
@@ -727,11 +659,7 @@ function GenericModule({ title, description, fields, extraToolbar }: { title: st
         onAdd={openAdd}
         onEdit={openEdit}
         onDelete={item => { pushHistory(data); setData(prev => prev.filter(i => i.id !== item.id)); }}
-        onImport={rows => {
-          pushHistory(data);
-          const mapped = rows.map(r => ({ id: crypto.randomUUID(), ...r }));
-          setData(prev => [...prev, ...mapped]);
-        }}
+        onImport={rows => { pushHistory(data); setData(prev => [...prev, ...rows.map(r => ({ id: crypto.randomUUID(), ...r }))]); }}
         fileName={title.replace(/\s+/g, '_')}
         extraToolbar={
           <CrudToolbar canUndo={history.length > 0} onUndo={undo} onClear={clearAll} dataLength={data.length}
@@ -749,9 +677,7 @@ function GenericModule({ title, description, fields, extraToolbar }: { title: st
                 {f.options ? (
                   <Select value={form[f.key] || ''} onValueChange={v => u(f.key, v)}>
                     <SelectTrigger><SelectValue placeholder={`Select ${f.label}`} /></SelectTrigger>
-                    <SelectContent className="max-h-60">
-                      {f.options.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                    </SelectContent>
+                    <SelectContent className="max-h-60">{f.options.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                   </Select>
                 ) : (
                   <Input type={f.type || 'text'} value={form[f.key] || ''} onChange={e => u(f.key, e.target.value)} />
@@ -769,18 +695,35 @@ function GenericModule({ title, description, fields, extraToolbar }: { title: st
   );
 }
 
-// Equipment options for fuel log dropdown (dynamic from sample + any added)
-const equipmentOptions = sampleEquipment.map(e => ({ value: `${e.eqId} - ${e.equipmentName}`, label: `${e.eqId} - ${e.equipmentName}` }));
+// ─── Daily Quantity (linked to BOQ) ───
+export function DailyQuantityPage() {
+  const { boqItems } = useProjectData();
+  return <GenericModule title="Daily Quantity" description="Enter executed quantities per BOQ item" fields={[
+    { key: 'date', label: 'Date', type: 'date' },
+    { key: 'boqCode', label: 'BOQ Code', options: boqItems.map(b => ({ value: b.code, label: `${b.code} – ${b.description}` })) },
+    { key: 'description', label: 'Description' },
+    { key: 'quantity', label: 'Quantity', type: 'number' },
+    { key: 'unit', label: 'Unit' },
+    { key: 'location', label: 'Location' },
+    { key: 'remarks', label: 'Remarks' },
+  ]} />;
+}
 
-export const DailyQuantityPage = () => <GenericModule title="Daily Quantity" description="Enter executed quantities per BOQ item" fields={[
-  { key: 'date', label: 'Date', type: 'date' },
-  { key: 'boqCode', label: 'BOQ Code', options: sampleBOQ.map(b => ({ value: b.code, label: `${b.code} – ${b.description}` })) },
-  { key: 'description', label: 'Description' },
-  { key: 'quantity', label: 'Quantity', type: 'number' },
-  { key: 'unit', label: 'Unit' },
-  { key: 'location', label: 'Location' },
-  { key: 'remarks', label: 'Remarks' },
-]} />;
+// ─── Fuel Log (linked to Equipment) ───
+export function FuelLogPage() {
+  const { equipment } = useProjectData();
+  const equipmentOptions = equipment.map(e => ({ value: `${e.eqId} - ${e.equipmentName}`, label: `${e.eqId} - ${e.equipmentName}` }));
+
+  return <GenericModule title="Fuel Log" description="Track fuel receipts, issues, and balance" fields={[
+    { key: 'date', label: 'Date', type: 'date' },
+    { key: 'type', label: 'Fuel Type', options: [{ value: 'diesel', label: 'Diesel' }, { value: 'petrol', label: 'Petrol' }, { value: 'lpg', label: 'LPG' }] },
+    { key: 'receipt', label: 'Receipt (L)', type: 'number' },
+    { key: 'issued', label: 'Issued (L)', type: 'number' },
+    { key: 'issuedTo', label: 'Issued To (Equipment)', options: equipmentOptions },
+    { key: 'balance', label: 'Balance', type: 'number' },
+    { key: 'remarks', label: 'Remarks' },
+  ]} />;
+}
 
 export const BillsPage = () => <GenericModule title="Bills" description="Record supplier bills with payment status" fields={[
   { key: 'billNo', label: 'Bill No.' }, { key: 'date', label: 'Date', type: 'date' }, { key: 'supplier', label: 'Supplier' },
@@ -794,16 +737,6 @@ export const StaffPage = () => <GenericModule title="Key Staff" description="Pro
   { key: 'department', label: 'Department' }, { key: 'responsibility', label: 'Responsibility' }, { key: 'joinDate', label: 'Join Date', type: 'date' },
 ]} />;
 
-export const FuelLogPage = () => <GenericModule title="Fuel Log" description="Track fuel receipts, issues, and balance" fields={[
-  { key: 'date', label: 'Date', type: 'date' },
-  { key: 'type', label: 'Fuel Type', options: [{ value: 'diesel', label: 'Diesel' }, { value: 'petrol', label: 'Petrol' }, { value: 'lpg', label: 'LPG' }] },
-  { key: 'receipt', label: 'Receipt (L)', type: 'number' },
-  { key: 'issued', label: 'Issued (L)', type: 'number' },
-  { key: 'issuedTo', label: 'Issued To (Equipment)', options: equipmentOptions },
-  { key: 'balance', label: 'Balance', type: 'number' },
-  { key: 'remarks', label: 'Remarks' },
-]} />;
-
 export const QualityPage = () => <GenericModule title="Quality (ITP/NCR)" description="Inspection test plans and non-conformance reports" fields={[
   { key: 'testId', label: 'Test ID' }, { key: 'date', label: 'Date', type: 'date' }, { key: 'location', label: 'Location' },
   { key: 'type', label: 'Type', options: [{ value: 'ITP', label: 'ITP' }, { value: 'NCR', label: 'NCR' }, { value: 'MIR', label: 'MIR' }] },
@@ -813,7 +746,6 @@ export const QualityPage = () => <GenericModule title="Quality (ITP/NCR)" descri
   { key: 'testedBy', label: 'Tested By' },
 ]} />;
 
-// ─── Concrete Pour (Enhanced with comprehensive grades) ───
 export const ConcreteLogPage = () => <GenericModule title="Concrete Pour" description="Daily pour cards with slump, cubes, weather" fields={[
   { key: 'date', label: 'Date', type: 'date' },
   { key: 'location', label: 'Location' },
@@ -856,7 +788,7 @@ export const SubcontractorsPage = () => <GenericModule title="Subcontractors" de
   { key: 'cumulative', label: 'Cumulative %', type: 'number' }, { key: 'supervisor', label: 'Supervisor' },
 ]} />;
 
-// ─── Photos (Enhanced with local file upload) ───
+// ─── Photos ───
 export function PhotosPage() {
   const [photos, setPhotos] = useState<any[]>([]);
   const [history, setHistory] = useState<any[][]>([]);
@@ -872,13 +804,10 @@ export function PhotosPage() {
       const reader = new FileReader();
       reader.onload = (evt) => {
         setPhotos(prev => [...prev, {
-          id: crypto.randomUUID(),
-          fileName: file.name,
+          id: crypto.randomUUID(), fileName: file.name,
           date: new Date().toISOString().split('T')[0],
           size: (file.size / 1024).toFixed(1) + ' KB',
-          location: '',
-          description: '',
-          takenBy: '',
+          location: '', description: '', takenBy: '',
           dataUrl: evt.target?.result as string,
         }]);
       };
@@ -899,7 +828,7 @@ export function PhotosPage() {
     if (photos.length === 0) return;
     pushHistory();
     setPhotos([]);
-    toast({ title: 'Cleared', description: 'All photos removed. Use Undo to restore.' });
+    toast({ title: 'Cleared' });
   };
 
   return (
@@ -917,15 +846,11 @@ export function PhotosPage() {
           <Button variant="ghost" size="sm" onClick={undo} disabled={history.length === 0}><Undo2 size={14} className="mr-1" /> Undo</Button>
           <Button variant="ghost" size="sm" onClick={clearAll} disabled={photos.length === 0} className="text-destructive"><Trash2 size={14} className="mr-1" /> Clear All</Button>
           <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={handleUpload} />
-          <Button size="sm" onClick={() => fileRef.current?.click()}>
-            <ImagePlus size={14} className="mr-1" /> Upload Photos
-          </Button>
+          <Button size="sm" onClick={() => fileRef.current?.click()}><ImagePlus size={14} className="mr-1" /> Upload Photos</Button>
         </div>
       </div>
       {photos.length === 0 ? (
-        <div className="bg-card rounded-xl border shadow-sm p-12 text-center text-muted-foreground">
-          No photos uploaded yet. Click "Upload Photos" to add site images from your computer.
-        </div>
+        <div className="bg-card rounded-xl border shadow-sm p-12 text-center text-muted-foreground">No photos uploaded yet.</div>
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {photos.map(p => (
@@ -941,9 +866,7 @@ export function PhotosPage() {
                 <Input className="mt-1 h-7 text-xs" placeholder="Description" value={p.description}
                   onChange={e => setPhotos(prev => prev.map(x => x.id === p.id ? { ...x, description: e.target.value } : x))} />
                 <Button variant="ghost" size="sm" className="mt-1 h-6 text-xs text-destructive w-full"
-                  onClick={() => { pushHistory(); setPhotos(prev => prev.filter(x => x.id !== p.id)); }}>
-                  Remove
-                </Button>
+                  onClick={() => { pushHistory(); setPhotos(prev => prev.filter(x => x.id !== p.id)); }}>Remove</Button>
               </div>
             </div>
           ))}
@@ -981,39 +904,201 @@ export const BackupPage = () => <GenericModule title="Backup / Restore" descript
   { key: 'notes', label: 'Notes' },
 ]} />;
 
-export const HelpPage = () => (
-  <div>
-    <div className="page-header">
-      <h1 className="text-2xl font-bold text-foreground">User Manual</h1>
-      <p className="text-sm text-muted-foreground mt-1">Built-in help and documentation</p>
-    </div>
-    <div className="bg-card rounded-xl border shadow-sm p-8 space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold mb-2">Getting Started</h2>
-        <p className="text-sm text-muted-foreground">BuildForge is a comprehensive construction project management tool. Use the sidebar to navigate between modules. Each module supports Add, Edit, Delete operations and Excel Import/Export.</p>
-      </div>
-      <div>
-        <h2 className="text-lg font-semibold mb-2">Key Features</h2>
-        <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-5">
-          <li><strong>Activities (CPM)</strong> – Gantt chart + CPM network diagram with critical path, float, and warnings</li>
-          <li><strong>AI Assistant</strong> – Automated critical path analysis, schedule optimization</li>
-          <li><strong>BOQ / Items</strong> – Bill of quantities with progress tracking and budget analysis</li>
-          <li><strong>Manpower</strong> – Dropdown selection for 35+ construction trades with per-trade counts</li>
-          <li><strong>Equipment</strong> – 45+ equipment types with hourly/daily/monthly billing and cost tracking</li>
-          <li><strong>Concrete Pour</strong> – 30+ international concrete grades (BS/EN/IS standards)</li>
-          <li><strong>Photos</strong> – Direct upload from local PC with grid gallery view</li>
-          <li><strong>Print Reports</strong> – International standard format with letterhead, signatures, and stamp</li>
-          <li><strong>Cross-module linking</strong> – BOQ items linked in POs, Daily Qty; Equipment linked in Fuel Log</li>
-          <li><strong>Undo / Clear / Select</strong> – Every module has Undo, Clear All, and batch delete</li>
-          <li><strong>Excel Import/Export</strong> – Import data from .xlsx/.csv files and export to Excel</li>
-        </ul>
-      </div>
-      <div>
-        <h2 className="text-lg font-semibold mb-2">Print Reports</h2>
-        <p className="text-sm text-muted-foreground">Click the Print Report button on any major module to generate a professional A4 landscape report with your company letterhead, project details, signature blocks, and company stamp. Configure these in Settings.</p>
-      </div>
-    </div>
-  </div>
-);
+// ─── Help Page (Interactive) ───
+const HELP_SECTIONS: { tab: string; sections: { title: string; content: string }[] }[] = [
+  {
+    tab: 'Dashboard',
+    sections: [
+      { title: 'Overview', content: 'The Dashboard shows real-time KPI cards for overall progress, manpower, critical activities, and open delays. All data auto-updates as you add/edit entries in other modules.' },
+      { title: 'Charts', content: 'BOQ Progress chart shows executed vs remaining quantities. Activity Status pie chart breaks down task completion. Both update automatically from your data.' },
+      { title: 'Budget Summary', content: 'Displays total budget (from BOQ), executed value, and equipment cost. All calculated from your actual entries.' },
+    ],
+  },
+  {
+    tab: 'Activities (CPM)',
+    sections: [
+      { title: 'Views', content: 'Switch between Gantt chart, Primavera P6 style schedule, CPM network diagram, and Table view using the toolbar buttons.' },
+      { title: 'Gantt Chart', content: 'Shows planned bars with progress fill. Critical path items are highlighted in red. Click any bar to edit. Dependency arrows show predecessor relationships.' },
+      { title: 'Primavera P6 View', content: 'Displays planned vs actual bars side by side, with variance calculation showing schedule performance. Data Date line marks today.' },
+      { title: 'CPM Diagram', content: 'Network diagram calculating Early/Late Start & Finish, Total Float. Zero-float activities are on the critical path (highlighted red). Warnings appear for delays.' },
+      { title: 'AI Assistant', content: 'Click "AI Assist" to analyze critical path, optimize schedule, or get recommendations. AI can auto-apply critical flags and dependencies.' },
+      { title: 'Import/Export', content: 'Download the Activities template from Templates, fill your data, then use Import XLS. Export creates a formatted Excel file of your schedule.' },
+    ],
+  },
+  {
+    tab: 'BOQ / Items',
+    sections: [
+      { title: 'Adding Items', content: 'Click "Add Item" to enter code, description, unit, measure type, rate, total and executed quantities. The progress bar and budget auto-calculate.' },
+      { title: 'Cross-Linking', content: 'BOQ items appear as dropdown options in Purchase Orders and Daily Quantity, preventing duplicate entry and maintaining data consistency.' },
+      { title: 'Clear / Undo', content: 'Use "Clear All" to remove all items (with Undo support). Use Undo to revert the last 20 actions.' },
+      { title: 'Budget Tracking', content: 'Footer shows total budget. Dashboard budget summary auto-updates from BOQ data.' },
+    ],
+  },
+  {
+    tab: 'Daily Manpower',
+    sections: [
+      { title: 'Adding Entries', content: 'Select date, location, then add trades from 35+ construction trade types using dropdown. Enter count per trade. Total calculates automatically.' },
+      { title: 'Trade Dropdown', content: 'Includes: Mason, Carpenter, Steel Fixer, Welder, Electrician, Plumber, Crane Operator, Surveyor, HVAC Technician, and 25+ more. Staff roles are excluded.' },
+      { title: 'Dashboard Link', content: 'Total manpower count appears on Dashboard KPI card, auto-updating as you add entries.' },
+    ],
+  },
+  {
+    tab: 'Equipment',
+    sections: [
+      { title: 'Equipment Types', content: '45+ equipment types including Excavator, Crane, Piling Rig, Concrete Pump, Forklift, Boom Lift, Asphalt Paver, TBM, and more.' },
+      { title: 'Ownership & Billing', content: 'Select Owned/Leased/Rented for each equipment. Choose billing basis: Hourly, Daily, or Monthly. Enter rate for cost tracking.' },
+      { title: 'Fuel Link', content: 'Equipment entries automatically appear as dropdown options in the Fuel Log for fuel issue tracking.' },
+      { title: 'Cost Calculation', content: 'Cost = Rate × Hours (hourly) or just Rate (daily/monthly). Equipment costs appear on Dashboard.' },
+    ],
+  },
+  {
+    tab: 'Fuel Log',
+    sections: [
+      { title: 'Tracking', content: 'Record fuel receipts and issues. Select equipment from your Equipment Log entries for accurate allocation tracking.' },
+      { title: 'Equipment Link', content: 'The "Issued To" dropdown dynamically shows all equipment from your Equipment tab. Add equipment first, then log fuel.' },
+    ],
+  },
+  {
+    tab: 'Concrete Pour',
+    sections: [
+      { title: 'Concrete Grades', content: '30+ international grades from C7/8 (M10) to C100 (M100), plus special types: Lean, Mass, SCC, Fiber Reinforced, Shotcrete, Underwater.' },
+      { title: 'Pour Details', content: 'Record location, supplier, volume, slump, temperature, weather, test cubes, pour method, and structural element.' },
+    ],
+  },
+  {
+    tab: 'Purchase Orders',
+    sections: [
+      { title: 'BOQ Link', content: 'Select BOQ item code from dropdown when creating POs. Items come from your BOQ/Items tab.' },
+      { title: 'Status Tracking', content: 'Track PO lifecycle: Draft → Issued → Delivered → Closed. Each status shows with color-coded badges.' },
+    ],
+  },
+  {
+    tab: 'Inventory',
+    sections: [
+      { title: 'Stock Management', content: 'Track opening balance, receipts, issues, and calculated balance. Low stock alerts when balance drops below minimum level.' },
+      { title: 'Auto Balance', content: 'Balance = Opening + Receipts - Issues. Calculated automatically when saving.' },
+    ],
+  },
+  {
+    tab: 'Safety',
+    sections: [
+      { title: 'Recording', content: 'Log incidents, near-misses, and observations with location, root cause, and preventive actions.' },
+      { title: 'Reporting', content: 'Print formatted safety reports with incident details for HSE compliance.' },
+    ],
+  },
+  {
+    tab: 'Delays Register',
+    sections: [
+      { title: 'Delay Tracking', content: 'Record delays with cause, duration, impact assessment, and recovery actions. Dashboard shows open delay count.' },
+      { title: 'Status', content: 'Track delay status: Open → Mitigated → Closed.' },
+    ],
+  },
+  {
+    tab: 'Print Reports',
+    sections: [
+      { title: 'Format', content: 'International A4 landscape format with company logo, project details, numbered rows, and signature blocks (Prepared/Checked/Approved).' },
+      { title: 'Setup', content: 'Go to Settings to upload company logo and stamp. These appear on all printed reports.' },
+    ],
+  },
+  {
+    tab: 'Templates',
+    sections: [
+      { title: 'Download', content: 'Pre-formatted Excel templates with correct headers and sample data for every module. Download, fill your data, then import.' },
+      { title: 'Format', content: 'Keep headers exactly as shown. Use YYYY-MM-DD for dates. Follow sample data format for best results.' },
+    ],
+  },
+  {
+    tab: 'Settings',
+    sections: [
+      { title: 'Company Info', content: 'Enter company name, client, contractor, project details. This information appears on printed reports.' },
+      { title: 'Logo & Stamp', content: 'Upload company logo and authorized stamp. These appear on report headers and footers.' },
+    ],
+  },
+];
 
-// Settings page moved to src/components/SettingsPage.tsx
+export function HelpPage() {
+  const [selectedTab, setSelectedTab] = useState('');
+  const [selectedSection, setSelectedSection] = useState('');
+
+  const tabData = HELP_SECTIONS.find(h => h.tab === selectedTab);
+  const sectionData = tabData?.sections.find(s => s.title === selectedSection);
+
+  return (
+    <div>
+      <div className="page-header">
+        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <HelpCircle className="text-primary" size={24} /> Help & User Guide
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">Select a module and section to learn how it works</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Step 1: Select Tab */}
+        <div className="bg-card rounded-xl border shadow-sm p-5">
+          <h2 className="text-sm font-semibold text-foreground mb-3">① Select Module</h2>
+          <div className="space-y-1">
+            {HELP_SECTIONS.map(h => (
+              <button
+                key={h.tab}
+                onClick={() => { setSelectedTab(h.tab); setSelectedSection(''); }}
+                className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                  selectedTab === h.tab ? 'bg-primary text-primary-foreground font-medium' : 'hover:bg-muted text-foreground'
+                }`}
+              >
+                {h.tab}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Step 2: Select Section */}
+        <div className="bg-card rounded-xl border shadow-sm p-5">
+          <h2 className="text-sm font-semibold text-foreground mb-3">② Select Section</h2>
+          {!tabData ? (
+            <p className="text-sm text-muted-foreground">← Select a module first</p>
+          ) : (
+            <div className="space-y-1">
+              {tabData.sections.map(s => (
+                <button
+                  key={s.title}
+                  onClick={() => setSelectedSection(s.title)}
+                  className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
+                    selectedSection === s.title ? 'bg-primary text-primary-foreground font-medium' : 'hover:bg-muted text-foreground'
+                  }`}
+                >
+                  {s.title}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Step 3: Help Content */}
+        <div className="bg-card rounded-xl border shadow-sm p-5">
+          <h2 className="text-sm font-semibold text-foreground mb-3">③ Help Details</h2>
+          {!sectionData ? (
+            <p className="text-sm text-muted-foreground">← Select a section to view help</p>
+          ) : (
+            <div>
+              <h3 className="text-base font-semibold text-foreground mb-2">{selectedTab} → {sectionData.title}</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">{sectionData.content}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Quick Reference */}
+      <div className="mt-6 bg-primary/5 border border-primary/20 rounded-xl p-5">
+        <h2 className="text-sm font-semibold text-primary mb-3">Quick Reference</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="text-xs text-muted-foreground"><strong className="text-foreground">Undo:</strong> Reverts the last action (up to 20 steps)</div>
+          <div className="text-xs text-muted-foreground"><strong className="text-foreground">Clear All:</strong> Removes all data from the current tab</div>
+          <div className="text-xs text-muted-foreground"><strong className="text-foreground">Import XLS:</strong> Upload Excel file to bulk-add records</div>
+          <div className="text-xs text-muted-foreground"><strong className="text-foreground">Export XLS:</strong> Download current data as Excel file</div>
+          <div className="text-xs text-muted-foreground"><strong className="text-foreground">Print:</strong> Generate formatted A4 report with letterhead</div>
+          <div className="text-xs text-muted-foreground"><strong className="text-foreground">Templates:</strong> Download sample Excel files from sidebar</div>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -18,7 +18,6 @@ const templates: Template[] = [
     sampleRows: [
       ['1.1', 'Site Mobilization', '2025-01-15', '2025-02-15', '2025-01-15', '2025-02-10', 100, 'Yes', '', 'completed'],
       ['1.2', 'Excavation & Earthworks', '2025-02-16', '2025-04-30', '2025-02-16', '', 65, 'Yes', '1.1', 'in-progress'],
-      ['2.1', 'Foundation – Piling', '2025-03-01', '2025-06-30', '', '', 0, 'Yes', '1.2', 'not-started'],
     ],
   },
   {
@@ -28,7 +27,6 @@ const templates: Template[] = [
     sampleRows: [
       ['EW-001', 'Bulk Excavation', 'm³', 'rectangular', 25000, 21250, 45],
       ['RC-001', 'Grade 40 Concrete', 'm³', 'direct', 3500, 2170, 850],
-      ['RB-001', 'Rebar 16mm', 'ton', 'rebar', 450, 279, 4200],
     ],
   },
   {
@@ -43,19 +41,35 @@ const templates: Template[] = [
   {
     name: 'Daily Manpower',
     fileName: 'Template_Manpower',
-    headers: ['Date', 'Location', 'Mason', 'Carpenter', 'Steel Fixer', 'Welder', 'Fitter', 'Electrician', 'Operator', 'Skilled Total', 'Unskilled Total', 'Supervisor'],
+    headers: ['Date', 'Location', 'Mason', 'Carpenter', 'Steel Fixer / Rebar', 'Welder', 'Pipe Fitter', 'Electrician', 'Plumber', 'Crane Operator', 'Skilled Labour', 'Unskilled Labour / Helper', 'Supervisor'],
     sampleRows: [
-      ['2025-03-03', 'Zone A – Piling', 0, 4, 8, 2, 3, 0, 4, 21, 35, 'Ahmad K.'],
-      ['2025-03-03', 'Zone B – Excavation', 0, 0, 0, 0, 0, 0, 6, 6, 45, 'Ravi M.'],
+      ['2025-03-03', 'Zone A – Piling', 0, 4, 8, 2, 3, 0, 0, 4, 5, 35, 'Ahmad K.'],
     ],
   },
   {
     name: 'Equipment Log',
     fileName: 'Template_Equipment',
-    headers: ['Date', 'Eq. ID', 'Equipment', 'Operator', 'Hours', 'Fuel (L)', 'Activity', 'Issues'],
+    headers: ['Date', 'Eq. ID', 'Equipment', 'Operator', 'Ownership (owned/leased/rented)', 'Billing (hourly/daily/monthly)', 'Rate', 'Hours', 'Fuel (L)', 'Activity', 'Issues'],
     sampleRows: [
-      ['2025-03-03', 'EQ-001', 'CAT 320 Excavator', 'Singh R.', 9.5, 180, 'Excavation Zone B', ''],
-      ['2025-03-03', 'EQ-002', 'Liebherr Piling Rig', 'Ahmed F.', 8, 250, 'Piling Zone A', ''],
+      ['2025-03-03', 'EQ-001', 'Excavator', 'Singh R.', 'owned', 'hourly', 250, 9.5, 180, 'Excavation Zone B', ''],
+      ['2025-03-03', 'EQ-002', 'Piling Rig (CFA)', 'Ahmed F.', 'leased', 'daily', 8500, 8, 250, 'Piling Zone A', ''],
+    ],
+  },
+  {
+    name: 'Fuel Log',
+    fileName: 'Template_FuelLog',
+    headers: ['Date', 'Fuel Type (diesel/petrol/lpg)', 'Receipt (L)', 'Issued (L)', 'Issued To (Equipment)', 'Balance', 'Remarks'],
+    sampleRows: [
+      ['2025-03-03', 'diesel', 2000, 0, '', 7500, 'Tanker delivery'],
+      ['2025-03-03', 'diesel', 0, 180, 'EQ-001 - Excavator', 7320, 'Issued to excavator'],
+    ],
+  },
+  {
+    name: 'Concrete Pour',
+    fileName: 'Template_ConcretePour',
+    headers: ['Date', 'Location', 'Concrete Grade', 'Supplier', 'Volume (m³)', 'Slump (mm)', 'Temp (°C)', 'Weather', 'Test Cubes', 'Pour Method', 'Structural Element', 'Supervisor'],
+    sampleRows: [
+      ['2025-03-03', 'Zone A - Pile Cap PC-01', 'C40 (M40)', 'Gulf Ready Mix', 85, 150, 28, 'sunny', 6, 'pump', 'Pile Cap', 'Ahmad K.'],
     ],
   },
   {
@@ -64,7 +78,6 @@ const templates: Template[] = [
     headers: ['PO No.', 'Date', 'Supplier', 'Item Code', 'Qty', 'Amount', 'Status (draft/issued/delivered/closed)', 'Remarks'],
     sampleRows: [
       ['PO-2025-001', '2025-01-20', 'Gulf Ready Mix', 'RC-001', 500, 425000, 'delivered', 'Grade 40, 150mm slump'],
-      ['PO-2025-002', '2025-02-05', 'National Steel Co.', 'RB-001', 150, 630000, 'issued', '16mm Y-bar'],
     ],
   },
   {
@@ -83,12 +96,76 @@ const templates: Template[] = [
       ['2025-02-20', 'Piling Works', 'Rig breakdown', 'Mechanical', 3, 'Critical path delayed', 'Mobilized standby rig', 'mitigated'],
     ],
   },
+  {
+    name: 'Daily Quantity',
+    fileName: 'Template_DailyQuantity',
+    headers: ['Date', 'BOQ Code', 'Description', 'Quantity', 'Unit', 'Location', 'Remarks'],
+    sampleRows: [
+      ['2025-03-03', 'EW-001', 'Bulk Excavation', 450, 'm³', 'Zone B', 'Level -3 to -2'],
+      ['2025-03-03', 'RC-001', 'Grade 40 Concrete', 85, 'm³', 'Zone A', 'Pile cap PC-01'],
+    ],
+  },
+  {
+    name: 'Bills',
+    fileName: 'Template_Bills',
+    headers: ['Bill No.', 'Date', 'Supplier', 'PO Ref', 'Amount', 'Status (pending/approved/paid/rejected)', 'Remarks'],
+    sampleRows: [
+      ['INV-001', '2025-02-28', 'Gulf Ready Mix', 'PO-2025-001', 212500, 'approved', 'Partial delivery'],
+    ],
+  },
+  {
+    name: 'Key Staff',
+    fileName: 'Template_Staff',
+    headers: ['Name', 'Role', 'Contact', 'Department', 'Responsibility', 'Join Date'],
+    sampleRows: [
+      ['Ahmad Khan', 'Project Manager', '+971-50-123-4567', 'Management', 'Overall project delivery', '2025-01-01'],
+    ],
+  },
+  {
+    name: 'Quality (ITP/NCR)',
+    fileName: 'Template_Quality',
+    headers: ['Test ID', 'Date', 'Location', 'Type (ITP/NCR/MIR)', 'Specification', 'Result (pass/fail/pending)', 'Status (open/closed)', 'Tested By'],
+    sampleRows: [
+      ['ITP-001', '2025-03-01', 'Zone A', 'ITP', 'BS EN 12390-3', 'pass', 'closed', 'Lab Technician'],
+    ],
+  },
+  {
+    name: 'Welding Log',
+    fileName: 'Template_Welding',
+    headers: ['Date', 'Location', 'Welder', 'Welder ID', 'Joint Type', 'No. Joints', 'NDT Required (yes/no)', 'NDT Result (pass/fail/pending)', 'Inspector'],
+    sampleRows: [
+      ['2025-03-03', 'Zone A - Steel Structure', 'Karim M.', 'WLD-005', 'Butt Weld', 12, 'yes', 'pass', 'QC Inspector'],
+    ],
+  },
+  {
+    name: 'Tools',
+    fileName: 'Template_Tools',
+    headers: ['Tool ID', 'Description', 'Issued To', 'Date Issued', 'Expected Return', 'Actual Return', 'Condition (good/fair/poor/damaged)'],
+    sampleRows: [
+      ['TL-001', 'Total Station Leica TS16', 'Survey Team', '2025-03-01', '2025-03-15', '', 'good'],
+    ],
+  },
+  {
+    name: 'Subcontractors',
+    fileName: 'Template_Subcontractors',
+    headers: ['Name', 'Scope', 'Contract Value', 'Date', 'Manpower', 'Daily Progress', 'Cumulative %', 'Supervisor'],
+    sampleRows: [
+      ['Al-Habtoor Piling', 'CFA Piling Works', 12500000, '2025-03-03', 25, '3 piles completed', 42, 'Site Engineer'],
+    ],
+  },
+  {
+    name: 'Change Orders',
+    fileName: 'Template_ChangeOrders',
+    headers: ['CO No.', 'Date', 'Description', 'Cost Impact', 'Schedule Impact', 'Status (pending/approved/rejected)', 'Approved Date'],
+    sampleRows: [
+      ['CO-001', '2025-02-15', 'Additional piling due to soil condition', 850000, '15 days extension', 'approved', '2025-02-28'],
+    ],
+  },
 ];
 
 function downloadTemplate(template: Template) {
   const wsData = [template.headers, ...template.sampleRows];
   const ws = XLSX.utils.aoa_to_sheet(wsData);
-  // Auto-size columns
   ws['!cols'] = template.headers.map(h => ({ wch: Math.max(h.length + 2, 15) }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, 'Template');
@@ -110,9 +187,9 @@ export default function SampleTemplates({ open, onOpenChange }: SampleTemplatesP
             Sample Excel Templates
           </DialogTitle>
         </DialogHeader>
-        <p className="text-sm text-muted-foreground">Download pre-formatted templates showing the expected columns and sample data for each module.</p>
+        <p className="text-sm text-muted-foreground">Download pre-formatted templates for every module.</p>
 
-        <div className="space-y-3 mt-2">
+        <div className="space-y-2 mt-2">
           {templates.map(t => (
             <div key={t.fileName} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border">
               <div>
