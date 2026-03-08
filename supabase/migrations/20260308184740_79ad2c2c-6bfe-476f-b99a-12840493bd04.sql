@@ -1,0 +1,1 @@
+ALTER TABLE public.data_changes ADD COLUMN rejection_reason text DEFAULT NULL;
