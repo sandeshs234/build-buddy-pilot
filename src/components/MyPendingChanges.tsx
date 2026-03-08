@@ -23,6 +23,7 @@ interface MyChange {
   operation: string;
   data: any;
   original_data: any;
+  rejection_reason: string | null;
   status: string;
   created_at: string;
   approved_at: string | null;
