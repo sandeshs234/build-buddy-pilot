@@ -82,6 +82,18 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
   const pendingChanges = changes.filter(c => c.status === 'pending');
   const allPendingSelected = pendingChanges.length > 0 && pendingChanges.every(c => selectedIds.has(c.id));
 
+  const fetchCounts = async () => {
+    const { data } = await (supabase as any)
+      .from('data_changes')
+      .select('status')
+      .eq('project_id', projectId);
+    if (data) {
+      const counts: Record<string, number> = { pending: 0, approved: 0, rejected: 0 };
+      data.forEach((d: any) => { counts[d.status] = (counts[d.status] || 0) + 1; });
+      setStatusCounts(counts);
+    }
+  };
+
   const fetchChanges = async () => {
     setLoading(true);
     let query = (supabase as any)
