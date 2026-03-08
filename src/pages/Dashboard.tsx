@@ -8,6 +8,24 @@ import DataApproval from '@/components/DataApproval';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
+interface ProcTrackingItem {
+  status: string;
+  total_cost: number;
+  expected_delivery: string;
+  actual_delivery: string;
+  material_description: string;
+}
+
+export default function Dashboard() {
+  const { activities, boqItems, manpower, delays, equipment, purchaseOrders } = useProjectData();
+  const { canApprove, currentProjectId } = useAuth();
+  const [procItems, setProcItems] = useState<ProcTrackingItem[]>([]);
+
+  useEffect(() => {
+    supabase.from('procurement_tracking').select('status,total_cost,expected_delivery,actual_delivery,material_description')
+      .then(({ data }) => setProcItems((data as ProcTrackingItem[]) || []));
+  }, []);
+
   const criticalCount = activities.filter(a => a.critical && a.status !== 'completed').length;
   const completedCount = activities.filter(a => a.status === 'completed').length;
   const totalManpower = manpower.reduce((sum, m) => {
