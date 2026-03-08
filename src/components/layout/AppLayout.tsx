@@ -18,10 +18,27 @@ import NotificationBell from '@/components/NotificationBell';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useIsMobile } from '@/hooks/use-mobile';
 
+type AppRole = 'admin' | 'project_manager' | 'engineer' | 'viewer';
+
+interface NavItem {
+  label: string;
+  path: string;
+  icon: React.ReactNode;
+  minRole?: AppRole; // minimum role required to see this item
+}
+
 interface NavGroup {
   label: string;
-  items: { label: string; path: string; icon: React.ReactNode }[];
+  items: NavItem[];
 }
+
+// Role hierarchy: admin > project_manager > engineer > viewer
+const ROLE_LEVEL: Record<AppRole, number> = {
+  admin: 4,
+  project_manager: 3,
+  engineer: 2,
+  viewer: 1,
+};
 
 const navGroups: NavGroup[] = [
   {
@@ -36,7 +53,7 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'Activities (CPM)', path: '/activities', icon: <CalendarClock size={18} /> },
       { label: 'BOQ / Items', path: '/boq', icon: <ClipboardList size={18} /> },
-      { label: 'Change Orders', path: '/change-orders', icon: <FileDiff size={18} /> },
+      { label: 'Change Orders', path: '/change-orders', icon: <FileDiff size={18} />, minRole: 'engineer' },
     ],
   },
   {
@@ -61,15 +78,15 @@ const navGroups: NavGroup[] = [
     label: 'Procurement',
     items: [
       { label: 'Inventory', path: '/inventory', icon: <Package size={18} /> },
-      { label: 'Purchase Orders', path: '/purchase-orders', icon: <ShoppingCart size={18} /> },
-      { label: 'Bills', path: '/bills', icon: <Receipt size={18} /> },
+      { label: 'Purchase Orders', path: '/purchase-orders', icon: <ShoppingCart size={18} />, minRole: 'engineer' },
+      { label: 'Bills', path: '/bills', icon: <Receipt size={18} />, minRole: 'project_manager' },
     ],
   },
   {
     label: 'Resources',
     items: [
-      { label: 'Key Staff', path: '/staff', icon: <UserCog size={18} /> },
-      { label: 'Subcontractors', path: '/subcontractors', icon: <Construction size={18} /> },
+      { label: 'Key Staff', path: '/staff', icon: <UserCog size={18} />, minRole: 'project_manager' },
+      { label: 'Subcontractors', path: '/subcontractors', icon: <Construction size={18} />, minRole: 'project_manager' },
       { label: 'Tools', path: '/tools', icon: <Wrench size={18} /> },
     ],
   },
@@ -79,15 +96,15 @@ const navGroups: NavGroup[] = [
       { label: 'Photos', path: '/photos', icon: <Camera size={18} /> },
       { label: 'Documents', path: '/documents', icon: <FileText size={18} /> },
       { label: 'Delays', path: '/delays', icon: <Clock size={18} /> },
-      { label: 'Reports', path: '/reports', icon: <BarChart3 size={18} /> },
+      { label: 'Reports', path: '/reports', icon: <BarChart3 size={18} />, minRole: 'project_manager' },
     ],
   },
   {
     label: 'System',
     items: [
-      { label: 'User Management', path: '/users', icon: <Shield size={18} /> },
-      { label: 'Settings', path: '/settings', icon: <Settings size={18} /> },
-      { label: 'Backup / Restore', path: '/backup', icon: <Database size={18} /> },
+      { label: 'User Management', path: '/users', icon: <Shield size={18} />, minRole: 'admin' },
+      { label: 'Settings', path: '/settings', icon: <Settings size={18} />, minRole: 'project_manager' },
+      { label: 'Backup / Restore', path: '/backup', icon: <Database size={18} />, minRole: 'project_manager' },
       { label: 'Help', path: '/help', icon: <HelpCircle size={18} /> },
     ],
   },
@@ -258,6 +275,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-1">
           {navGroups.map((group) => {
+            const userLevel = ROLE_LEVEL[(role as AppRole) || 'viewer'];
+            const visibleItems = group.items.filter(item => !item.minRole || userLevel >= ROLE_LEVEL[item.minRole]);
+            if (visibleItems.length === 0) return null;
             const isCollapsed = collapsed[group.label];
 
             return (
@@ -271,7 +291,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </button>
                 {!isCollapsed && (
                   <div className="space-y-0.5 mt-0.5 mb-2">
-                    {group.items.map((item) => {
+                    {visibleItems.map((item) => {
                        const active = location.pathname === item.path;
                        let badge: number | null = null;
                        
