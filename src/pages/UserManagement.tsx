@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { toast } from '@/hooks/use-toast';
 import { UserPlus, Shield, Trash2, Info, CheckCircle2, XCircle, Trash, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 type AppRole = 'admin' | 'project_manager' | 'engineer' | 'viewer';
@@ -42,6 +43,8 @@ export default function UserManagement() {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
   const [clearAllOpen, setClearAllOpen] = useState(false);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -146,6 +149,46 @@ export default function UserManagement() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+        body: { user_ids: ids },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: 'Users Deleted', description: `${data.deleted} user(s) removed.` });
+      setBulkDeleteOpen(false);
+      setSelectedIds(new Set());
+      fetchUsers();
+    } catch (err: any) {
+      toast({ title: 'Bulk Delete Failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const selectableUsers = users.filter(u => u.id !== currentUser?.id);
+  const allSelected = selectableUsers.length > 0 && selectableUsers.every(u => selectedIds.has(u.id));
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(selectableUsers.map(u => u.id)));
+    }
+  };
+
   if (!isAdmin) {
     return (
       <div className="p-12 text-center">
@@ -174,11 +217,16 @@ export default function UserManagement() {
           <h1 className="text-2xl font-bold text-foreground">User Management</h1>
           <p className="text-sm text-muted-foreground mt-1">Create accounts and assign roles · {users.length} users</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          {selectedIds.size > 0 && (
+            <Button variant="destructive" onClick={() => setBulkDeleteOpen(true)}>
+              <Trash2 size={14} className="mr-1.5" /> Delete Selected ({selectedIds.size})
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setGuideOpen(!guideOpen)}>
             <Info size={14} className="mr-1.5" /> Role Guide
           </Button>
-          <Button variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/5" onClick={() => setClearAllOpen(true)} disabled={users.filter(u => u.id !== currentUser?.id).length === 0}>
+          <Button variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/5" onClick={() => setClearAllOpen(true)} disabled={selectableUsers.length === 0}>
             <Trash size={14} className="mr-1.5" /> Clear All Users
           </Button>
           <Button onClick={() => setDialogOpen(true)}>
@@ -230,8 +278,11 @@ export default function UserManagement() {
       <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="data-table">
-            <thead>
+             <thead>
               <tr>
+                <th className="w-10">
+                  <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all" />
+                </th>
                 <th>Name</th>
                 <th>Email</th>
                 <th>Company</th>
@@ -240,44 +291,52 @@ export default function UserManagement() {
               </tr>
             </thead>
             <tbody>
-              {users.map(u => (
-                <tr key={u.id}>
-                  <td className="font-medium">{u.full_name || '—'}</td>
-                  <td>{u.email}</td>
-                  <td>{u.company || '—'}</td>
-                  <td>
-                    <Badge variant="outline" className={ROLE_COLORS[u.role]}>
-                      {ROLE_LABELS[u.role]}
-                    </Badge>
-                  </td>
-                  <td>
-                    <div className="flex items-center gap-2">
-                      <Select value={u.role} onValueChange={(v) => handleChangeRole(u.id, v as AppRole)}>
-                        <SelectTrigger className="w-[160px] h-8 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="admin">Admin</SelectItem>
-                          <SelectItem value="project_manager">Project Manager</SelectItem>
-                          <SelectItem value="engineer">Engineer</SelectItem>
-                          <SelectItem value="viewer">Viewer</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {u.id !== currentUser?.id && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
-                          onClick={() => { setDeleteTarget(u); setConfirmDeleteOpen(true); }}
-                          title="Delete user"
-                        >
-                          <Trash2 size={14} />
-                        </Button>
+              {users.map(u => {
+                const isSelf = u.id === currentUser?.id;
+                return (
+                  <tr key={u.id} className={selectedIds.has(u.id) ? 'bg-primary/5' : ''}>
+                    <td>
+                      {isSelf ? <span className="text-xs text-muted-foreground">You</span> : (
+                        <Checkbox checked={selectedIds.has(u.id)} onCheckedChange={() => toggleSelect(u.id)} aria-label={`Select ${u.email}`} />
                       )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="font-medium">{u.full_name || '—'}</td>
+                    <td>{u.email}</td>
+                    <td>{u.company || '—'}</td>
+                    <td>
+                      <Badge variant="outline" className={ROLE_COLORS[u.role]}>
+                        {ROLE_LABELS[u.role]}
+                      </Badge>
+                    </td>
+                    <td>
+                      <div className="flex items-center gap-2">
+                        <Select value={u.role} onValueChange={(v) => handleChangeRole(u.id, v as AppRole)}>
+                          <SelectTrigger className="w-[160px] h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="admin">Admin</SelectItem>
+                            <SelectItem value="project_manager">Project Manager</SelectItem>
+                            <SelectItem value="engineer">Engineer</SelectItem>
+                            <SelectItem value="viewer">Viewer</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {!isSelf && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
+                            onClick={() => { setDeleteTarget(u); setConfirmDeleteOpen(true); }}
+                            title="Delete user"
+                          >
+                            <Trash2 size={14} />
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -355,6 +414,27 @@ export default function UserManagement() {
             <Button variant="outline" onClick={() => setClearAllOpen(false)} disabled={deleting}>Cancel</Button>
             <Button variant="destructive" onClick={handleClearAll} disabled={deleting}>
               {deleting ? <><Loader2 size={14} className="mr-1 animate-spin" /> Removing...</> : <><Trash size={14} className="mr-1" /> Remove All Users</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Confirmation */}
+      <Dialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete {selectedIds.size} User(s)?</DialogTitle>
+            <DialogDescription>
+              This will permanently remove the selected users and all their data. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-sm text-destructive">
+            ⚠️ {users.filter(u => selectedIds.has(u.id)).map(u => u.email).join(', ')}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setBulkDeleteOpen(false)} disabled={deleting}>Cancel</Button>
+            <Button variant="destructive" onClick={handleBulkDelete} disabled={deleting}>
+              {deleting ? <><Loader2 size={14} className="mr-1 animate-spin" /> Deleting...</> : <><Trash2 size={14} className="mr-1" /> Delete Selected</>}
             </Button>
           </DialogFooter>
         </DialogContent>
