@@ -40,6 +40,10 @@ const ROLE_LABELS: Record<AppRole, string> = {
   project_manager: 'Project Manager',
   engineer: 'Engineer',
   viewer: 'Viewer',
+  accountant: 'Accountant',
+  safety_officer: 'Safety Officer',
+  store_keeper: 'Store Keeper',
+  surveyor: 'Surveyor',
 };
 
 const ROLE_COLORS: Record<AppRole, string> = {
@@ -47,6 +51,10 @@ const ROLE_COLORS: Record<AppRole, string> = {
   project_manager: 'bg-primary/10 text-primary border-primary/20',
   engineer: 'bg-accent/10 text-accent-foreground border-accent/20',
   viewer: 'bg-muted text-muted-foreground border-muted',
+  accountant: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+  safety_officer: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
+  store_keeper: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
+  surveyor: 'bg-violet-500/10 text-violet-600 border-violet-500/20',
 };
 
 const STATUS_COLORS: Record<string, string> = {
