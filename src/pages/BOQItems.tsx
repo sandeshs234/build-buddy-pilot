@@ -83,7 +83,63 @@ export default function BOQItems() {
     setTimeout(() => runAutoAnalysis(), 500);
   };
 
-  const excelColumns = [
+  const handleGenerateBOQ = useCallback(async () => {
+    if (!projectDesc.trim()) {
+      toast({ title: 'Description Required', description: 'Please describe your project to generate BOQ items.', variant: 'destructive' });
+      return;
+    }
+    setGenerating(true);
+    toast({ title: '🤖 Generating BOQ', description: 'AI is creating BOQ items from your project description...' });
+    try {
+      const { data, error } = await supabase.functions.invoke('boq-material-analysis', {
+        body: { action: 'generate-boq', projectDescription: projectDesc.trim() },
+      });
+      if (error) throw error;
+      
+      const result = data?.result;
+      if (!result?.items?.length) {
+        toast({ title: 'No Items Generated', description: 'AI could not generate items. Try a more detailed description.', variant: 'destructive' });
+        return;
+      }
+
+      const mapped: BOQItem[] = result.items.map((item: any) => ({
+        id: crypto.randomUUID(),
+        code: item.code || '',
+        description: item.description || '',
+        unit: item.unit || '',
+        measureType: (item.measureType || 'direct') as BOQItem['measureType'],
+        totalQty: Number(item.totalQty || 0),
+        executedQty: 0,
+        rate: Number(item.rate || 0),
+      }));
+
+      boqOps.bulkAdd(mapped);
+      setGenerateDialogOpen(false);
+      setProjectDesc('');
+
+      const budget = mapped.reduce((s, i) => s + i.totalQty * i.rate, 0);
+      toast({
+        title: '✅ BOQ Generated',
+        description: `${mapped.length} items created · Est. budget: NPR ${budget.toLocaleString()}`,
+      });
+
+      // Auto-trigger AI analysis on generated items
+      setTimeout(() => runAutoAnalysis(), 500);
+    } catch (err: any) {
+      const msg = err?.message || String(err);
+      if (msg.includes('429')) {
+        toast({ title: 'Rate Limited', description: 'Too many requests. Please try again in a moment.', variant: 'destructive' });
+      } else if (msg.includes('402')) {
+        toast({ title: 'Credits Exhausted', description: 'Please add AI credits to continue.', variant: 'destructive' });
+      } else {
+        toast({ title: 'Generation Failed', description: msg, variant: 'destructive' });
+      }
+    } finally {
+      setGenerating(false);
+    }
+  }, [projectDesc, boqOps, runAutoAnalysis]);
+
+
     { key: 'code', label: 'Code' }, { key: 'description', label: 'Description' }, { key: 'unit', label: 'Unit' },
     { key: 'measureType', label: 'Method' }, { key: 'totalQty', label: 'Total Qty' },
     { key: 'executedQty', label: 'Executed Qty' }, { key: 'rate', label: 'Rate' },
