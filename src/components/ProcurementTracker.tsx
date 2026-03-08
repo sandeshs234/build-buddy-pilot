@@ -146,7 +146,35 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
     }
   };
 
-  const handleStatusChange = async (item: TrackingItem, newStatus: string) => {
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === items.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(items.map(i => i.id)));
+    }
+  };
+
+  const deleteSelected = async () => {
+    if (selectedIds.size === 0) return;
+    const ids = [...selectedIds];
+    const { error } = await supabase.from('procurement_tracking').delete().in('id', ids);
+    if (!error) {
+      toast({ title: 'Deleted', description: `${ids.length} entries removed` });
+      setSelectedIds(new Set());
+      fetchItems();
+    } else {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
     const updates: any = { status: newStatus };
     if (newStatus === 'received') {
       updates.received_qty = item.ordered_qty;
