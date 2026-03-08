@@ -44,36 +44,52 @@ export default function BOQItems() {
 
   const runAutoAnalysis = useCallback(async () => {
     setAutoAnalysisRunning(true);
-    toast({ title: '🤖 AI Analysis Started', description: 'Analyzing imported BOQ items for materials, activities & inventory gaps...' });
+    let matCount = 0, actCount = 0, gapCount = 0;
+
     try {
-      const result = await fullSync();
-      if (result) {
-        const matCount = result.materials?.length || 0;
-        const actCount = result.activities?.length || 0;
-        const gapCount = result.inventoryGaps?.length || 0;
-        const totalCost = (result.materials || []).reduce((s: number, m: any) => s + (m.totalWithWaste || 0) * (m.unitRate || 0), 0);
-
-        // Auto-apply materials to inventory and activities to schedule
-        if (result.materials?.length) applyMaterials(result.materials);
-        if (result.activities?.length) applyActivities(result.activities);
-
-        toast({
-          title: '✅ AI Analysis Complete',
-          description: `${matCount} materials, ${actCount} activities, ${gapCount} inventory gaps detected.`,
-          action: actCount > 0 ? (
-            <Button variant="outline" size="sm" className="ml-2 shrink-0" onClick={() => navigate('/activities')}>
-              View Activities →
-            </Button>
-          ) : undefined,
-          duration: 8000,
-        });
+      // Step 1: Analyze materials
+      setAnalysisStep('Analyzing materials & quantities...');
+      const matResult = await analyzeMaterials();
+      if (matResult?.materials?.length) {
+        matCount = matResult.materials.length;
+        applyMaterials(matResult.materials);
       }
+
+      // Step 2: Generate activities
+      setAnalysisStep('Generating construction activities...');
+      const actResult = await generateActivities();
+      if (actResult?.activities?.length) {
+        actCount = actResult.activities.length;
+        applyActivities(actResult.activities);
+      }
+
+      // Step 3: Check inventory gaps
+      setAnalysisStep('Checking inventory gaps...');
+      gapCount = matResult?.materials?.filter((m: any) => {
+        const inv = items.find((i: any) => i.code === m.code);
+        return !inv;
+      })?.length || 0;
+      await new Promise(r => setTimeout(r, 500));
+
+      setAnalysisStep(null);
+      toast({
+        title: '✅ AI Analysis Complete',
+        description: `${matCount} materials, ${actCount} activities, ${gapCount} inventory gaps detected.`,
+        action: actCount > 0 ? (
+          <Button variant="outline" size="sm" className="ml-2 shrink-0" onClick={() => navigate('/activities')}>
+            View Activities →
+          </Button>
+        ) : undefined,
+        duration: 8000,
+      });
     } catch {
+      setAnalysisStep(null);
       toast({ title: 'Analysis Error', description: 'Auto-analysis failed. You can run it manually.', variant: 'destructive' });
     } finally {
       setAutoAnalysisRunning(false);
+      setAnalysisStep(null);
     }
-  }, [fullSync, applyMaterials, applyActivities]);
+  }, [analyzeMaterials, generateActivities, applyMaterials, applyActivities, items, navigate]);
 
   const handleImport = (data: Record<string, any>[]) => {
     const mapped: BOQItem[] = data.map(row => ({
