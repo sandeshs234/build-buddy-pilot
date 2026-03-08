@@ -55,6 +55,7 @@ const App = () => (
               <Route path="/inventory" element={<ProtectedPage><InventoryPage /></ProtectedPage>} />
               <Route path="/procurement-plan" element={<ProtectedPage><MaterialProcurement /></ProtectedPage>} />
               <Route path="/procurement-digest" element={<ProtectedPage><ProcurementDigest /></ProtectedPage>} />
+              <Route path="/procurement-tracker" element={<ProtectedPage><ProcurementTrackerPage /></ProtectedPage>} />
               <Route path="/project-summary" element={<ProtectedPage><ProjectSummaryReport /></ProtectedPage>} />
               <Route path="/manpower" element={<ProtectedPage><ManpowerPage /></ProtectedPage>} />
               <Route path="/equipment" element={<ProtectedPage><EquipmentPage /></ProtectedPage>} />
