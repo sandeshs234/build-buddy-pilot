@@ -65,6 +65,7 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
   const [form, setForm] = useState<Omit<TrackingItem, 'id'> & { id?: string }>(emptyItem);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Filter items early for use in functions
   const filteredItems = selectedStatus 
