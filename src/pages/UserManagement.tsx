@@ -36,9 +36,13 @@ const ROLE_COLORS: Record<AppRole, string> = {
 };
 
 export default function UserManagement() {
-  const { isAdmin, currentProjectId } = useAuth();
+  const { isAdmin, currentProjectId, user: currentUser } = useAuth();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
+  const [clearAllOpen, setClearAllOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newName, setNewName] = useState('');
