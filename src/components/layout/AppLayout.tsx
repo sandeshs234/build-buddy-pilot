@@ -7,6 +7,7 @@ import {
   BarChart3, HelpCircle, FileText, FileDiff, ChevronDown, ChevronRight,
   Construction, FileSpreadsheet, Bot, LogOut, Shield, FolderKanban, Menu, X
 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -316,7 +317,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-sidebar-foreground truncate">{profile?.full_name || profile?.email || 'User'}</p>
-              <p className="text-[10px] text-sidebar-foreground/50 capitalize">{role?.replace('_', ' ') || 'viewer'}</p>
+              <Badge
+                variant="outline"
+                className={cn(
+                  'text-[9px] px-1.5 py-0 h-4 mt-0.5 font-semibold uppercase tracking-wide',
+                  role === 'admin' && 'bg-destructive/10 text-destructive border-destructive/30',
+                  role === 'project_manager' && 'bg-primary/10 text-primary border-primary/30',
+                  role === 'engineer' && 'bg-accent/50 text-accent-foreground border-accent',
+                  role === 'viewer' && 'bg-muted text-muted-foreground border-muted-foreground/20',
+                )}
+              >
+                {role?.replace('_', ' ') || 'viewer'}
+              </Badge>
             </div>
           </div>
           <button
