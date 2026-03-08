@@ -70,6 +70,9 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
   const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending');
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  const [rejectDialogId, setRejectDialogId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+
   const fetchChanges = async () => {
     setLoading(true);
     let query = (supabase as any)
