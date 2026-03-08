@@ -229,6 +229,13 @@ export default function MyPendingChanges() {
                   </AlertDialog>
                 )}
               </div>
+              </div>
+              {change.status === 'rejected' && change.rejection_reason && (
+                <div className="flex items-start gap-1.5 mt-1">
+                  <MessageSquare size={10} className="text-destructive mt-0.5 flex-shrink-0" />
+                  <p className="text-[10px] text-destructive">{change.rejection_reason}</p>
+                </div>
+              )}
             </div>
           ))}
         </div>
