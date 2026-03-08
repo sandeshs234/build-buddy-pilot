@@ -136,12 +136,12 @@ export default function SettingsPage() {
           <div className="bg-card rounded-xl border shadow-sm p-6">
             <h3 className="text-sm font-semibold mb-4">Project Details</h3>
             <div className="grid grid-cols-2 gap-4">
-              <Field label="Project Name" field="projectName" span />
-              <Field label="Location" field="projectLocation" span />
-              <Field label="Start Date" field="projectStartDate" type="date" />
-              <Field label="End Date" field="projectEndDate" type="date" />
-              <Field label="Contract Value" field="contractValue" />
-              <Field label="Currency" field="currency" />
+              {renderField("Project Name", "projectName", "text", true)}
+              {renderField("Location", "projectLocation", "text", true)}
+              {renderField("Start Date", "projectStartDate", "date")}
+              {renderField("End Date", "projectEndDate", "date")}
+              {renderField("Contract Value", "contractValue")}
+              {renderField("Currency", "currency")}
             </div>
           </div>
         </TabsContent>
