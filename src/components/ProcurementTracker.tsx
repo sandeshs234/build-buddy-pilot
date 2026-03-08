@@ -66,6 +66,11 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
 
+  // Filter items early for use in functions
+  const filteredItems = selectedStatus 
+    ? items.filter(i => i.status === selectedStatus)
+    : items;
+
   const fetchItems = useCallback(async () => {
     if (!user) return;
     setLoading(true);
