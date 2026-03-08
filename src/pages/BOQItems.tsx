@@ -34,6 +34,33 @@ export default function BOQItems() {
   const handleSave = () => { boqOps.save(form); setDialogOpen(false); };
   const handleDelete = (id: string) => boqOps.remove(id);
 
+  const runAutoAnalysis = useCallback(async () => {
+    setAutoAnalysisRunning(true);
+    toast({ title: '🤖 AI Analysis Started', description: 'Analyzing imported BOQ items for materials, activities & inventory gaps...' });
+    try {
+      const result = await fullSync();
+      if (result) {
+        const matCount = result.materials?.length || 0;
+        const actCount = result.activities?.length || 0;
+        const gapCount = result.inventoryGaps?.length || 0;
+        const totalCost = (result.materials || []).reduce((s: number, m: any) => s + (m.totalWithWaste || 0) * (m.unitRate || 0), 0);
+
+        // Auto-apply materials to inventory and activities to schedule
+        if (result.materials?.length) applyMaterials(result.materials);
+        if (result.activities?.length) applyActivities(result.activities);
+
+        toast({
+          title: '✅ AI Analysis Complete',
+          description: `${matCount} materials (est. NPR ${totalCost.toLocaleString()}), ${actCount} activities, ${gapCount} inventory gaps detected. Data synced to Inventory & Activities.`,
+        });
+      }
+    } catch {
+      toast({ title: 'Analysis Error', description: 'Auto-analysis failed. You can run it manually.', variant: 'destructive' });
+    } finally {
+      setAutoAnalysisRunning(false);
+    }
+  }, [fullSync, applyMaterials, applyActivities]);
+
   const handleImport = (data: Record<string, any>[]) => {
     const mapped: BOQItem[] = data.map(row => ({
       id: crypto.randomUUID(),
@@ -46,6 +73,9 @@ export default function BOQItems() {
       rate: Number(row.rate || row.Rate || row['Unit Rate'] || 0),
     }));
     boqOps.bulkAdd(mapped);
+
+    // Auto-trigger AI analysis after import
+    setTimeout(() => runAutoAnalysis(), 500);
   };
 
   const excelColumns = [
