@@ -4,8 +4,8 @@ import { sampleActivities, sampleBOQ, sampleInventory, sampleEquipment, sampleSa
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import StorageChoiceDialog from '@/components/StorageChoiceDialog';
 
+const CACHE_KEY = 'buildforge_offline_cache';
 const STORAGE_KEY = 'buildforge_project_data';
 
 // ── Local storage helpers ──
@@ -175,45 +175,55 @@ function createCrudOps<T extends { id: string }>(
   };
 }
 
-// ── Hook: state with optional cloud or local persistence, scoped by project ──
-function useDataState<T>(key: string, fallback: T[], isCloud: boolean, userId: string | null, projectId: string | null) {
+// ── Hook: state with cloud persistence + local cache for offline ──
+function useDataState<T>(key: string, fallback: T[], userId: string | null, projectId: string | null) {
   const [data, setData] = useState<T[]>([]);
   const [history, setHistory] = useState<T[][]>([]);
   const [loaded, setLoaded] = useState(false);
 
-  // Load data - re-fetch when projectId changes
+  // Load from cloud, cache locally for offline
   useEffect(() => {
-    if (isCloud && userId) {
+    if (userId) {
       const tableName = TABLE_MAP[key];
       if (!tableName) return;
       setLoaded(false);
       let query = (supabase as any).from(tableName).select('*');
-      // If project is selected, filter by project_id; otherwise filter by user_id only
       if (projectId) {
         query = query.eq('project_id', projectId);
       } else {
         query = query.eq('user_id', userId).is('project_id', null);
       }
-      query.then(({ data: rows }: any) => {
-        if (rows) {
-          setData(rows.map((r: any) => toCamelCase(key, r)) as T[]);
+      query.then(({ data: rows, error }: any) => {
+        if (rows && !error) {
+          const mapped = rows.map((r: any) => toCamelCase(key, r)) as T[];
+          setData(mapped);
+          // Cache for offline
+          try {
+            const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+            cache[`${projectId || 'default'}_${key}`] = mapped;
+            localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
+          } catch {}
         } else {
-          setData([]);
+          // Offline fallback: load from cache
+          try {
+            const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+            const cached = cache[`${projectId || 'default'}_${key}`];
+            if (cached) {
+              setData(cached as T[]);
+            } else {
+              setData([]);
+            }
+          } catch {
+            setData([]);
+          }
         }
         setLoaded(true);
       });
-    } else if (!isCloud) {
+    } else {
       setData(getInitial(key, fallback));
       setLoaded(true);
     }
-  }, [key, isCloud, userId, projectId]);
-
-  // Save to localStorage when in local mode
-  useEffect(() => {
-    if (!isCloud && loaded) {
-      saveState(key, data);
-    }
-  }, [key, data, isCloud, loaded]);
+  }, [key, userId, projectId]);
 
   return { data, setData, history, setHistory, loaded };
 }
@@ -249,47 +259,36 @@ const ProjectDataContext = createContext<ProjectDataContextType | null>(null);
 
 export function ProjectDataProvider({ children }: { children: ReactNode }) {
   const { user, storageMode, setStorageMode, currentProjectId } = useAuth();
-  const isCloud = storageMode === 'cloud';
   const userId = user?.id || null;
   const projectId = currentProjectId;
-  const showChoice = !!user && storageMode === null;
 
-  const cloudSync = isCloud && userId ? (key: string) => ({
+  // Auto-set to cloud if not set
+  useEffect(() => {
+    if (user && storageMode === null) {
+      setStorageMode('cloud');
+    }
+  }, [user, storageMode]);
+
+  const cloudSync = userId ? (key: string) => ({
     tableName: TABLE_MAP[key],
     key,
     userId,
     projectId,
   }) : () => undefined;
 
-  const act = useDataState<Activity>('activities', sampleActivities, isCloud, userId, projectId);
-  const boq = useDataState<BOQItem>('boqItems', sampleBOQ, isCloud, userId, projectId);
-  const inv = useDataState<InventoryItem>('inventory', sampleInventory, isCloud, userId, projectId);
-  const eq = useDataState<EquipmentEntry>('equipment', sampleEquipment, isCloud, userId, projectId);
-  const saf = useDataState<SafetyIncident>('safety', sampleSafety, isCloud, userId, projectId);
-  const del = useDataState<DelayEntry>('delays', sampleDelays, isCloud, userId, projectId);
-  const po = useDataState<PurchaseOrder>('purchaseOrders', samplePOs, isCloud, userId, projectId);
-  const mp = useDataState<any>('manpower', [], isCloud, userId, projectId);
-  const fl = useDataState<any>('fuelLog', [], isCloud, userId, projectId);
-  const cp = useDataState<any>('concretePours', [], isCloud, userId, projectId);
-  const dq = useDataState<any>('dailyQty', [], isCloud, userId, projectId);
+  const act = useDataState<Activity>('activities', sampleActivities, userId, projectId);
+  const boq = useDataState<BOQItem>('boqItems', sampleBOQ, userId, projectId);
+  const inv = useDataState<InventoryItem>('inventory', sampleInventory, userId, projectId);
+  const eq = useDataState<EquipmentEntry>('equipment', sampleEquipment, userId, projectId);
+  const saf = useDataState<SafetyIncident>('safety', sampleSafety, userId, projectId);
+  const del = useDataState<DelayEntry>('delays', sampleDelays, userId, projectId);
+  const po = useDataState<PurchaseOrder>('purchaseOrders', samplePOs, userId, projectId);
+  const mp = useDataState<any>('manpower', [], userId, projectId);
+  const fl = useDataState<any>('fuelLog', [], userId, projectId);
+  const cp = useDataState<any>('concretePours', [], userId, projectId);
+  const dq = useDataState<any>('dailyQty', [], userId, projectId);
 
   const dataLoaded = act.loaded && boq.loaded;
-
-  const handleStorageChoice = async (mode: 'local' | 'cloud') => {
-    await setStorageMode(mode);
-    if (mode === 'cloud' && userId) {
-      const localData = loadState();
-      for (const [key, items] of Object.entries(localData)) {
-        const tableName = TABLE_MAP[key];
-        if (!tableName || !items || items.length === 0) continue;
-        const rows = items.map((item: any) => toSnakeCase(key, item, userId, projectId));
-        await (supabase as any).from(tableName).insert(rows);
-      }
-      localStorage.removeItem(STORAGE_KEY);
-      toast({ title: 'Data migrated to cloud', description: 'Your local data has been synced to the cloud.' });
-      window.location.reload();
-    }
-  };
 
   const value: ProjectDataContextType = {
     activities: act.data,
@@ -314,13 +313,12 @@ export function ProjectDataProvider({ children }: { children: ReactNode }) {
     concreteOps: createCrudOps(cp.data, cp.setData, cp.history, cp.setHistory, cloudSync('concretePours')),
     dailyQty: dq.data,
     dailyQtyOps: createCrudOps(dq.data, dq.setData, dq.history, dq.setHistory, cloudSync('dailyQty')),
-    isCloudMode: isCloud,
+    isCloudMode: true,
     dataLoaded,
   };
 
   return (
     <ProjectDataContext.Provider value={value}>
-      <StorageChoiceDialog open={showChoice} onChoose={handleStorageChoice} />
       {children}
     </ProjectDataContext.Provider>
   );
