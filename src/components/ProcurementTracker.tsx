@@ -513,7 +513,7 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
             </tbody>
             <tfoot>
               <tr className="bg-muted/50 font-medium">
-                <td colSpan={9} className="p-3 text-right">Total Ordered Value:</td>
+                <td colSpan={10} className="p-3 text-right">Total Ordered Value:</td>
                 <td className="p-3 text-right font-mono font-bold">NPR {totalOrdered.toLocaleString()}</td>
                 <td></td>
               </tr>
