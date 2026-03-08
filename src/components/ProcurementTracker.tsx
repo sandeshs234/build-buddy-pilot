@@ -451,7 +451,7 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
               </tr>
             </thead>
             <tbody>
-              {items.map(item => {
+              {filteredItems.map(item => {
                 const cfg = STATUS_CONFIG[item.status] || STATUS_CONFIG.pending;
                 const Icon = cfg.icon;
                 const deliveryPct = item.required_qty > 0
