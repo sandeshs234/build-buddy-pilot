@@ -109,7 +109,6 @@ export default function UserManagement() {
     );
   }
 
-  const [guideOpen, setGuideOpen] = useState(false);
 
   const permissions = [
     { action: 'View project data', admin: true, pm: true, eng: true, viewer: true },
