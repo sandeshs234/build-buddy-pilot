@@ -7,8 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
-import { UserPlus, Shield, Trash2 } from 'lucide-react';
+import { UserPlus, Shield, Trash2, Info, CheckCircle2, XCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 type AppRole = 'admin' | 'project_manager' | 'engineer' | 'viewer';
 
@@ -43,6 +44,7 @@ export default function UserManagement() {
   const [newName, setNewName] = useState('');
   const [newRole, setNewRole] = useState<AppRole>('viewer');
   const [loading, setLoading] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
 
   const fetchUsers = async () => {
     const { data: profiles } = await supabase.from('profiles').select('*');
@@ -107,6 +109,17 @@ export default function UserManagement() {
     );
   }
 
+
+  const permissions = [
+    { action: 'View project data', admin: true, pm: true, eng: true, viewer: true },
+    { action: 'Add/edit own entries', admin: true, pm: true, eng: true, viewer: false },
+    { action: 'Approve/reject entries', admin: true, pm: true, eng: false, viewer: false },
+    { action: 'Manage project members', admin: true, pm: false, eng: false, viewer: false },
+    { action: 'Create/delete projects', admin: true, pm: false, eng: false, viewer: false },
+    { action: 'Manage users & roles', admin: true, pm: false, eng: false, viewer: false },
+    { action: 'Access settings & backup', admin: true, pm: true, eng: false, viewer: false },
+  ];
+
   return (
     <div>
       <div className="page-header flex items-start justify-between flex-wrap gap-4">
@@ -114,10 +127,55 @@ export default function UserManagement() {
           <h1 className="text-2xl font-bold text-foreground">User Management</h1>
           <p className="text-sm text-muted-foreground mt-1">Create accounts and assign roles · {users.length} users</p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <UserPlus size={14} className="mr-1.5" /> Create User
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setGuideOpen(!guideOpen)}>
+            <Info size={14} className="mr-1.5" /> Role Guide
+          </Button>
+          <Button onClick={() => setDialogOpen(true)}>
+            <UserPlus size={14} className="mr-1.5" /> Create User
+          </Button>
+        </div>
       </div>
+
+      <Collapsible open={guideOpen} onOpenChange={setGuideOpen}>
+        <CollapsibleContent>
+          <div className="bg-card rounded-xl border shadow-sm p-5 mb-4">
+            <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <Shield size={16} className="text-primary" /> Role Permissions Guide
+            </h3>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 pr-4 font-medium text-muted-foreground">Permission</th>
+                    <th className="text-center py-2 px-3 font-medium"><Badge variant="outline" className={ROLE_COLORS.admin}>Admin</Badge></th>
+                    <th className="text-center py-2 px-3 font-medium"><Badge variant="outline" className={ROLE_COLORS.project_manager}>PM</Badge></th>
+                    <th className="text-center py-2 px-3 font-medium"><Badge variant="outline" className={ROLE_COLORS.engineer}>Engineer</Badge></th>
+                    <th className="text-center py-2 px-3 font-medium"><Badge variant="outline" className={ROLE_COLORS.viewer}>Viewer</Badge></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {permissions.map((p) => (
+                    <tr key={p.action} className="border-b last:border-0">
+                      <td className="py-2 pr-4 text-foreground">{p.action}</td>
+                      {[p.admin, p.pm, p.eng, p.viewer].map((allowed, i) => (
+                        <td key={i} className="text-center py-2 px-3">
+                          {allowed
+                            ? <CheckCircle2 size={15} className="inline text-emerald-500" />
+                            : <XCircle size={15} className="inline text-muted-foreground/40" />}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              💡 The first user to register becomes Admin. Admin-created users are auto-approved into the current project.
+            </p>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
 
       <div className="bg-card rounded-xl border shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
