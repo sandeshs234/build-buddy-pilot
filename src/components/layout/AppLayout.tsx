@@ -20,13 +20,13 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useDeliveryAlerts } from '@/hooks/useDeliveryAlerts';
 import { useBackupReminder } from '@/hooks/useBackupReminder';
 
-type AppRole = 'admin' | 'project_manager' | 'engineer' | 'viewer';
+type AppRole = 'admin' | 'project_manager' | 'engineer' | 'viewer' | 'accountant' | 'safety_officer' | 'store_keeper' | 'surveyor';
 
 interface NavItem {
   label: string;
   path: string;
   icon: React.ReactNode;
-  minRole?: AppRole; // minimum role required to see this item
+  allowedRoles?: AppRole[]; // if set, only these roles see this item
 }
 
 interface NavGroup {
@@ -34,13 +34,8 @@ interface NavGroup {
   items: NavItem[];
 }
 
-// Role hierarchy: admin > project_manager > engineer > viewer
-const ROLE_LEVEL: Record<AppRole, number> = {
-  admin: 4,
-  project_manager: 3,
-  engineer: 2,
-  viewer: 1,
-};
+// Roles that have full access (see everything)
+const FULL_ACCESS_ROLES: AppRole[] = ['admin', 'project_manager'];
 
 const navGroups: NavGroup[] = [
   {
@@ -53,45 +48,45 @@ const navGroups: NavGroup[] = [
   {
     label: 'Planning',
     items: [
-      { label: 'Activities (CPM)', path: '/activities', icon: <CalendarClock size={18} /> },
-      { label: 'BOQ / Items', path: '/boq', icon: <ClipboardList size={18} /> },
-      { label: 'Change Orders', path: '/change-orders', icon: <FileDiff size={18} />, minRole: 'engineer' },
+      { label: 'Activities (CPM)', path: '/activities', icon: <CalendarClock size={18} />, allowedRoles: ['admin', 'project_manager', 'engineer', 'surveyor'] },
+      { label: 'BOQ / Items', path: '/boq', icon: <ClipboardList size={18} />, allowedRoles: ['admin', 'project_manager', 'engineer', 'surveyor', 'accountant'] },
+      { label: 'Change Orders', path: '/change-orders', icon: <FileDiff size={18} />, allowedRoles: ['admin', 'project_manager', 'engineer', 'accountant'] },
     ],
   },
   {
     label: 'Daily Logs',
     items: [
-      { label: 'Daily Quantity', path: '/daily-quantity', icon: <Ruler size={18} /> },
-      { label: 'Manpower', path: '/manpower', icon: <Users size={18} /> },
-      { label: 'Equipment', path: '/equipment', icon: <Truck size={18} /> },
-      { label: 'Fuel Log', path: '/fuel', icon: <Droplets size={18} /> },
-      { label: 'Concrete Pour', path: '/concrete', icon: <Building2 size={18} /> },
-      { label: 'Welding', path: '/welding', icon: <Flame size={18} /> },
+      { label: 'Daily Quantity', path: '/daily-quantity', icon: <Ruler size={18} />, allowedRoles: ['admin', 'project_manager', 'engineer', 'surveyor'] },
+      { label: 'Manpower', path: '/manpower', icon: <Users size={18} />, allowedRoles: ['admin', 'project_manager', 'engineer', 'safety_officer'] },
+      { label: 'Equipment', path: '/equipment', icon: <Truck size={18} />, allowedRoles: ['admin', 'project_manager', 'engineer', 'store_keeper'] },
+      { label: 'Fuel Log', path: '/fuel', icon: <Droplets size={18} />, allowedRoles: ['admin', 'project_manager', 'engineer', 'store_keeper'] },
+      { label: 'Concrete Pour', path: '/concrete', icon: <Building2 size={18} />, allowedRoles: ['admin', 'project_manager', 'engineer', 'surveyor'] },
+      { label: 'Welding', path: '/welding', icon: <Flame size={18} />, allowedRoles: ['admin', 'project_manager', 'engineer'] },
     ],
   },
   {
     label: 'Quality & Safety',
     items: [
-      { label: 'Quality (ITP/NCR)', path: '/quality', icon: <ShieldCheck size={18} /> },
-      { label: 'Safety', path: '/safety', icon: <HardHat size={18} /> },
+      { label: 'Quality (ITP/NCR)', path: '/quality', icon: <ShieldCheck size={18} />, allowedRoles: ['admin', 'project_manager', 'engineer', 'safety_officer'] },
+      { label: 'Safety', path: '/safety', icon: <HardHat size={18} />, allowedRoles: ['admin', 'project_manager', 'engineer', 'safety_officer'] },
     ],
   },
   {
-    label: 'Procurement',
+    label: 'Finance & Procurement',
     items: [
-      { label: 'Inventory', path: '/inventory', icon: <Package size={18} /> },
-      { label: 'Procurement Plan', path: '/procurement-plan', icon: <TrendingUp size={18} /> },
-      { label: 'Procurement Digest', path: '/procurement-digest', icon: <FileText size={18} /> },
-      { label: 'Purchase Orders', path: '/purchase-orders', icon: <ShoppingCart size={18} />, minRole: 'engineer' },
-      { label: 'Bills', path: '/bills', icon: <Receipt size={18} />, minRole: 'project_manager' },
+      { label: 'Inventory', path: '/inventory', icon: <Package size={18} />, allowedRoles: ['admin', 'project_manager', 'engineer', 'store_keeper', 'accountant'] },
+      { label: 'Procurement Plan', path: '/procurement-plan', icon: <TrendingUp size={18} />, allowedRoles: ['admin', 'project_manager', 'store_keeper', 'accountant'] },
+      { label: 'Procurement Digest', path: '/procurement-digest', icon: <FileText size={18} />, allowedRoles: ['admin', 'project_manager', 'store_keeper', 'accountant'] },
+      { label: 'Purchase Orders', path: '/purchase-orders', icon: <ShoppingCart size={18} />, allowedRoles: ['admin', 'project_manager', 'engineer', 'store_keeper', 'accountant'] },
+      { label: 'Bills', path: '/bills', icon: <Receipt size={18} />, allowedRoles: ['admin', 'project_manager', 'accountant'] },
     ],
   },
   {
     label: 'Resources',
     items: [
-      { label: 'Key Staff', path: '/staff', icon: <UserCog size={18} />, minRole: 'project_manager' },
-      { label: 'Subcontractors', path: '/subcontractors', icon: <Construction size={18} />, minRole: 'project_manager' },
-      { label: 'Tools', path: '/tools', icon: <Wrench size={18} /> },
+      { label: 'Key Staff', path: '/staff', icon: <UserCog size={18} />, allowedRoles: ['admin', 'project_manager'] },
+      { label: 'Subcontractors', path: '/subcontractors', icon: <Construction size={18} />, allowedRoles: ['admin', 'project_manager', 'accountant'] },
+      { label: 'Tools', path: '/tools', icon: <Wrench size={18} />, allowedRoles: ['admin', 'project_manager', 'engineer', 'store_keeper'] },
     ],
   },
   {
@@ -99,21 +94,32 @@ const navGroups: NavGroup[] = [
     items: [
       { label: 'Photos', path: '/photos', icon: <Camera size={18} /> },
       { label: 'Documents', path: '/documents', icon: <FileText size={18} /> },
-      { label: 'Delays', path: '/delays', icon: <Clock size={18} /> },
-      { label: 'Project Summary', path: '/project-summary', icon: <FileSpreadsheet size={18} />, minRole: 'project_manager' },
-      { label: 'Reports', path: '/reports', icon: <BarChart3 size={18} />, minRole: 'project_manager' },
+      { label: 'Delays', path: '/delays', icon: <Clock size={18} />, allowedRoles: ['admin', 'project_manager', 'engineer'] },
+      { label: 'Project Summary', path: '/project-summary', icon: <FileSpreadsheet size={18} />, allowedRoles: ['admin', 'project_manager', 'accountant'] },
+      { label: 'Reports', path: '/reports', icon: <BarChart3 size={18} />, allowedRoles: ['admin', 'project_manager', 'accountant'] },
     ],
   },
   {
     label: 'System',
     items: [
-      { label: 'User Management', path: '/users', icon: <Shield size={18} />, minRole: 'admin' },
-      { label: 'Settings', path: '/settings', icon: <Settings size={18} />, minRole: 'project_manager' },
-      { label: 'Backup / Restore', path: '/backup', icon: <Database size={18} />, minRole: 'project_manager' },
+      { label: 'User Management', path: '/users', icon: <Shield size={18} />, allowedRoles: ['admin'] },
+      { label: 'Settings', path: '/settings', icon: <Settings size={18} />, allowedRoles: ['admin', 'project_manager'] },
+      { label: 'Backup / Restore', path: '/backup', icon: <Database size={18} />, allowedRoles: ['admin', 'project_manager'] },
       { label: 'Help', path: '/help', icon: <HelpCircle size={18} /> },
     ],
   },
 ];
+
+const ROLE_BADGE_COLORS: Partial<Record<AppRole, string>> = {
+  admin: 'bg-destructive/10 text-destructive border-destructive/30',
+  project_manager: 'bg-primary/10 text-primary border-primary/30',
+  engineer: 'bg-accent/50 text-accent-foreground border-accent',
+  viewer: 'bg-muted text-muted-foreground border-muted-foreground/20',
+  accountant: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30',
+  safety_officer: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
+  store_keeper: 'bg-blue-500/10 text-blue-600 border-blue-500/30',
+  surveyor: 'bg-violet-500/10 text-violet-600 border-violet-500/30',
+};
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { profile, role, signOut, currentProjectId, setCurrentProjectId, projectMemberships, projectRole } = useAuth();
@@ -128,17 +134,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [pendingMembersCount, setPendingMembersCount] = useState(0);
   const [pendingChangesCount, setPendingChangesCount] = useState(0);
 
-  // Fetch pending member requests and unapproved data changes
   useEffect(() => {
     const fetchCounts = async () => {
-      // Fetch pending member requests for all projects user is admin of
       const { data: memberData } = await supabase
         .from('project_members')
         .select('id')
         .eq('status', 'pending');
       setPendingMembersCount(memberData?.length || 0);
 
-      // Fetch unapproved data changes
       const { data: changesData } = await supabase
         .from('data_changes')
         .select('id')
@@ -148,44 +151,37 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
     fetchCounts();
 
-    // Subscribe to realtime updates for project_members
     const membersSub = supabase
       .channel('project_members_changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'project_members' },
-        () => fetchCounts()
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'project_members' }, () => fetchCounts())
       .subscribe();
 
-    // Subscribe to realtime updates for data_changes
     const changesSub = supabase
       .channel('data_changes_changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'data_changes' },
-        () => fetchCounts()
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'data_changes' }, () => fetchCounts())
       .subscribe();
 
-    return () => {
-      membersSub.unsubscribe();
-      changesSub.unsubscribe();
-    };
+    return () => { membersSub.unsubscribe(); changesSub.unsubscribe(); };
   }, []);
 
-  // Close sidebar on route change for mobile/tablet
   useEffect(() => {
-    if (isMobile) {
-      setSidebarOpen(false);
-    }
+    if (isMobile) setSidebarOpen(false);
   }, [location.pathname, isMobile]);
 
   const toggleGroup = (label: string) => {
     setCollapsed(prev => ({ ...prev, [label]: !prev[label] }));
   };
 
+  const userRole = (role as AppRole) || 'viewer';
+
+  const isItemVisible = (item: NavItem): boolean => {
+    if (!item.allowedRoles) return true; // no restriction = visible to all
+    return item.allowedRoles.includes(userRole);
+  };
+
   const currentProjectName = projectMemberships.find(m => m.project_id === currentProjectId)?.project_name || 'No Project';
+  const roleBadgeClass = ROLE_BADGE_COLORS[userRole] || ROLE_BADGE_COLORS.viewer;
+  const roleLabel = userRole.replace(/_/g, ' ');
 
   return (
     <div className="flex h-screen overflow-hidden relative">
@@ -210,19 +206,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Overlay for mobile */}
       {isMobile && sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
-          onClick={() => setSidebarOpen(false)}
-        />
+        <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* Sidebar */}
       <aside
         className={cn(
           'flex-shrink-0 bg-sidebar flex flex-col border-r border-sidebar-border overflow-hidden transition-transform duration-300 ease-in-out z-50',
-          isMobile
-            ? 'fixed top-14 left-0 bottom-0 w-72 shadow-2xl'
-            : 'w-64 relative',
+          isMobile ? 'fixed top-14 left-0 bottom-0 w-72 shadow-2xl' : 'w-64 relative',
           isMobile && !sidebarOpen && '-translate-x-full'
         )}
       >
@@ -282,8 +273,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-1">
           {navGroups.map((group) => {
-            const userLevel = ROLE_LEVEL[(role as AppRole) || 'viewer'];
-            const visibleItems = group.items.filter(item => !item.minRole || userLevel >= ROLE_LEVEL[item.minRole]);
+            const visibleItems = group.items.filter(isItemVisible);
             if (visibleItems.length === 0) return null;
             const isCollapsed = collapsed[group.label];
 
@@ -302,11 +292,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                        const active = location.pathname === item.path;
                        let badge: number | null = null;
                        
-                       if (item.path === '/projects') {
-                         badge = pendingMembersCount;
-                       } else if (item.path === '/dashboard') {
-                         badge = pendingChangesCount;
-                       }
+                       if (item.path === '/projects') badge = pendingMembersCount;
+                       else if (item.path === '/dashboard') badge = pendingChangesCount;
 
                        return (
                          <Link
@@ -346,15 +333,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <p className="text-xs font-medium text-sidebar-foreground truncate">{profile?.full_name || profile?.email || 'User'}</p>
               <Badge
                 variant="outline"
-                className={cn(
-                  'text-[9px] px-1.5 py-0 h-4 mt-0.5 font-semibold uppercase tracking-wide',
-                  role === 'admin' && 'bg-destructive/10 text-destructive border-destructive/30',
-                  role === 'project_manager' && 'bg-primary/10 text-primary border-primary/30',
-                  role === 'engineer' && 'bg-accent/50 text-accent-foreground border-accent',
-                  role === 'viewer' && 'bg-muted text-muted-foreground border-muted-foreground/20',
-                )}
+                className={cn('text-[9px] px-1.5 py-0 h-4 mt-0.5 font-semibold uppercase tracking-wide', roleBadgeClass)}
               >
-                {role?.replace('_', ' ') || 'viewer'}
+                {roleLabel}
               </Badge>
             </div>
           </div>
