@@ -408,13 +408,13 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
       {/* Table */}
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">Loading tracking data...</div>
-      ) : items.length === 0 ? (
+      ) : filteredItems.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <Package size={48} className="mx-auto text-muted-foreground/30 mb-3" />
-            <p className="font-medium mb-1">No materials being tracked</p>
+            <p className="font-medium mb-1">{selectedStatus ? 'No items with this status' : 'No materials being tracked'}</p>
             <p className="text-sm text-muted-foreground mb-4">
-              {materials.length > 0
+              {selectedStatus ? 'Try selecting a different status or add new items.' : materials.length > 0
                 ? 'Click "Import from Analysis" to add materials from BOQ analysis.'
                 : 'Add materials manually or run BOQ analysis first.'}
             </p>
