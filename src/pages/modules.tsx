@@ -443,11 +443,6 @@ export function DelaysPage() {
         onAdd={() => { setForm({ id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0], activity: '', description: '', cause: '', duration: 0, impact: '', recovery: '', status: 'open' }); setEditing(null); setDialogOpen(true); }}
         onEdit={item => { setForm(item); setEditing(item); setDialogOpen(true); }}
         onDelete={item => ops.remove(item.id)}
-        onImport={rows => rows.forEach(r => ops.add({
-          id: crypto.randomUUID(), date: r.Date || '', activity: r.Activity || '', description: r.Description || '',
-          cause: r.Cause || '', duration: +r.Days || +r.duration || 0, impact: r.Impact || '',
-          recovery: r['Recovery Action'] || r.recovery || '', status: (r.Status || 'open').toLowerCase(),
-        } as any))}
         fileName="Delays"
         extraToolbar={
           <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
