@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
-import { UserPlus, Shield, Trash2, Info, CheckCircle2, XCircle } from 'lucide-react';
+import { UserPlus, Shield, Trash2, Info, CheckCircle2, XCircle, Trash, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
@@ -36,9 +36,13 @@ const ROLE_COLORS: Record<AppRole, string> = {
 };
 
 export default function UserManagement() {
-  const { isAdmin, currentProjectId } = useAuth();
+  const { isAdmin, currentProjectId, user: currentUser } = useAuth();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<UserRow | null>(null);
+  const [clearAllOpen, setClearAllOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newName, setNewName] = useState('');
@@ -99,6 +103,49 @@ export default function UserManagement() {
     }
   };
 
+  const handleDeleteUser = async (user: UserRow) => {
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+        body: { user_ids: [user.id] },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: 'User Deleted', description: `${user.email} has been removed.` });
+      setConfirmDeleteOpen(false);
+      setDeleteTarget(null);
+      fetchUsers();
+    } catch (err: any) {
+      toast({ title: 'Delete Failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleClearAll = async () => {
+    const nonAdminUsers = users.filter(u => u.id !== currentUser?.id);
+    if (nonAdminUsers.length === 0) {
+      toast({ title: 'No users to remove', description: 'Only your admin account exists.' });
+      setClearAllOpen(false);
+      return;
+    }
+    setDeleting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-delete-user', {
+        body: { user_ids: nonAdminUsers.map(u => u.id) },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast({ title: 'Users Removed', description: `${data.deleted} user(s) deleted. Your admin account is preserved.` });
+      setClearAllOpen(false);
+      fetchUsers();
+    } catch (err: any) {
+      toast({ title: 'Clear Failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (!isAdmin) {
     return (
       <div className="p-12 text-center">
@@ -130,6 +177,9 @@ export default function UserManagement() {
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setGuideOpen(!guideOpen)}>
             <Info size={14} className="mr-1.5" /> Role Guide
+          </Button>
+          <Button variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/5" onClick={() => setClearAllOpen(true)} disabled={users.filter(u => u.id !== currentUser?.id).length === 0}>
+            <Trash size={14} className="mr-1.5" /> Clear All Users
           </Button>
           <Button onClick={() => setDialogOpen(true)}>
             <UserPlus size={14} className="mr-1.5" /> Create User
@@ -201,17 +251,30 @@ export default function UserManagement() {
                     </Badge>
                   </td>
                   <td>
-                    <Select value={u.role} onValueChange={(v) => handleChangeRole(u.id, v as AppRole)}>
-                      <SelectTrigger className="w-[160px] h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="project_manager">Project Manager</SelectItem>
-                        <SelectItem value="engineer">Engineer</SelectItem>
-                        <SelectItem value="viewer">Viewer</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-2">
+                      <Select value={u.role} onValueChange={(v) => handleChangeRole(u.id, v as AppRole)}>
+                        <SelectTrigger className="w-[160px] h-8 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="project_manager">Project Manager</SelectItem>
+                          <SelectItem value="engineer">Engineer</SelectItem>
+                          <SelectItem value="viewer">Viewer</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      {u.id !== currentUser?.id && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
+                          onClick={() => { setDeleteTarget(u); setConfirmDeleteOpen(true); }}
+                          title="Delete user"
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -255,6 +318,45 @@ export default function UserManagement() {
               <Button type="submit" disabled={loading}>{loading ? 'Creating...' : 'Create User'}</Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Single User Confirmation */}
+      <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete User?</DialogTitle>
+            <DialogDescription>
+              This will permanently remove <strong>{deleteTarget?.email}</strong> and all their data. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setConfirmDeleteOpen(false)} disabled={deleting}>Cancel</Button>
+            <Button variant="destructive" onClick={() => deleteTarget && handleDeleteUser(deleteTarget)} disabled={deleting}>
+              {deleting ? <><Loader2 size={14} className="mr-1 animate-spin" /> Deleting...</> : <><Trash2 size={14} className="mr-1" /> Delete User</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Clear All Users Confirmation */}
+      <Dialog open={clearAllOpen} onOpenChange={setClearAllOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Remove All Other Users?</DialogTitle>
+            <DialogDescription>
+              This will permanently delete {users.filter(u => u.id !== currentUser?.id).length} user(s). Your admin account will be preserved. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-sm text-destructive">
+            ⚠️ All user profiles, roles, and project memberships will be removed.
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setClearAllOpen(false)} disabled={deleting}>Cancel</Button>
+            <Button variant="destructive" onClick={handleClearAll} disabled={deleting}>
+              {deleting ? <><Loader2 size={14} className="mr-1 animate-spin" /> Removing...</> : <><Trash size={14} className="mr-1" /> Remove All Users</>}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
