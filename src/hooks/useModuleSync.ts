@@ -81,7 +81,7 @@ export function useModuleSync() {
     }
   }, [projectData.boqItems, projectData.activities, projectData.inventory]);
 
-  const applyActivities = useCallback((activities: any[]) => {
+  const applyActivities = useCallback(async (activities: any[]) => {
     const today = new Date();
     const newActivities: Activity[] = activities.map((a: any, idx: number) => {
       const start = new Date(today);
