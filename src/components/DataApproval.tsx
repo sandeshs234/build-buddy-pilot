@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Check, X, Clock, Eye } from 'lucide-react';
+import { Check, X, Clock, Eye, ArrowRight } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface DataChange {
@@ -15,6 +15,7 @@ interface DataChange {
   record_id: string;
   operation: string;
   data: any;
+  original_data: any;
   status: string;
   approved_by: string | null;
   approved_at: string | null;
@@ -26,11 +27,43 @@ interface DataApprovalProps {
   projectId: string;
 }
 
+// Diff component for showing original vs edited
+function DataDiff({ original, current }: { original: Record<string, any>; current: Record<string, any> }) {
+  const hiddenFields = ['id', 'user_id', 'project_id', 'created_at', 'updated_at'];
+  const allKeys = [...new Set([...Object.keys(original), ...Object.keys(current)])].filter(k => !hiddenFields.includes(k));
+  const changedKeys = allKeys.filter(k => JSON.stringify(original[k]) !== JSON.stringify(current[k]));
+
+  if (changedKeys.length === 0) return <p className="text-xs text-muted-foreground italic">No fields changed.</p>;
+
+  const formatLabel = (key: string) => key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+
+  return (
+    <div className="space-y-1.5">
+      <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Changed Fields</p>
+      {changedKeys.map(key => (
+        <div key={key} className="rounded-md border bg-muted/20 px-3 py-2 text-xs">
+          <span className="font-medium text-foreground">{formatLabel(key)}</span>
+          <div className="flex items-center gap-2 mt-1 flex-wrap">
+            <span className="bg-destructive/10 text-destructive rounded px-1.5 py-0.5 line-through break-all">
+              {String(original[key] ?? '—')}
+            </span>
+            <ArrowRight size={12} className="text-muted-foreground flex-shrink-0" />
+            <span className="bg-green-500/10 text-green-700 rounded px-1.5 py-0.5 break-all">
+              {String(current[key] ?? '—')}
+            </span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function DataApproval({ projectId }: DataApprovalProps) {
   const { user } = useAuth();
   const [changes, setChanges] = useState<DataChange[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected' | 'all'>('pending');
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const fetchChanges = async () => {
     setLoading(true);
@@ -64,7 +97,6 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
 
   useEffect(() => { fetchChanges(); }, [projectId, filter]);
 
-  // Subscribe to realtime updates
   useEffect(() => {
     const channel = supabase
       .channel(`changes-${projectId}`)
@@ -85,9 +117,8 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
     const { table_name, operation, data, record_id } = change;
     try {
       if (operation === 'insert') {
-        // Remove any undefined/null fields that might cause issues
         const cleanData = { ...data };
-        delete cleanData.id; // let DB generate if needed, or keep if valid UUID
+        delete cleanData.id;
         if (record_id?.match(/^[0-9a-f]{8}-[0-9a-f]{4}/i)) {
           cleanData.id = record_id;
         }
@@ -111,8 +142,7 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
   const approveChange = async (changeId: string) => {
     const change = changes.find(c => c.id === changeId);
     if (!change) return;
-    
-    // First apply the data to the actual table
+
     const applied = await applyChangeToTable(change);
     if (!applied) return;
 
@@ -120,8 +150,7 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
       .from('data_changes')
       .update({ status: 'approved', approved_by: user?.id, approved_at: new Date().toISOString() })
       .eq('id', changeId);
-    
-    // Notify the submitting user
+
     await (supabase as any).from('notifications').insert({
       user_id: change.user_id,
       project_id: change.project_id,
@@ -129,7 +158,7 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
       message: `Your ${change.operation} on ${change.table_name.replace(/_/g, ' ')} has been approved and applied.`,
       type: 'approval_notification',
     });
-    
+
     toast({ title: '✅ Change approved & applied', description: `Data has been written to ${change.table_name.replace(/_/g, ' ')}` });
     fetchChanges();
   };
@@ -142,8 +171,7 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
       .from('data_changes')
       .update({ status: 'rejected', approved_by: user?.id, approved_at: new Date().toISOString() })
       .eq('id', changeId);
-    
-    // Notify the submitting user
+
     await (supabase as any).from('notifications').insert({
       user_id: change.user_id,
       project_id: change.project_id,
@@ -151,7 +179,7 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
       message: `Your ${change.operation} on ${change.table_name.replace(/_/g, ' ')} has been rejected and will not be applied.`,
       type: 'approval_notification',
     });
-    
+
     toast({ title: '❌ Change rejected', description: 'Data has been discarded and will not be applied.' });
     fetchChanges();
   };
@@ -205,11 +233,17 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
       <div className="space-y-2">
         {changes.map(change => (
           <div key={change.id} className="bg-card border rounded-lg p-4 space-y-2">
-            <div className="flex items-center justify-between">
+            <div
+              className="flex items-center justify-between cursor-pointer"
+              onClick={() => setExpandedId(expandedId === change.id ? null : change.id)}
+            >
               <div className="flex items-center gap-2">
                 {getOperationBadge(change.operation)}
                 <span className="text-sm font-medium text-foreground capitalize">{change.table_name.replace(/_/g, ' ')}</span>
                 {getStatusBadge(change.status)}
+                {change.original_data && (
+                  <Badge variant="outline" className="text-xs border-blue-300 text-blue-600">Edited</Badge>
+                )}
               </div>
               <span className="text-xs text-muted-foreground">
                 {format(new Date(change.created_at), 'MMM d, HH:mm')}
@@ -218,9 +252,32 @@ export default function DataApproval({ projectId }: DataApprovalProps) {
             <div className="text-xs text-muted-foreground">
               By: {change.profile?.full_name || change.profile?.email || 'Unknown'}
             </div>
-            <pre className="text-xs bg-muted rounded-md p-2 overflow-x-auto max-h-32">
-              {JSON.stringify(change.data, null, 2)}
-            </pre>
+
+            {expandedId === change.id && (
+              <div className="space-y-3">
+                {/* Show diff if original_data exists */}
+                {change.original_data ? (
+                  <DataDiff original={change.original_data} current={change.data} />
+                ) : null}
+
+                {/* Always show current data */}
+                <div>
+                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">
+                    {change.original_data ? 'Current Data' : 'Submitted Data'}
+                  </p>
+                  <pre className="text-xs bg-muted rounded-md p-2 overflow-x-auto max-h-32">
+                    {JSON.stringify(change.data, null, 2)}
+                  </pre>
+                </div>
+              </div>
+            )}
+
+            {expandedId !== change.id && !change.original_data && (
+              <pre className="text-xs bg-muted rounded-md p-2 overflow-x-auto max-h-32">
+                {JSON.stringify(change.data, null, 2)}
+              </pre>
+            )}
+
             {change.status === 'pending' && (
               <div className="flex gap-2 pt-1">
                 <Button size="sm" onClick={() => approveChange(change.id)} className="bg-green-600 hover:bg-green-700">
