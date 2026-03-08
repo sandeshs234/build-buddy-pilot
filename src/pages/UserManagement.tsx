@@ -320,6 +320,45 @@ export default function UserManagement() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Single User Confirmation */}
+      <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete User?</DialogTitle>
+            <DialogDescription>
+              This will permanently remove <strong>{deleteTarget?.email}</strong> and all their data. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setConfirmDeleteOpen(false)} disabled={deleting}>Cancel</Button>
+            <Button variant="destructive" onClick={() => deleteTarget && handleDeleteUser(deleteTarget)} disabled={deleting}>
+              {deleting ? <><Loader2 size={14} className="mr-1 animate-spin" /> Deleting...</> : <><Trash2 size={14} className="mr-1" /> Delete User</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Clear All Users Confirmation */}
+      <Dialog open={clearAllOpen} onOpenChange={setClearAllOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Remove All Other Users?</DialogTitle>
+            <DialogDescription>
+              This will permanently delete {users.filter(u => u.id !== currentUser?.id).length} user(s). Your admin account will be preserved. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-sm text-destructive">
+            ⚠️ All user profiles, roles, and project memberships will be removed.
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setClearAllOpen(false)} disabled={deleting}>Cancel</Button>
+            <Button variant="destructive" onClick={handleClearAll} disabled={deleting}>
+              {deleting ? <><Loader2 size={14} className="mr-1 animate-spin" /> Removing...</> : <><Trash size={14} className="mr-1" /> Remove All Users</>}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
