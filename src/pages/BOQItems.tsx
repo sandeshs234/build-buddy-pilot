@@ -139,7 +139,7 @@ export default function BOQItems() {
     }
   }, [projectDesc, boqOps, runAutoAnalysis]);
 
-
+  const excelColumns = [
     { key: 'code', label: 'Code' }, { key: 'description', label: 'Description' }, { key: 'unit', label: 'Unit' },
     { key: 'measureType', label: 'Method' }, { key: 'totalQty', label: 'Total Qty' },
     { key: 'executedQty', label: 'Executed Qty' }, { key: 'rate', label: 'Rate' },
