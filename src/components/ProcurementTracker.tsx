@@ -175,6 +175,7 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
     }
   };
 
+  const handleStatusChange = async (item: TrackingItem, newStatus: string) => {
     const updates: any = { status: newStatus };
     if (newStatus === 'received') {
       updates.received_qty = item.ordered_qty;
