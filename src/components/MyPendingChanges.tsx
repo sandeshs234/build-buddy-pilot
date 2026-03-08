@@ -22,6 +22,7 @@ interface MyChange {
   table_name: string;
   operation: string;
   data: any;
+  original_data: any;
   status: string;
   created_at: string;
   approved_at: string | null;
@@ -41,7 +42,7 @@ export default function MyPendingChanges() {
     setLoading(true);
     let query = (supabase as any)
       .from('data_changes')
-      .select('id, table_name, operation, data, status, created_at, approved_at')
+      .select('id, table_name, operation, data, original_data, status, created_at, approved_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(20);
@@ -100,9 +101,14 @@ export default function MyPendingChanges() {
   const saveEdit = async () => {
     if (!editingChange) return;
     setSaving(true);
+    // Save original_data only on the first edit (preserve the very first version)
+    const updatePayload: any = { data: editData };
+    if (!editingChange.original_data) {
+      updatePayload.original_data = editingChange.data;
+    }
     const { error } = await (supabase as any)
       .from('data_changes')
-      .update({ data: editData })
+      .update(updatePayload)
       .eq('id', editingChange.id)
       .eq('user_id', user?.id)
       .eq('status', 'pending');

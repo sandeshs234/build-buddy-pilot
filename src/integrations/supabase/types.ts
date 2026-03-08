@@ -266,6 +266,7 @@ export type Database = {
           data: Json
           id: string
           operation: string
+          original_data: Json | null
           project_id: string
           record_id: string
           status: string
@@ -279,6 +280,7 @@ export type Database = {
           data?: Json
           id?: string
           operation?: string
+          original_data?: Json | null
           project_id: string
           record_id: string
           status?: string
@@ -292,6 +294,7 @@ export type Database = {
           data?: Json
           id?: string
           operation?: string
+          original_data?: Json | null
           project_id?: string
           record_id?: string
           status?: string

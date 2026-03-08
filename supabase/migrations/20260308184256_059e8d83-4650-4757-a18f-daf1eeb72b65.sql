@@ -1,0 +1,1 @@
+ALTER TABLE public.data_changes ADD COLUMN original_data jsonb DEFAULT NULL;
