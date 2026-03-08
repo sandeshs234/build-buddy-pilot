@@ -519,11 +519,6 @@ export function PurchaseOrdersPage() {
         onAdd={() => { setForm({ id: crypto.randomUUID(), poNo: '', supplier: '', date: new Date().toISOString().split('T')[0], itemCode: '', qty: 0, price: 0, status: 'draft', remarks: '' }); setEditing(null); setDialogOpen(true); }}
         onEdit={item => { setForm(item); setEditing(item); setDialogOpen(true); }}
         onDelete={item => ops.remove(item.id)}
-        onImport={rows => rows.forEach(r => ops.add({
-          id: crypto.randomUUID(), poNo: r['PO No.'] || r.poNo || '', supplier: r.Supplier || '',
-          date: r.Date || '', itemCode: r['Item Code'] || '', qty: +r.Qty || 0, price: +r.Amount || +r.price || 0,
-          status: (r.Status || 'draft').toLowerCase(), remarks: r.Remarks || '',
-        } as any))}
         fileName="PurchaseOrders"
         extraToolbar={
           <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
