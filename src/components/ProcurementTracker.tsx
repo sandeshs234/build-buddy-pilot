@@ -409,7 +409,8 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
             aria-label="Select all"
           />
           <span className="text-xs text-muted-foreground">{selectedIds.size} selected</span>
-          <AlertDialog>
+          <span className="text-[10px] text-muted-foreground/60 hidden md:inline">Ctrl+A select all · Delete to remove · Esc clear</span>
+          <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
             <AlertDialogTrigger asChild>
               <Button size="sm" variant="destructive" className="ml-auto">
                 <Trash2 size={14} className="mr-1" /> Delete ({selectedIds.size})
