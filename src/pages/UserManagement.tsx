@@ -71,7 +71,7 @@ export default function UserManagement() {
 
     // Use edge function to create user (admin-only)
     const { data, error } = await supabase.functions.invoke('admin-create-user', {
-      body: { email: newEmail, password: newPassword, full_name: newName, role: newRole },
+      body: { email: newEmail, password: newPassword, full_name: newName, role: newRole, project_id: currentProjectId },
     });
 
     setLoading(false);
