@@ -1,7 +1,7 @@
 import { ReactNode, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Pencil, Trash2, Plus, Upload, Download } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import * as XLSX from '@e965/xlsx';
 import { toast } from '@/hooks/use-toast';
 
 interface Column<T> {
