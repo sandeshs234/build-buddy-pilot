@@ -25,6 +25,7 @@ export default function BOQItems() {
   const [newProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
   const [materialAnalysisOpen, setMaterialAnalysisOpen] = useState(false);
   const [autoAnalysisRunning, setAutoAnalysisRunning] = useState(false);
+  const [analysisStep, setAnalysisStep] = useState<string | null>(null);
   const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
   const [projectDesc, setProjectDesc] = useState('');
   const [generating, setGenerating] = useState(false);
