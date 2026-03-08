@@ -23,7 +23,6 @@ export default function Dashboard() {
   const { canApprove, currentProjectId } = useAuth();
   const navigate = useNavigate();
   const [procItems, setProcItems] = useState<ProcTrackingItem[]>([]);
-  const [procItems, setProcItems] = useState<ProcTrackingItem[]>([]);
 
   useEffect(() => {
     let query = supabase.from('procurement_tracking').select('status,total_cost,expected_delivery,actual_delivery,material_description');
