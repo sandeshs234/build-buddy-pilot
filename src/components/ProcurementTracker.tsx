@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Package, Truck, CheckCircle2, Clock, Plus, Pencil, Trash2, ArrowDownToLine, RefreshCw, Trash } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
@@ -62,6 +63,7 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<TrackingItem | null>(null);
   const [form, setForm] = useState<Omit<TrackingItem, 'id'> & { id?: string }>(emptyItem);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const fetchItems = useCallback(async () => {
     if (!user) return;
@@ -139,6 +141,35 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
     if (!error) {
       toast({ title: 'Cleared', description: `All ${ids.length} tracking entries removed` });
       setItems([]);
+    } else {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === items.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(items.map(i => i.id)));
+    }
+  };
+
+  const deleteSelected = async () => {
+    if (selectedIds.size === 0) return;
+    const ids = [...selectedIds];
+    const { error } = await supabase.from('procurement_tracking').delete().in('id', ids);
+    if (!error) {
+      toast({ title: 'Deleted', description: `${ids.length} entries removed` });
+      setSelectedIds(new Set());
+      fetchItems();
     } else {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     }
@@ -324,6 +355,39 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
         )}
       </div>
 
+      {/* Bulk selection bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 bg-muted/40 rounded-lg px-4 py-2 border">
+          <Checkbox
+            checked={selectedIds.size === items.length}
+            onCheckedChange={toggleSelectAll}
+            aria-label="Select all"
+          />
+          <span className="text-xs text-muted-foreground">{selectedIds.size} selected</span>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button size="sm" variant="destructive" className="ml-auto">
+                <Trash2 size={14} className="mr-1" /> Delete ({selectedIds.size})
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete {selectedIds.size} entries?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently remove the selected procurement tracking entries. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={deleteSelected} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                  Yes, delete them
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      )}
+
       {/* Table */}
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">Loading tracking data...</div>
@@ -349,6 +413,13 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50">
+                <th className="p-3 w-10">
+                  <Checkbox
+                    checked={items.length > 0 && selectedIds.size === items.length}
+                    onCheckedChange={toggleSelectAll}
+                    aria-label="Select all"
+                  />
+                </th>
                 <th className="text-left p-3 font-medium">Material</th>
                 <th className="text-center p-3 font-medium">Status</th>
                 <th className="text-right p-3 font-medium">Required</th>
@@ -373,7 +444,14 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
                   new Date(item.expected_delivery) < new Date();
 
                 return (
-                  <tr key={item.id} className={`border-b hover:bg-muted/30 ${isOverdue ? 'bg-destructive/5' : ''}`}>
+                  <tr key={item.id} className={`border-b hover:bg-muted/30 ${isOverdue ? 'bg-destructive/5' : ''} ${selectedIds.has(item.id) ? 'bg-primary/5' : ''}`}>
+                    <td className="p-3">
+                      <Checkbox
+                        checked={selectedIds.has(item.id)}
+                        onCheckedChange={() => toggleSelect(item.id)}
+                        aria-label={`Select ${item.material_description}`}
+                      />
+                    </td>
                     <td className="p-3">
                       <div className="font-medium">{item.material_description}</div>
                       <div className="text-[10px] text-muted-foreground font-mono">{item.material_code}</div>
@@ -435,7 +513,7 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
             </tbody>
             <tfoot>
               <tr className="bg-muted/50 font-medium">
-                <td colSpan={9} className="p-3 text-right">Total Ordered Value:</td>
+                <td colSpan={10} className="p-3 text-right">Total Ordered Value:</td>
                 <td className="p-3 text-right font-mono font-bold">NPR {totalOrdered.toLocaleString()}</td>
                 <td></td>
               </tr>
