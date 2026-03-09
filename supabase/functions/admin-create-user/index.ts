@@ -60,6 +60,14 @@ serve(async (req) => {
         });
     }
 
+    // Log audit event
+    await supabase.from("audit_logs").insert({
+      event_type: "user_created",
+      user_id: caller.id,
+      event_data: { created_user_id: newUser.user?.id, email, role: role || "viewer" },
+      status: "success",
+    });
+
     return new Response(JSON.stringify({ success: true, user_id: newUser.user?.id }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

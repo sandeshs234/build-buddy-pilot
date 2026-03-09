@@ -38,6 +38,13 @@ serve(async (req) => {
 
     if (error) throw error;
 
+    await supabase.from("audit_logs").insert({
+      event_type: "role_changed",
+      user_id: caller.id,
+      event_data: { target_user_id: user_id, new_role: role },
+      status: "success",
+    });
+
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
