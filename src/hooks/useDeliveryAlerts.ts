@@ -21,8 +21,12 @@ export function useDeliveryAlerts() {
     const lastInventory = localStorage.getItem(INVENTORY_CACHE_KEY);
     const shouldCheckInventory = !lastInventory || Date.now() - parseInt(lastInventory) >= CHECK_INTERVAL_MS;
 
+    const lastSupplier = localStorage.getItem(SUPPLIER_CACHE_KEY);
+    const shouldCheckSupplier = !lastSupplier || Date.now() - parseInt(lastSupplier) >= CHECK_INTERVAL_MS;
+
     if (shouldCheckDelivery) checkDeliveryDates(user.id, currentProjectId);
     if (shouldCheckInventory) checkInventoryLevels(user.id, currentProjectId);
+    if (shouldCheckSupplier) checkSupplierPerformance(user.id, currentProjectId);
   }, [user, currentProjectId]);
 }
 
