@@ -142,3 +142,71 @@ async function checkInventoryLevels(userId: string, projectId: string | null) {
     console.error('Inventory alert check failed:', err);
   }
 }
+
+async function checkSupplierPerformance(userId: string, projectId: string | null) {
+  try {
+    const { data: items } = await supabase
+      .from('procurement_tracking')
+      .select('supplier, status, expected_delivery, actual_delivery');
+
+    if (!items || items.length === 0) return;
+
+    // Group by supplier
+    const grouped: Record<string, typeof items> = {};
+    items.forEach(item => {
+      const name = (item.supplier || '').trim() || 'Unknown';
+      if (!grouped[name]) grouped[name] = [];
+      grouped[name].push(item);
+    });
+
+    const alerts: { title: string; message: string; type: string }[] = [];
+
+    for (const [supplier, orders] of Object.entries(grouped)) {
+      if (supplier === 'Unknown') continue;
+      const delivered = orders.filter(o => o.status === 'received' && o.actual_delivery && o.expected_delivery);
+      if (delivered.length < 2) continue; // Need at least 2 deliveries to assess
+
+      const onTime = delivered.filter(o => {
+        const expected = new Date(o.expected_delivery);
+        const actual = new Date(o.actual_delivery);
+        return actual <= expected;
+      });
+
+      const onTimeRate = Math.round((onTime.length / delivered.length) * 100);
+
+      if (onTimeRate < 70) {
+        alerts.push({
+          title: `📊 Low Performance: ${supplier}`,
+          message: `On-time delivery rate is ${onTimeRate}% (${onTime.length}/${delivered.length} deliveries on time). Review in Supplier Performance dashboard.`,
+          type: 'supplier',
+        });
+      }
+    }
+
+    if (alerts.length === 0) {
+      localStorage.setItem(SUPPLIER_CACHE_KEY, String(Date.now()));
+      return;
+    }
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    const { data: existing } = await (supabase as any)
+      .from('notifications')
+      .select('title')
+      .eq('user_id', userId)
+      .gte('created_at', `${todayStr}T00:00:00`)
+      .eq('type', 'supplier');
+
+    const existingTitles = new Set((existing || []).map((n: any) => n.title));
+    const newAlerts = alerts.filter(a => !existingTitles.has(a.title));
+
+    if (newAlerts.length > 0) {
+      await (supabase as any).from('notifications').insert(
+        newAlerts.map(a => ({ user_id: userId, project_id: projectId, title: a.title, message: a.message, type: a.type }))
+      );
+    }
+
+    localStorage.setItem(SUPPLIER_CACHE_KEY, String(Date.now()));
+  } catch (err) {
+    console.error('Supplier performance alert check failed:', err);
+  }
+}
