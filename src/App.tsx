@@ -21,6 +21,7 @@ import ProcurementDigest from "./pages/ProcurementDigest";
 import ProcurementTrackerPage from "./pages/ProcurementTrackerPage";
 import SupplierPerformancePage from "./pages/SupplierPerformancePage";
 import ProjectSummaryReport from "./pages/ProjectSummaryReport";
+import AuditLogs from "./pages/AuditLogs";
 import {
   InventoryPage, ManpowerPage, EquipmentPage, SafetyPage, DelaysPage,
   PurchaseOrdersPage, DailyQuantityPage, BillsPage, StaffPage, FuelLogPage,
