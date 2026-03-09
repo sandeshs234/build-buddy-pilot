@@ -441,7 +441,7 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
           <Plus size={14} className="mr-1" /> Add Material
         </Button>
         <ExcelImportExport
-          data={items}
+          data={filteredItems}
           columns={[
             { key: 'material_code', label: 'Material Code' },
             { key: 'material_description', label: 'Description' },
@@ -489,6 +489,9 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
             }
           }}
         />
+        <Button variant="outline" size="sm" onClick={exportWithSummary}>
+          <Download size={14} className="mr-1" /> Export with Summary
+        </Button>
         {items.length > 0 && (
           <AlertDialog>
             <AlertDialogTrigger asChild>
