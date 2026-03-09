@@ -321,6 +321,66 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
   const totalReceived = filteredItems.filter(i => i.status === 'received').length;
   const overallProgress = filteredItems.length > 0 ? Math.round((totalReceived / filteredItems.length) * 100) : 0;
 
+  const exportWithSummary = () => {
+    const cols = [
+      { key: 'material_code', label: 'Material Code' },
+      { key: 'material_description', label: 'Description' },
+      { key: 'unit', label: 'Unit' },
+      { key: 'required_qty', label: 'Required Qty' },
+      { key: 'ordered_qty', label: 'Ordered Qty' },
+      { key: 'received_qty', label: 'Received Qty' },
+      { key: 'status', label: 'Status' },
+      { key: 'supplier', label: 'Supplier' },
+      { key: 'po_number', label: 'PO Number' },
+      { key: 'order_date', label: 'Order Date' },
+      { key: 'expected_delivery', label: 'Expected Delivery' },
+      { key: 'actual_delivery', label: 'Actual Delivery' },
+      { key: 'unit_rate', label: 'Unit Rate (NPR)' },
+      { key: 'total_cost', label: 'Total Cost (NPR)' },
+      { key: 'remarks', label: 'Remarks' },
+    ];
+
+    const wsData = filteredItems.map(row =>
+      Object.fromEntries(cols.map(c => [c.label, row[c.key as keyof TrackingItem]]))
+    );
+
+    // Blank row separator
+    wsData.push(Object.fromEntries(cols.map(c => [c.label, ''])));
+
+    // Cost summary rows
+    const summaryTotalCost = filteredItems.reduce((s, i) => s + (i.ordered_qty * i.unit_rate), 0);
+    const summaryReceivedCost = filteredItems.filter(i => i.status === 'received').reduce((s, i) => s + i.total_cost, 0);
+    const summaryPendingCost = summaryTotalCost - summaryReceivedCost;
+
+    const summaryRows = [
+      { 'Material Code': 'SUMMARY', 'Description': '', 'Total Cost (NPR)': '' },
+      { 'Material Code': 'Total Items', 'Description': String(filteredItems.length), 'Total Cost (NPR)': '' },
+      ...Object.entries(STATUS_CONFIG).map(([key, cfg]) => ({
+        'Material Code': cfg.label,
+        'Description': String(filteredItems.filter(i => i.status === key).length),
+        'Total Cost (NPR)': String(filteredItems.filter(i => i.status === key).reduce((s, i) => s + (i.ordered_qty * i.unit_rate), 0)),
+      })),
+      { 'Material Code': '', 'Description': '', 'Total Cost (NPR)': '' },
+      { 'Material Code': 'Total Ordered Value', 'Description': '', 'Total Cost (NPR)': String(summaryTotalCost) },
+      { 'Material Code': 'Received Value', 'Description': '', 'Total Cost (NPR)': String(summaryReceivedCost) },
+      { 'Material Code': 'Pending Value', 'Description': '', 'Total Cost (NPR)': String(summaryPendingCost) },
+      { 'Material Code': 'Progress', 'Description': '', 'Total Cost (NPR)': `${overallProgress}%` },
+    ];
+
+    const allData = [...wsData, ...summaryRows];
+    const ws = XLSX.utils.json_to_sheet(allData);
+
+    // Set column widths
+    ws['!cols'] = cols.map(c => ({ wch: Math.max(c.label.length, 16) }));
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Procurement Tracking');
+
+    const filterLabel = selectedStatus ? STATUS_CONFIG[selectedStatus]?.label : 'All';
+    XLSX.writeFile(wb, `procurement_tracking_${filterLabel.toLowerCase()}.xlsx`);
+    toast({ title: 'Exported', description: `${filteredItems.length} items exported with cost summary` });
+  };
+
   return (
     <div className="space-y-4">
       {/* Stats Row */}
