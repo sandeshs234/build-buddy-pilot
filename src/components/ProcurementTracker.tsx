@@ -359,6 +359,12 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
         <Button variant="outline" size="sm" onClick={fetchItems}>
           <RefreshCw size={14} className="mr-1" /> Refresh
         </Button>
+        <Input 
+          placeholder="Search by code, description, or supplier..." 
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-40 h-9"
+        />
         <Select value={selectedStatus || ''} onValueChange={(v) => setSelectedStatus(v || null)}>
           <SelectTrigger className="w-40 h-9">
             <SelectValue placeholder="Filter by status" />
