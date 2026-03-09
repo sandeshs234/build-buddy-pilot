@@ -105,6 +105,7 @@ const navGroups: NavGroup[] = [
     label: 'System',
     items: [
       { label: 'User Management', path: '/users', icon: <Shield size={18} />, allowedRoles: ['admin'] },
+      { label: 'Audit Logs', path: '/audit-logs', icon: <Shield size={18} />, allowedRoles: ['admin'] },
       { label: 'Settings', path: '/settings', icon: <Settings size={18} />, allowedRoles: ['admin', 'project_manager'] },
       { label: 'Backup / Restore', path: '/backup', icon: <Database size={18} />, allowedRoles: ['admin', 'project_manager'] },
       { label: 'Help', path: '/help', icon: <HelpCircle size={18} /> },
