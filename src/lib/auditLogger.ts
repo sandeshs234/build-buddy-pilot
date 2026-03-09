@@ -3,16 +3,21 @@ import { supabase } from "@/integrations/supabase/client";
 export type AuditEventType =
   | "login_success"
   | "login_failed"
-  | "signup_success"
-  | "signup_failed"
-  | "signout"
+  | "logout"
+  | "signup"
   | "password_reset_request"
+  | "password_reset_complete"
   | "password_change"
   | "role_assigned"
   | "role_changed"
   | "user_created"
   | "user_deleted"
-  | "oauth_login";
+  | "profile_updated"
+  | "oauth_login_success"
+  | "oauth_login_failed"
+  | "session_expired"
+  | "mfa_enabled"
+  | "mfa_disabled";
 
 interface AuditLogParams {
   event_type: AuditEventType;
