@@ -6,7 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { Users, Clock, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, Package, Truck } from 'lucide-react';
+import { Users, Clock, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, Package, Truck, Download } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import * as XLSX from '@e965/xlsx';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from 'recharts';
 
 interface TrackingItem {
