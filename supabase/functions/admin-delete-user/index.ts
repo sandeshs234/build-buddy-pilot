@@ -56,6 +56,8 @@ serve(async (req) => {
       }
     }
 
+    const successCount = results.filter(r => r.success).length;
+
     await supabase.from("audit_logs").insert({
       event_type: "user_deleted",
       user_id: caller.id,
@@ -63,7 +65,6 @@ serve(async (req) => {
       status: "success",
     });
 
-    const successCount2 = results.filter(r => r.success).length;
     return new Response(JSON.stringify({ success: true, deleted: successCount, results }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
