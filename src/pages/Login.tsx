@@ -45,7 +45,7 @@ export default function Login() {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -55,8 +55,10 @@ export default function Login() {
     });
     setLoading(false);
     if (error) {
+      logAuditEvent({ event_type: 'signup_failed', event_data: { email }, status: 'failure', error_message: error.message });
       toast({ title: 'Signup failed', description: error.message, variant: 'destructive' });
     } else {
+      logAuditEvent({ event_type: 'signup_success', event_data: { email }, user_id: data.user?.id });
       toast({ title: 'Account created!', description: 'You can now sign in.' });
       navigate('/dashboard');
     }
