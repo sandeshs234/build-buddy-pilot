@@ -21,11 +21,13 @@ export default function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
+      logAuditEvent({ event_type: 'login_failed', event_data: { email }, status: 'failure', error_message: error.message });
       toast({ title: 'Login failed', description: error.message, variant: 'destructive' });
     } else {
+      logAuditEvent({ event_type: 'login_success', event_data: { email }, user_id: data.user?.id });
       navigate('/dashboard');
     }
   };
