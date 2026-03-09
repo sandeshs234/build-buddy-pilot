@@ -327,19 +327,70 @@ export default function SupplierPerformance() {
       {/* Supplier Table */}
       <Card>
         <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <CardTitle className="text-sm font-semibold">Supplier Scorecard</CardTitle>
-            <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
-              <SelectTrigger className="w-44 h-8 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="totalOrderedValue">Sort: Order Value</SelectItem>
-                <SelectItem value="onTimeRate">Sort: On-Time Rate</SelectItem>
-                <SelectItem value="totalOrders">Sort: Total Orders</SelectItem>
-                <SelectItem value="avgDelayDays">Sort: Least Delays</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+                <SelectTrigger className="w-44 h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="totalOrderedValue">Sort: Order Value</SelectItem>
+                  <SelectItem value="onTimeRate">Sort: On-Time Rate</SelectItem>
+                  <SelectItem value="totalOrders">Sort: Total Orders</SelectItem>
+                  <SelectItem value="avgDelayDays">Sort: Least Delays</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => {
+                const rating = (s: SupplierMetrics) =>
+                  s.onTimeRate >= 90 ? 'Excellent' : s.onTimeRate >= 70 ? 'Good' : s.onTimeRate >= 50 ? 'Fair' : s.deliveredOrders === 0 ? 'N/A' : 'Poor';
+
+                const rows = supplierMetrics.map(s => ({
+                  'Supplier': s.name,
+                  'Total Orders': s.totalOrders,
+                  'Delivered': s.deliveredOrders,
+                  'On-Time': s.onTimeDeliveries,
+                  'Late': s.lateDeliveries,
+                  'Early': s.earlyDeliveries,
+                  'Avg Delay (days)': s.avgDelayDays,
+                  'On-Time Rate (%)': s.onTimeRate,
+                  'Ordered Value (NPR)': Math.round(s.totalOrderedValue),
+                  'Received Value (NPR)': Math.round(s.totalReceivedValue),
+                  'Cost Variance (NPR)': Math.round(s.costVariance),
+                  'Cost Variance (%)': s.costVariancePercent,
+                  'Fulfillment (%)': s.fulfillmentRate,
+                  'Pending Orders': s.pendingOrders,
+                  'Rating': rating(s),
+                }));
+
+                // Summary row
+                rows.push({
+                  'Supplier': 'TOTALS',
+                  'Total Orders': overallStats.totalOrders,
+                  'Delivered': overallStats.delivered,
+                  'On-Time': supplierMetrics.reduce((s, m) => s + m.onTimeDeliveries, 0),
+                  'Late': supplierMetrics.reduce((s, m) => s + m.lateDeliveries, 0),
+                  'Early': supplierMetrics.reduce((s, m) => s + m.earlyDeliveries, 0),
+                  'Avg Delay (days)': 0,
+                  'On-Time Rate (%)': overallStats.avgOnTimeRate,
+                  'Ordered Value (NPR)': Math.round(overallStats.totalValue),
+                  'Received Value (NPR)': Math.round(supplierMetrics.reduce((s, m) => s + m.totalReceivedValue, 0)),
+                  'Cost Variance (NPR)': Math.round(supplierMetrics.reduce((s, m) => s + m.costVariance, 0)),
+                  'Cost Variance (%)': 0,
+                  'Fulfillment (%)': overallStats.totalOrders > 0 ? Math.round((overallStats.delivered / overallStats.totalOrders) * 100) : 0,
+                  'Pending Orders': supplierMetrics.reduce((s, m) => s + m.pendingOrders, 0),
+                  'Rating': '',
+                });
+
+                const ws = XLSX.utils.json_to_sheet(rows);
+                ws['!cols'] = Object.keys(rows[0]).map(k => ({ wch: Math.max(k.length + 2, 14) }));
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Supplier Scorecard');
+                XLSX.writeFile(wb, 'supplier_performance_scorecard.xlsx');
+              }}>
+                <Download size={14} className="mr-1" /> Export Excel
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
