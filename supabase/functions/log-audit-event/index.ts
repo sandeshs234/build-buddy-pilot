@@ -14,36 +14,21 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Verify caller is admin
-    const authHeader = req.headers.get("Authorization")!;
-    const callerClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
+    const { event_type, event_data, user_id, status, error_message, ip_address, user_agent } = await req.json();
+
+    if (!event_type) throw new Error("event_type is required");
+
+    const { error } = await supabase.from("audit_logs").insert({
+      event_type,
+      event_data: event_data || {},
+      user_id: user_id || null,
+      status: status || "success",
+      error_message: error_message || null,
+      ip_address: ip_address || null,
+      user_agent: user_agent || null,
     });
-    const { data: { user: caller } } = await callerClient.auth.getUser();
-    if (!caller) throw new Error("Unauthorized");
-
-    const { data: callerRole } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", caller.id)
-      .single();
-    if (callerRole?.role !== "admin") throw new Error("Admin access required");
-
-    const { user_id, role } = await req.json();
-
-    const { error } = await supabase
-      .from("user_roles")
-      .update({ role })
-      .eq("user_id", user_id);
 
     if (error) throw error;
-
-    await supabase.from("audit_logs").insert({
-      event_type: "role_changed",
-      user_id: caller.id,
-      event_data: { target_user_id: user_id, new_role: role },
-      status: "success",
-    });
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

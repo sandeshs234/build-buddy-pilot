@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { Construction } from 'lucide-react';
+import { logAuditEvent } from '@/lib/auditLogger';
 
 export default function ResetPassword() {
   const navigate = useNavigate();
@@ -32,6 +33,7 @@ export default function ResetPassword() {
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } else {
+      logAuditEvent({ event_type: 'password_change', event_data: { method: 'reset_link' } });
       toast({ title: 'Password updated', description: 'You can now sign in with your new password.' });
       navigate('/login');
     }

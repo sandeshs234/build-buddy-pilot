@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { Construction, Mail, Lock, Eye, EyeOff, User } from 'lucide-react';
+import { logAuditEvent } from '@/lib/auditLogger';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -20,11 +21,13 @@ export default function Login() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     setLoading(false);
     if (error) {
+      logAuditEvent({ event_type: 'login_failed', event_data: { email }, status: 'failure', error_message: error.message });
       toast({ title: 'Login failed', description: error.message, variant: 'destructive' });
     } else {
+      logAuditEvent({ event_type: 'login_success', event_data: { email }, user_id: data.user?.id });
       navigate('/dashboard');
     }
   };
@@ -42,7 +45,7 @@ export default function Login() {
       return;
     }
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -52,8 +55,10 @@ export default function Login() {
     });
     setLoading(false);
     if (error) {
+      logAuditEvent({ event_type: 'login_failed', event_data: { email, method: 'signup' }, status: 'failure', error_message: error.message });
       toast({ title: 'Signup failed', description: error.message, variant: 'destructive' });
     } else {
+      logAuditEvent({ event_type: 'signup', event_data: { email }, user_id: data.user?.id });
       toast({ title: 'Account created!', description: 'You can now sign in.' });
       navigate('/dashboard');
     }

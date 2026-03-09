@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
+import { logAuditEvent } from '@/lib/auditLogger';
 
 type AppRole = 'admin' | 'project_manager' | 'engineer' | 'viewer' | 'accountant' | 'safety_officer' | 'store_keeper' | 'surveyor';
 type StorageMode = 'local' | 'cloud' | null;
@@ -149,6 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    if (user) logAuditEvent({ event_type: 'logout', user_id: user.id, event_data: { email: user.email } });
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);

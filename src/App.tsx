@@ -21,6 +21,7 @@ import ProcurementDigest from "./pages/ProcurementDigest";
 import ProcurementTrackerPage from "./pages/ProcurementTrackerPage";
 import SupplierPerformancePage from "./pages/SupplierPerformancePage";
 import ProjectSummaryReport from "./pages/ProjectSummaryReport";
+import AuditLogs from "./pages/AuditLogs";
 import {
   InventoryPage, ManpowerPage, EquipmentPage, SafetyPage, DelaysPage,
   PurchaseOrdersPage, DailyQuantityPage, BillsPage, StaffPage, FuelLogPage,
@@ -81,6 +82,7 @@ const App = () => (
               <Route path="/help" element={<ProtectedPage><HelpPage /></ProtectedPage>} />
               <Route path="/settings" element={<ProtectedPage><SettingsPage /></ProtectedPage>} />
               <Route path="/users" element={<ProtectedPage><UserManagement /></ProtectedPage>} />
+              <Route path="/audit-logs" element={<ProtectedPage><AuditLogs /></ProtectedPage>} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </ProjectDataProvider>
