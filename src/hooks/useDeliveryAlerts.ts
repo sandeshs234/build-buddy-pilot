@@ -4,6 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 
 const ALERT_CACHE_KEY = 'buildforge_delivery_alerts_last';
 const INVENTORY_CACHE_KEY = 'buildforge_inventory_alerts_last';
+const SUPPLIER_CACHE_KEY = 'buildforge_supplier_perf_alerts_last';
 const CHECK_INTERVAL_MS = 4 * 60 * 60 * 1000; // 4 hours
 
 export function useDeliveryAlerts() {
