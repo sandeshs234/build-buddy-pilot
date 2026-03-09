@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { Construction, Mail, Lock, Eye, EyeOff, User } from 'lucide-react';
+import { logAuditEvent } from '@/lib/auditLogger';
 
 export default function Login() {
   const navigate = useNavigate();
