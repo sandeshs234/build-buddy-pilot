@@ -150,7 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    if (user) logAuditEvent({ event_type: 'signout', user_id: user.id, event_data: { email: user.email } });
+    if (user) logAuditEvent({ event_type: 'logout', user_id: user.id, event_data: { email: user.email } });
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
