@@ -67,11 +67,17 @@ export default function ProcurementTracker({ materials = [] }: ProcurementTracke
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   // Filter items early for use in functions
-  const filteredItems = selectedStatus 
-    ? items.filter(i => i.status === selectedStatus)
-    : items;
+  const filteredItems = items.filter(i => {
+    const matchesStatus = !selectedStatus || i.status === selectedStatus;
+    const matchesSearch = !searchTerm || 
+      i.material_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      i.material_description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      i.supplier.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
 
   const fetchItems = useCallback(async () => {
     if (!user) return;
