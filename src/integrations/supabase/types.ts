@@ -991,6 +991,7 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
+      purge_old_audit_logs: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role:
