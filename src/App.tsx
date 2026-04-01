@@ -48,6 +48,7 @@ const App = () => (
         <AuthProvider>
           <ProjectDataProvider>
             <Routes>
+              <Route path="/setup" element={<SetupGuide />} />
               <Route path="/login" element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/" element={<ProtectedPage><Dashboard /></ProtectedPage>} />
