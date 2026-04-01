@@ -233,6 +233,12 @@ export default function Login() {
             </>
           )}
         </div>
+
+        <div className="text-center mt-6">
+          <Link to="/setup" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+            📖 Self-Hosting Setup Guide
+          </Link>
+        </div>
       </div>
     </div>
   );
