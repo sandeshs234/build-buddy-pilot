@@ -9,6 +9,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import AppLayout from "./components/layout/AppLayout";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
+import SetupGuide from "./pages/SetupGuide";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import Activities from "./pages/Activities";
@@ -47,6 +48,7 @@ const App = () => (
         <AuthProvider>
           <ProjectDataProvider>
             <Routes>
+              <Route path="/setup" element={<SetupGuide />} />
               <Route path="/login" element={<Login />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/" element={<ProtectedPage><Dashboard /></ProtectedPage>} />
