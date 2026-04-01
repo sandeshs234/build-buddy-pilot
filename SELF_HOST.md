@@ -46,10 +46,32 @@ Share the **Network URL** with your office team. They can open it in any browser
 
 ## Configuration
 
+### Enable HTTPS with mkcert (Recommended)
+
+HTTPS is required for secure login cookies. Use [mkcert](https://github.com/FiloSottile/mkcert) to create locally-trusted certificates:
+
+```bash
+# 1. Install mkcert (Windows: choco install mkcert | macOS: brew install mkcert)
+mkcert -install
+
+# 2. Generate certificates for your server
+mkdir certs
+mkcert -key-file certs/key.pem -cert-file certs/cert.pem localhost 192.168.x.x
+
+# 3. Start the server (auto-detects certs)
+node serve.cjs
+# → https://192.168.x.x:8443 (HTTPS)
+# → http://192.168.x.x:8080 (redirects to HTTPS)
+```
+
+> Replace `192.168.x.x` with your server's actual LAN IP.
+
+**Trust on team machines:** Copy `rootCA.pem` from the server (run `mkcert -CAROOT` to find it) and install it on each team machine's trust store.
+
 ### Change the Port
 
 ```bash
-PORT=3000 node serve.cjs
+PORT=3000 HTTPS_PORT=3443 node serve.cjs
 ```
 
 ### Run in Background (Linux/Mac)
