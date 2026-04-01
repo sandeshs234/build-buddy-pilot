@@ -9,6 +9,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import AppLayout from "./components/layout/AppLayout";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
+import SetupGuide from "./pages/SetupGuide";
 import NotFound from "./pages/NotFound";
 import Dashboard from "./pages/Dashboard";
 import Activities from "./pages/Activities";
