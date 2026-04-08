@@ -116,11 +116,11 @@ export default function PrintableReport({ title, columns, data, projectName }: P
   </div>
   
   <div class="footer">
-    <div class="footer-left">
-      <div>${settings.companyName || 'BuildForge Engineering'} — Confidential</div>
-      <div>Page 1 of 1 · ${docRef}</div>
+     <div class="footer-left">
+      <div>${esc(settings.companyName || 'BuildForge Engineering')} — Confidential</div>
+      <div>Page 1 of 1 · ${esc(docRef)}</div>
     </div>
-    ${stamp ? `<div class="footer-stamp"><img src="${stamp}" /></div>` : ''}
+    ${stamp ? `<div class="footer-stamp"><img src="${esc(stamp)}" /></div>` : ''}
   </div>
 </body></html>`);
     printWindow.document.close();
