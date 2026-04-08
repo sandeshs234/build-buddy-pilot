@@ -260,16 +260,21 @@ export default function SetupGuide() {
             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
               <Construction size={20} className="text-primary-foreground" />
             </div>
-            <div>
+             <div>
               <h1 className="text-lg font-bold text-foreground">BuildForge Setup Guide</h1>
               <p className="text-xs text-muted-foreground">Self-hosted LAN server setup</p>
             </div>
           </div>
-          <Link to="/login">
-            <Button variant="outline" size="sm">
-              Skip to Login →
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handlePrintPDF} className="gap-1.5">
+              <FileDown size={14} /> Export PDF
             </Button>
-          </Link>
+            <Link to="/login">
+              <Button variant="outline" size="sm">
+                Skip to Login →
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 
