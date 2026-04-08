@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Printer } from 'lucide-react';
+import { esc } from '@/lib/htmlEscape';
 
 interface PrintableReportProps {
   title: string;
