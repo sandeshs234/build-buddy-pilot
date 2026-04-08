@@ -96,8 +96,8 @@ export default function PrintableReport({ title, columns, data, projectName }: P
     </div>
   </div>
   
-  <div class="report-title">${title}</div>
-  <div class="report-subtitle">Total Records: ${data.length} · Generated: ${new Date().toLocaleString('en-GB')}</div>
+   <div class="report-title">${esc(title)}</div>
+  <div class="report-subtitle">Total Records: ${data.length} · Generated: ${esc(new Date().toLocaleString('en-GB'))}</div>
   
   <table>
     <thead><tr><th style="width:30px">#</th>${columns.map(c => `<th>${c.label}</th>`).join('')}</tr></thead>
