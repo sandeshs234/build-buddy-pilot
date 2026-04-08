@@ -100,8 +100,8 @@ export default function PrintableReport({ title, columns, data, projectName }: P
   <div class="report-subtitle">Total Records: ${data.length} · Generated: ${esc(new Date().toLocaleString('en-GB'))}</div>
   
   <table>
-    <thead><tr><th style="width:30px">#</th>${columns.map(c => `<th>${c.label}</th>`).join('')}</tr></thead>
-    <tbody>${data.map((row, i) => `<tr><td style="text-align:center;color:#888;font-size:7pt">${i + 1}</td>${columns.map(c => `<td>${row[c.key] ?? '—'}</td>`).join('')}</tr>`).join('')}</tbody>
+     <thead><tr><th style="width:30px">#</th>${columns.map(c => `<th>${esc(c.label)}</th>`).join('')}</tr></thead>
+    <tbody>${data.map((row, i) => `<tr><td style="text-align:center;color:#888;font-size:7pt">${i + 1}</td>${columns.map(c => `<td>${esc(row[c.key] ?? '—')}</td>`).join('')}</tr>`).join('')}</tbody>
   </table>
   
   <div class="summary-row">
