@@ -76,10 +76,10 @@ export default function PrintableReport({ title, columns, data, projectName }: P
   }
 </style></head><body>
   <div class="header">
-    ${logo ? `<div class="header-logo"><img src="${logo}" /></div>` : ''}
-    <div class="company-name">${settings.companyName || 'BuildForge Engineering'}</div>
-    <div class="company-tagline">${settings.companyTagline || 'Construction Project Management'}</div>
-    <div class="company-contact">${[settings.companyAddress, settings.companyPhone, settings.companyEmail].filter(Boolean).join('  ·  ')}</div>
+     ${logo ? `<div class="header-logo"><img src="${esc(logo)}" /></div>` : ''}
+    <div class="company-name">${esc(settings.companyName || 'BuildForge Engineering')}</div>
+    <div class="company-tagline">${esc(settings.companyTagline || 'Construction Project Management')}</div>
+    <div class="company-contact">${[settings.companyAddress, settings.companyPhone, settings.companyEmail].filter(Boolean).map(esc).join('  ·  ')}</div>
     <div class="header-line"></div>
   </div>
   
