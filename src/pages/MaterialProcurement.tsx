@@ -239,8 +239,8 @@ export default function MaterialProcurement() {
     <div class="sig-block"><div class="sig-line">Approved By</div><div class="sig-role">Name / Date / Signature</div></div>
   </div>
   <div class="footer">
-    <div class="footer-left"><div>${settings.companyName || 'BuildForge Engineering'} — Confidential</div><div>Page 1 of 1 · ${docRef}</div></div>
-    ${stamp ? `<div class="footer-stamp"><img src="${stamp}" /></div>` : ''}
+     <div class="footer-left"><div>${esc(settings.companyName || 'BuildForge Engineering')} — Confidential</div><div>Page 1 of 1 · ${esc(docRef)}</div></div>
+    ${stamp ? `<div class="footer-stamp"><img src="${esc(stamp)}" /></div>` : ''}
   </div>
 </body></html>`);
     pw.document.close();

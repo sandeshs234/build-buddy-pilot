@@ -76,8 +76,8 @@ export default function ProjectSummaryReport() {
     const boqTop = [...boqItems].sort((a, b) => (b.executedQty * b.rate) - (a.executedQty * a.rate)).slice(0, 8);
     const boqRows = boqTop.map((b, i) => {
       const pct = b.totalQty > 0 ? Math.round((b.executedQty / b.totalQty) * 100) : 0;
-      return `<tr><td style="text-align:center;color:#888;font-size:7pt">${i + 1}</td>
-      <td class="mono">${b.code}</td><td>${b.description}</td><td>${b.unit}</td>
+       return `<tr><td style="text-align:center;color:#888;font-size:7pt">${i + 1}</td>
+      <td class="mono">${esc(b.code)}</td><td>${esc(b.description)}</td><td>${esc(b.unit)}</td>
       <td style="text-align:right">${b.totalQty.toLocaleString()}</td>
       <td style="text-align:right">${b.executedQty.toLocaleString()}</td>
       <td>${pct}%</td></tr>`;

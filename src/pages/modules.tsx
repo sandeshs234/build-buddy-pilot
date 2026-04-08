@@ -1167,22 +1167,22 @@ export function ReportsPage() {
   @media print { body { padding: 8mm 12mm; } @page { size: A4 landscape; margin: 8mm; } }
 </style></head><body>
   <div class="header">
-    ${logo ? `<div class="header-logo"><img src="${logo}" /></div>` : ''}
-    <div class="company-name">${settings.companyName || 'BuildForge Engineering'}</div>
-    <div class="company-tagline">${settings.companyTagline || 'Construction Project Management'}</div>
-    <div class="company-contact">${[settings.companyAddress, settings.companyPhone, settings.companyEmail].filter(Boolean).join('  ·  ')}</div>
+     ${logo ? `<div class="header-logo"><img src="${esc(logo)}" /></div>` : ''}
+    <div class="company-name">${esc(settings.companyName || 'BuildForge Engineering')}</div>
+    <div class="company-tagline">${esc(settings.companyTagline || 'Construction Project Management')}</div>
+    <div class="company-contact">${[settings.companyAddress, settings.companyPhone, settings.companyEmail].filter(Boolean).map(esc).join('  ·  ')}</div>
     <div class="header-line"></div>
   </div>
   <div class="project-info">
     <div class="left">
-      <div><strong>Project:</strong> ${settings.projectName || 'Construction Project'}</div>
-      <div><strong>Client:</strong> ${settings.clientName || '—'}</div>
-      <div><strong>Contractor:</strong> ${settings.contractorName || settings.companyName || '—'}</div>
+      <div><strong>Project:</strong> ${esc(settings.projectName || 'Construction Project')}</div>
+      <div><strong>Client:</strong> ${esc(settings.clientName || '—')}</div>
+      <div><strong>Contractor:</strong> ${esc(settings.contractorName || settings.companyName || '—')}</div>
     </div>
     <div class="right">
-      <div><strong>Contract No:</strong> ${settings.contractNo || '—'}</div>
-      <div><strong>Report Date:</strong> ${today}</div>
-      <div><strong>Doc Ref:</strong> ${docRef}</div>
+      <div><strong>Contract No:</strong> ${esc(settings.contractNo || '—')}</div>
+      <div><strong>Report Date:</strong> ${esc(today)}</div>
+      <div><strong>Doc Ref:</strong> ${esc(docRef)}</div>
       <div><strong>Reports:</strong> ${sections.length} of ${reportSections.length}</div>
     </div>
   </div>
@@ -1194,10 +1194,10 @@ export function ReportsPage() {
   </div>
   <div class="footer">
     <div class="footer-left">
-      <div>${settings.companyName || 'BuildForge Engineering'} — Confidential</div>
-      <div>${docRef}</div>
+      <div>${esc(settings.companyName || 'BuildForge Engineering')} — Confidential</div>
+      <div>${esc(docRef)}</div>
     </div>
-    ${stamp ? `<div class="footer-stamp"><img src="${stamp}" /></div>` : ''}
+    ${stamp ? `<div class="footer-stamp"><img src="${esc(stamp)}" /></div>` : ''}
   </div>
 </body></html>`);
     printWindow.document.close();
