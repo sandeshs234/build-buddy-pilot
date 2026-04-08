@@ -286,7 +286,9 @@ serve(async (req) => {
       }];
       toolChoice = { type: "function", function: { name: "generate_boq" } };
     } else {
-      throw new Error(`Unknown action: ${action}`);
+      return new Response(JSON.stringify({ error: "Invalid request" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const body: any = {
