@@ -217,16 +217,16 @@ export default function MaterialProcurement() {
   <table>
     <thead><tr><th>#</th><th>Code</th><th>Description</th><th>Category</th><th>Qty (w/ waste)</th><th>Unit</th><th>Rate (NPR)</th><th>Total (NPR)</th><th>Priority</th><th>Lead</th><th>Week</th></tr></thead>
     <tbody>
-      ${materials.map((m, i) => `<tr>
+       ${materials.map((m, i) => `<tr>
         <td style="text-align:center;color:#888">${i + 1}</td>
-        <td style="font-family:monospace">${m.code}</td>
-        <td>${m.description}</td>
-        <td>${m.category}</td>
+        <td style="font-family:monospace">${esc(m.code)}</td>
+        <td>${esc(m.description)}</td>
+        <td>${esc(m.category)}</td>
         <td style="text-align:right;font-family:monospace">${m.totalWithWaste?.toLocaleString()}</td>
-        <td>${m.unit}</td>
+        <td>${esc(m.unit)}</td>
         <td style="text-align:right;font-family:monospace">${(m.unitRate || 0).toLocaleString()}</td>
         <td style="text-align:right;font-family:monospace">${(m.totalCost || 0).toLocaleString()}</td>
-        <td class="priority-${m.priority}" style="text-align:center">${m.priority}</td>
+        <td class="priority-${esc(m.priority)}" style="text-align:center">${esc(m.priority)}</td>
         <td style="text-align:center">${m.leadTimeDays}d</td>
         <td style="text-align:center">W${m.procurementWeek}</td>
       </tr>`).join('')}
