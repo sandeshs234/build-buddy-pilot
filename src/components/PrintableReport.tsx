@@ -106,7 +106,7 @@ export default function PrintableReport({ title, columns, data, projectName }: P
   
   <div class="summary-row">
     <span>End of Report — ${data.length} record(s)</span>
-    <span>${settings.companyName || 'BuildForge Engineering'}</span>
+    <span>${esc(settings.companyName || 'BuildForge Engineering')}</span>
   </div>
   
   <div class="signatures">
