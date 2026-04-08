@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Construction, ChevronRight, ChevronLeft, Server, Shield, Network, Rocket, Database, CheckCircle2, Copy, ExternalLink } from 'lucide-react';
+import { Construction, ChevronRight, ChevronLeft, Server, Shield, Network, Rocket, Database, CheckCircle2, Copy, ExternalLink, FileDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -251,6 +251,106 @@ export default function SetupGuide() {
   const [currentStep, setCurrentStep] = useState(0);
   const step = steps[currentStep];
 
+  const handlePrintPDF = () => {
+    const pw = window.open('', '_blank');
+    if (!pw) return;
+
+    const stepsContent = steps.map((s, i) => `
+      <div class="step" style="${i > 0 ? 'page-break-before:always;' : ''}">
+        <div class="step-header">
+          <span class="step-badge">Step ${s.id}</span>
+          <h2>${s.title}</h2>
+          <p class="subtitle">${s.subtitle}</p>
+        </div>
+      </div>
+    `).join('');
+
+    const commandBlocks: Record<number, string[]> = {
+      1: [
+        'brew install node',
+        'curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -\nsudo apt-get install -y nodejs',
+        'node --version',
+        'git clone <YOUR_GIT_URL>\ncd <YOUR_PROJECT_NAME>\nnpm install'
+      ],
+      2: [
+        'choco install mkcert',
+        'brew install mkcert',
+        'sudo apt install libnss3-tools\ncurl -JLO "https://dl.filippo.io/mkcert/latest?for=linux/amd64"\nchmod +x mkcert-v*-linux-amd64\nsudo mv mkcert-v*-linux-amd64 /usr/local/bin/mkcert',
+        'mkcert -install',
+        'mkdir certs\nmkcert -key-file certs/key.pem -cert-file certs/cert.pem localhost 192.168.1.100',
+        'mkcert -CAROOT'
+      ],
+      3: [
+        'npm run build',
+        'node serve.cjs',
+        'npm install -g pm2\npm2 start serve.cjs --name buildforge\npm2 save\npm2 startup'
+      ],
+      4: [
+        'netsh advfirewall firewall add rule name="BuildForge HTTPS" dir=in action=allow protocol=tcp localport=8443\nnetsh advfirewall firewall add rule name="BuildForge HTTP" dir=in action=allow protocol=tcp localport=8080',
+        'sudo ufw allow 8443/tcp\nsudo ufw allow 8080/tcp'
+      ],
+      5: [
+        'cd /path/to/buildforge\ngit pull\nnpm install\nnpm run build\npm2 restart buildforge',
+        'pm2 status\npm2 logs buildforge\npm2 monit',
+        'mkcert -key-file certs/key.pem -cert-file certs/cert.pem localhost NEW_IP'
+      ]
+    };
+
+    const detailedSteps = steps.map((s, i) => {
+      const cmds = commandBlocks[s.id] || [];
+      const cmdHtml = cmds.map(c => `<pre class="code">${c}</pre>`).join('');
+      return `
+        <div class="step" style="${i > 0 ? 'page-break-before:always;' : ''}">
+          <div class="step-header">
+            <span class="step-badge">Step ${s.id}</span>
+            <h2>${s.title}</h2>
+            <p class="subtitle">${s.subtitle}</p>
+          </div>
+          <div class="step-body">
+            ${s.id === 1 ? '<p>Install Node.js 18+ on the server machine. Download from nodejs.org (Windows), or use the commands below.</p>' : ''}
+            ${s.id === 2 ? '<p>HTTPS secures login cookies. Install mkcert, set up the local CA, and generate certificates for your LAN IP.</p>' : ''}
+            ${s.id === 3 ? '<p>Build for production, then start the server. Use PM2 for auto-restart on boot.</p>' : ''}
+            ${s.id === 4 ? '<p>Set a static LAN IP and open firewall ports so your team can access the app.</p>' : ''}
+            ${s.id === 5 ? '<p>Regular backups, updates, and server monitoring keep things running smoothly.</p>' : ''}
+            ${cmdHtml}
+            ${s.id === 4 ? '<table><thead><tr><th>Port</th><th>Protocol</th><th>Purpose</th></tr></thead><tbody><tr><td>8443</td><td>HTTPS</td><td>App (secure)</td></tr><tr><td>8080</td><td>HTTP</td><td>Redirects to HTTPS</td></tr></tbody></table>' : ''}
+            ${s.id === 5 ? '<h3>Maintenance Checklist</h3><ul><li>Weekly: Export data backup</li><li>Monthly: Update app &amp; dependencies</li><li>Quarterly: Review audit logs &amp; user access</li><li>Ensure server has internet (for cloud backend)</li></ul>' : ''}
+          </div>
+        </div>`;
+    }).join('');
+
+    pw.document.write(`<!DOCTYPE html><html><head><title>BuildForge Setup Guide</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Segoe UI','Helvetica Neue',Arial,sans-serif;color:#1a1a2e;padding:15mm 20mm;font-size:10pt;line-height:1.6}
+  h1{font-size:22pt;font-weight:900;text-align:center;margin-bottom:4px}
+  .header-sub{text-align:center;font-size:9pt;color:#666;margin-bottom:20px}
+  .step{margin-bottom:20px}
+  .step-header{margin-bottom:12px;border-bottom:2px solid #1a1a2e;padding-bottom:8px}
+  .step-badge{display:inline-block;background:#1a1a2e;color:#fff;font-size:8pt;font-weight:700;padding:3px 10px;border-radius:12px;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px}
+  h2{font-size:14pt;font-weight:800;margin-top:4px}
+  .subtitle{font-size:9pt;color:#666;margin-top:2px}
+  .step-body{padding:0 4px}
+  .step-body p{margin-bottom:10px;color:#444}
+  .step-body h3{font-size:11pt;font-weight:700;margin:14px 0 6px}
+  pre.code{background:#f4f4f5;border:1px solid #e4e4e7;border-radius:6px;padding:10px 14px;font-family:'Consolas','Monaco',monospace;font-size:8.5pt;margin:8px 0;white-space:pre-wrap;word-break:break-all}
+  table{width:100%;border-collapse:collapse;margin:10px 0}
+  th{background:#1a1a2e;color:#fff;font-size:8pt;font-weight:700;padding:6px 10px;text-align:left}
+  td{padding:5px 10px;font-size:9pt;border-bottom:1px solid #e4e4e7}
+  ul{margin:8px 0;padding-left:20px}
+  li{margin:4px 0;font-size:9pt}
+  .footer{margin-top:30px;padding-top:10px;border-top:1px solid #ddd;font-size:7.5pt;color:#888;text-align:center}
+  @media print{body{padding:10mm 15mm}@page{size:A4;margin:10mm}}
+</style></head><body>
+  <h1>🏗️ BuildForge Setup Guide</h1>
+  <div class="header-sub">Self-Hosted LAN Server · Step-by-Step Instructions · ${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+  ${detailedSteps}
+  <div class="footer">BuildForge Engineering · Self-Hosting Setup Guide · Generated ${new Date().toLocaleString('en-GB')}</div>
+</body></html>`);
+    pw.document.close();
+    setTimeout(() => pw.print(), 300);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -260,16 +360,21 @@ export default function SetupGuide() {
             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
               <Construction size={20} className="text-primary-foreground" />
             </div>
-            <div>
+             <div>
               <h1 className="text-lg font-bold text-foreground">BuildForge Setup Guide</h1>
               <p className="text-xs text-muted-foreground">Self-hosted LAN server setup</p>
             </div>
           </div>
-          <Link to="/login">
-            <Button variant="outline" size="sm">
-              Skip to Login →
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={handlePrintPDF} className="gap-1.5">
+              <FileDown size={14} /> Export PDF
             </Button>
-          </Link>
+            <Link to="/login">
+              <Button variant="outline" size="sm">
+                Skip to Login →
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
 

@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -26,9 +27,36 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { action, data } = await req.json();
+    // Authenticate the user
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data, error: claimsError } = await supabase.auth.getClaims(token);
+    if (claimsError || !data?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { action, data: reqData } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    if (!LOVABLE_API_KEY) {
+      console.error("LOVABLE_API_KEY not configured");
+      return new Response(JSON.stringify({ error: "AI service unavailable" }), {
+        status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     let systemPrompt = "";
     let userPrompt = "";
@@ -50,28 +78,28 @@ Return a JSON response with this structure:
   "recoveryActions": [{"activity": "name", "action": "...", "priority": "high"}],
   "summary": "Brief overall analysis"
 }`;
-      userPrompt = `Analyze these construction activities:\n${JSON.stringify(data.activities, null, 2)}\n\nToday's date: ${new Date().toISOString().split('T')[0]}`;
+      userPrompt = `Analyze these construction activities:\n${JSON.stringify(reqData.activities, null, 2)}\n\nToday's date: ${new Date().toISOString().split('T')[0]}`;
     } else if (action === "schedule-optimize") {
       systemPrompt = `You are a construction scheduling optimizer. Given the activities, suggest optimizations to reduce project duration, level resources, and improve efficiency. Return practical, actionable suggestions.`;
-      userPrompt = `Optimize this schedule:\n${JSON.stringify(data.activities, null, 2)}`;
+      userPrompt = `Optimize this schedule:\n${JSON.stringify(reqData.activities, null, 2)}`;
     } else if (action === "module-suggest") {
-      // Context-aware suggestions for any module
-      const moduleKey = data.module || "dashboard";
+      const moduleKey = reqData.module || "dashboard";
       systemPrompt = (MODULE_PROMPTS[moduleKey] || MODULE_PROMPTS.dashboard) +
         `\n\nYou are BuildForge AI. Analyze the provided data and give 3-5 smart, actionable suggestions. Be concise and data-driven. Format as markdown with bullet points. Reference specific items by their codes/IDs when possible.`;
-      userPrompt = `Here is the current ${moduleKey} data (${data.itemCount || 0} items):\n${JSON.stringify(data.moduleData?.slice(0, 50), null, 2)}\n\nProvide smart suggestions and insights for this module.`;
+      userPrompt = `Here is the current ${moduleKey} data (${reqData.itemCount || 0} items):\n${JSON.stringify(reqData.moduleData?.slice(0, 50), null, 2)}\n\nProvide smart suggestions and insights for this module.`;
     } else if (action === "module-chat") {
-      // Context-aware chat for any module
-      const moduleKey = data.module || "dashboard";
+      const moduleKey = reqData.module || "dashboard";
       systemPrompt = (MODULE_PROMPTS[moduleKey] || MODULE_PROMPTS.dashboard) +
         `\n\nYou are BuildForge AI, an expert construction project management assistant. You have access to the current module data. Be concise, practical, and data-driven. When analyzing data, reference specific items by their codes/IDs. Format responses with markdown.`;
-      const contextSnippet = data.moduleData?.slice(0, 30);
-      userPrompt = `Current module: ${moduleKey} (${data.itemCount || 0} items)\nModule data snapshot:\n${JSON.stringify(contextSnippet, null, 2)}\n\nUser question: ${data.message}`;
+      const contextSnippet = reqData.moduleData?.slice(0, 30);
+      userPrompt = `Current module: ${moduleKey} (${reqData.itemCount || 0} items)\nModule data snapshot:\n${JSON.stringify(contextSnippet, null, 2)}\n\nUser question: ${reqData.message}`;
     } else if (action === "general") {
       systemPrompt = `You are BuildForge AI, an expert construction project management assistant. Help with scheduling, BOQ analysis, cost control, safety, quality management, and all aspects of construction project management. Be concise, practical, and data-driven. When analyzing data, reference specific items by their codes/IDs.`;
-      userPrompt = data.message;
+      userPrompt = reqData.message;
     } else {
-      throw new Error(`Unknown action: ${action}`);
+      return new Response(JSON.stringify({ error: "Invalid request" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -103,7 +131,9 @@ Return a JSON response with this structure:
       }
       const t = await response.text();
       console.error("AI gateway error:", response.status, t);
-      throw new Error("AI gateway error");
+      return new Response(JSON.stringify({ error: "AI service error" }), {
+        status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const result = await response.json();
@@ -114,7 +144,7 @@ Return a JSON response with this structure:
     });
   } catch (e) {
     console.error("ai-assistant error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

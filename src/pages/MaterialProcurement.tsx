@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { esc } from '@/lib/htmlEscape';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -195,15 +196,15 @@ export default function MaterialProcurement() {
   @media print{body{padding:8mm 12mm}@page{size:A4 landscape;margin:8mm}}
 </style></head><body>
   <div class="header">
-    ${logo ? `<div class="header-logo"><img src="${logo}" /></div>` : ''}
-    <div class="company-name">${settings.companyName || 'BuildForge Engineering'}</div>
-    <div class="company-tagline">${settings.companyTagline || 'Construction Project Management'}</div>
-    <div class="company-contact">${[settings.companyAddress, settings.companyPhone, settings.companyEmail].filter(Boolean).join('  ·  ')}</div>
+     ${logo ? `<div class="header-logo"><img src="${esc(logo)}" /></div>` : ''}
+    <div class="company-name">${esc(settings.companyName || 'BuildForge Engineering')}</div>
+    <div class="company-tagline">${esc(settings.companyTagline || 'Construction Project Management')}</div>
+    <div class="company-contact">${[settings.companyAddress, settings.companyPhone, settings.companyEmail].filter(Boolean).map(esc).join('  ·  ')}</div>
     <div class="header-line"></div>
   </div>
   <div class="project-info">
-    <div><strong>Project:</strong> ${settings.projectName || 'Construction Project'} &nbsp;&nbsp; <strong>Client:</strong> ${settings.clientName || '—'} &nbsp;&nbsp; <strong>Contractor:</strong> ${settings.contractorName || settings.companyName || '—'}</div>
-    <div><strong>Contract No:</strong> ${settings.contractNo || '—'} &nbsp;&nbsp; <strong>Date:</strong> ${today} &nbsp;&nbsp; <strong>Ref:</strong> ${docRef}</div>
+    <div><strong>Project:</strong> ${esc(settings.projectName || 'Construction Project')} &nbsp;&nbsp; <strong>Client:</strong> ${esc(settings.clientName || '—')} &nbsp;&nbsp; <strong>Contractor:</strong> ${esc(settings.contractorName || settings.companyName || '—')}</div>
+    <div><strong>Contract No:</strong> ${esc(settings.contractNo || '—')} &nbsp;&nbsp; <strong>Date:</strong> ${esc(today)} &nbsp;&nbsp; <strong>Ref:</strong> ${esc(docRef)}</div>
   </div>
   <div class="report-title">Material Procurement Plan</div>
   <div class="report-subtitle">${materials.length} materials · NPR ${totalBudget.toLocaleString()} estimated budget · Generated ${new Date().toLocaleString('en-GB')}</div>
@@ -216,16 +217,16 @@ export default function MaterialProcurement() {
   <table>
     <thead><tr><th>#</th><th>Code</th><th>Description</th><th>Category</th><th>Qty (w/ waste)</th><th>Unit</th><th>Rate (NPR)</th><th>Total (NPR)</th><th>Priority</th><th>Lead</th><th>Week</th></tr></thead>
     <tbody>
-      ${materials.map((m, i) => `<tr>
+       ${materials.map((m, i) => `<tr>
         <td style="text-align:center;color:#888">${i + 1}</td>
-        <td style="font-family:monospace">${m.code}</td>
-        <td>${m.description}</td>
-        <td>${m.category}</td>
+        <td style="font-family:monospace">${esc(m.code)}</td>
+        <td>${esc(m.description)}</td>
+        <td>${esc(m.category)}</td>
         <td style="text-align:right;font-family:monospace">${m.totalWithWaste?.toLocaleString()}</td>
-        <td>${m.unit}</td>
+        <td>${esc(m.unit)}</td>
         <td style="text-align:right;font-family:monospace">${(m.unitRate || 0).toLocaleString()}</td>
         <td style="text-align:right;font-family:monospace">${(m.totalCost || 0).toLocaleString()}</td>
-        <td class="priority-${m.priority}" style="text-align:center">${m.priority}</td>
+        <td class="priority-${esc(m.priority)}" style="text-align:center">${esc(m.priority)}</td>
         <td style="text-align:center">${m.leadTimeDays}d</td>
         <td style="text-align:center">W${m.procurementWeek}</td>
       </tr>`).join('')}
@@ -238,8 +239,8 @@ export default function MaterialProcurement() {
     <div class="sig-block"><div class="sig-line">Approved By</div><div class="sig-role">Name / Date / Signature</div></div>
   </div>
   <div class="footer">
-    <div class="footer-left"><div>${settings.companyName || 'BuildForge Engineering'} — Confidential</div><div>Page 1 of 1 · ${docRef}</div></div>
-    ${stamp ? `<div class="footer-stamp"><img src="${stamp}" /></div>` : ''}
+     <div class="footer-left"><div>${esc(settings.companyName || 'BuildForge Engineering')} — Confidential</div><div>Page 1 of 1 · ${esc(docRef)}</div></div>
+    ${stamp ? `<div class="footer-stamp"><img src="${esc(stamp)}" /></div>` : ''}
   </div>
 </body></html>`);
     pw.document.close();

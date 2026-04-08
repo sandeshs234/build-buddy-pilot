@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { esc } from '@/lib/htmlEscape';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -84,15 +85,15 @@ export default function ProcurementDigest() {
     const pw = window.open('', '_blank');
     if (!pw) return;
 
-    const makeTable = (title: string, rows: TrackingItem[], showOverdue = false) => {
+     const makeTable = (title: string, rows: TrackingItem[], showOverdue = false) => {
       if (rows.length === 0) return `<p style="color:#888;font-size:8pt;margin:6px 0">No items</p>`;
-      return `<h3 style="font-size:10pt;font-weight:700;margin:10px 0 4px;color:#1a1a2e">${title} (${rows.length})</h3>
+      return `<h3 style="font-size:10pt;font-weight:700;margin:10px 0 4px;color:#1a1a2e">${esc(title)} (${rows.length})</h3>
       <table><thead><tr><th>Material</th><th>Supplier</th><th>PO #</th><th>Qty</th><th>Expected</th>${showOverdue ? '<th>Days Overdue</th>' : '<th>Status</th>'}<th>Cost (NPR)</th></tr></thead>
       <tbody>${rows.map(r => {
         const days = showOverdue ? differenceInDays(today, parseISO(r.expected_delivery)) : 0;
-        return `<tr><td>${r.material_description}</td><td>${r.supplier || '—'}</td><td style="font-family:monospace;font-size:7pt">${r.po_number || '—'}</td>
-        <td style="text-align:right">${r.required_qty}</td><td>${r.expected_delivery || '—'}</td>
-        ${showOverdue ? `<td style="text-align:center;color:#dc2626;font-weight:700">${days}d</td>` : `<td style="text-align:center">${r.status}</td>`}
+        return `<tr><td>${esc(r.material_description)}</td><td>${esc(r.supplier || '—')}</td><td style="font-family:monospace;font-size:7pt">${esc(r.po_number || '—')}</td>
+        <td style="text-align:right">${r.required_qty}</td><td>${esc(r.expected_delivery || '—')}</td>
+        ${showOverdue ? `<td style="text-align:center;color:#dc2626;font-weight:700">${days}d</td>` : `<td style="text-align:center">${esc(r.status)}</td>`}
         <td style="text-align:right;font-family:monospace">${(r.total_cost || 0).toLocaleString()}</td></tr>`;
       }).join('')}</tbody></table>`;
     };

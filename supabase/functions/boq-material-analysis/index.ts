@@ -286,7 +286,9 @@ serve(async (req) => {
       }];
       toolChoice = { type: "function", function: { name: "generate_boq" } };
     } else {
-      throw new Error(`Unknown action: ${action}`);
+      return new Response(JSON.stringify({ error: "Invalid request" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const body: any = {
@@ -342,7 +344,7 @@ serve(async (req) => {
     });
   } catch (e) {
     console.error("boq-material-analysis error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

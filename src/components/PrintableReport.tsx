@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Printer } from 'lucide-react';
+import { esc } from '@/lib/htmlEscape';
 
 interface PrintableReportProps {
   title: string;
@@ -75,37 +76,37 @@ export default function PrintableReport({ title, columns, data, projectName }: P
   }
 </style></head><body>
   <div class="header">
-    ${logo ? `<div class="header-logo"><img src="${logo}" /></div>` : ''}
-    <div class="company-name">${settings.companyName || 'BuildForge Engineering'}</div>
-    <div class="company-tagline">${settings.companyTagline || 'Construction Project Management'}</div>
-    <div class="company-contact">${[settings.companyAddress, settings.companyPhone, settings.companyEmail].filter(Boolean).join('  ·  ')}</div>
+     ${logo ? `<div class="header-logo"><img src="${esc(logo)}" /></div>` : ''}
+    <div class="company-name">${esc(settings.companyName || 'BuildForge Engineering')}</div>
+    <div class="company-tagline">${esc(settings.companyTagline || 'Construction Project Management')}</div>
+    <div class="company-contact">${[settings.companyAddress, settings.companyPhone, settings.companyEmail].filter(Boolean).map(esc).join('  ·  ')}</div>
     <div class="header-line"></div>
   </div>
   
   <div class="project-info">
     <div class="left">
-      <div><strong>Project:</strong> ${settings.projectName || projectName || 'Construction Project'}</div>
-      <div><strong>Client:</strong> ${settings.clientName || '—'}</div>
-      <div><strong>Contractor:</strong> ${settings.contractorName || settings.companyName || '—'}</div>
+       <div><strong>Project:</strong> ${esc(settings.projectName || projectName || 'Construction Project')}</div>
+      <div><strong>Client:</strong> ${esc(settings.clientName || '—')}</div>
+      <div><strong>Contractor:</strong> ${esc(settings.contractorName || settings.companyName || '—')}</div>
     </div>
     <div class="right">
-      <div><strong>Contract No:</strong> ${settings.contractNo || '—'}</div>
-      <div><strong>Report Date:</strong> ${today}</div>
-      <div><strong>Doc Ref:</strong> ${docRef}</div>
+      <div><strong>Contract No:</strong> ${esc(settings.contractNo || '—')}</div>
+      <div><strong>Report Date:</strong> ${esc(today)}</div>
+      <div><strong>Doc Ref:</strong> ${esc(docRef)}</div>
     </div>
   </div>
   
-  <div class="report-title">${title}</div>
-  <div class="report-subtitle">Total Records: ${data.length} · Generated: ${new Date().toLocaleString('en-GB')}</div>
+   <div class="report-title">${esc(title)}</div>
+  <div class="report-subtitle">Total Records: ${data.length} · Generated: ${esc(new Date().toLocaleString('en-GB'))}</div>
   
   <table>
-    <thead><tr><th style="width:30px">#</th>${columns.map(c => `<th>${c.label}</th>`).join('')}</tr></thead>
-    <tbody>${data.map((row, i) => `<tr><td style="text-align:center;color:#888;font-size:7pt">${i + 1}</td>${columns.map(c => `<td>${row[c.key] ?? '—'}</td>`).join('')}</tr>`).join('')}</tbody>
+     <thead><tr><th style="width:30px">#</th>${columns.map(c => `<th>${esc(c.label)}</th>`).join('')}</tr></thead>
+    <tbody>${data.map((row, i) => `<tr><td style="text-align:center;color:#888;font-size:7pt">${i + 1}</td>${columns.map(c => `<td>${esc(row[c.key] ?? '—')}</td>`).join('')}</tr>`).join('')}</tbody>
   </table>
   
   <div class="summary-row">
     <span>End of Report — ${data.length} record(s)</span>
-    <span>${settings.companyName || 'BuildForge Engineering'}</span>
+    <span>${esc(settings.companyName || 'BuildForge Engineering')}</span>
   </div>
   
   <div class="signatures">
@@ -115,11 +116,11 @@ export default function PrintableReport({ title, columns, data, projectName }: P
   </div>
   
   <div class="footer">
-    <div class="footer-left">
-      <div>${settings.companyName || 'BuildForge Engineering'} — Confidential</div>
-      <div>Page 1 of 1 · ${docRef}</div>
+     <div class="footer-left">
+      <div>${esc(settings.companyName || 'BuildForge Engineering')} — Confidential</div>
+      <div>Page 1 of 1 · ${esc(docRef)}</div>
     </div>
-    ${stamp ? `<div class="footer-stamp"><img src="${stamp}" /></div>` : ''}
+    ${stamp ? `<div class="footer-stamp"><img src="${esc(stamp)}" /></div>` : ''}
   </div>
 </body></html>`);
     printWindow.document.close();
