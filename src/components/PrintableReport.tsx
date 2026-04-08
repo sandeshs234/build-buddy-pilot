@@ -85,14 +85,14 @@ export default function PrintableReport({ title, columns, data, projectName }: P
   
   <div class="project-info">
     <div class="left">
-      <div><strong>Project:</strong> ${settings.projectName || projectName || 'Construction Project'}</div>
-      <div><strong>Client:</strong> ${settings.clientName || '—'}</div>
-      <div><strong>Contractor:</strong> ${settings.contractorName || settings.companyName || '—'}</div>
+       <div><strong>Project:</strong> ${esc(settings.projectName || projectName || 'Construction Project')}</div>
+      <div><strong>Client:</strong> ${esc(settings.clientName || '—')}</div>
+      <div><strong>Contractor:</strong> ${esc(settings.contractorName || settings.companyName || '—')}</div>
     </div>
     <div class="right">
-      <div><strong>Contract No:</strong> ${settings.contractNo || '—'}</div>
-      <div><strong>Report Date:</strong> ${today}</div>
-      <div><strong>Doc Ref:</strong> ${docRef}</div>
+      <div><strong>Contract No:</strong> ${esc(settings.contractNo || '—')}</div>
+      <div><strong>Report Date:</strong> ${esc(today)}</div>
+      <div><strong>Doc Ref:</strong> ${esc(docRef)}</div>
     </div>
   </div>
   
