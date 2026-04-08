@@ -196,15 +196,15 @@ export default function MaterialProcurement() {
   @media print{body{padding:8mm 12mm}@page{size:A4 landscape;margin:8mm}}
 </style></head><body>
   <div class="header">
-    ${logo ? `<div class="header-logo"><img src="${logo}" /></div>` : ''}
-    <div class="company-name">${settings.companyName || 'BuildForge Engineering'}</div>
-    <div class="company-tagline">${settings.companyTagline || 'Construction Project Management'}</div>
-    <div class="company-contact">${[settings.companyAddress, settings.companyPhone, settings.companyEmail].filter(Boolean).join('  ·  ')}</div>
+     ${logo ? `<div class="header-logo"><img src="${esc(logo)}" /></div>` : ''}
+    <div class="company-name">${esc(settings.companyName || 'BuildForge Engineering')}</div>
+    <div class="company-tagline">${esc(settings.companyTagline || 'Construction Project Management')}</div>
+    <div class="company-contact">${[settings.companyAddress, settings.companyPhone, settings.companyEmail].filter(Boolean).map(esc).join('  ·  ')}</div>
     <div class="header-line"></div>
   </div>
   <div class="project-info">
-    <div><strong>Project:</strong> ${settings.projectName || 'Construction Project'} &nbsp;&nbsp; <strong>Client:</strong> ${settings.clientName || '—'} &nbsp;&nbsp; <strong>Contractor:</strong> ${settings.contractorName || settings.companyName || '—'}</div>
-    <div><strong>Contract No:</strong> ${settings.contractNo || '—'} &nbsp;&nbsp; <strong>Date:</strong> ${today} &nbsp;&nbsp; <strong>Ref:</strong> ${docRef}</div>
+    <div><strong>Project:</strong> ${esc(settings.projectName || 'Construction Project')} &nbsp;&nbsp; <strong>Client:</strong> ${esc(settings.clientName || '—')} &nbsp;&nbsp; <strong>Contractor:</strong> ${esc(settings.contractorName || settings.companyName || '—')}</div>
+    <div><strong>Contract No:</strong> ${esc(settings.contractNo || '—')} &nbsp;&nbsp; <strong>Date:</strong> ${esc(today)} &nbsp;&nbsp; <strong>Ref:</strong> ${esc(docRef)}</div>
   </div>
   <div class="report-title">Material Procurement Plan</div>
   <div class="report-subtitle">${materials.length} materials · NPR ${totalBudget.toLocaleString()} estimated budget · Generated ${new Date().toLocaleString('en-GB')}</div>
