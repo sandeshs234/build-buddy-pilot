@@ -1120,15 +1120,15 @@ export function ReportsPage() {
     const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     const docRef = `COMPILED-${Date.now().toString(36).toUpperCase()}`;
 
-    const buildTable = (section: typeof sections[0]) => `
+     const buildTable = (section: typeof sections[0]) => `
       <div class="report-section" style="page-break-before: always;">
-        <div class="report-title">${section.title}</div>
-        <div class="report-subtitle">Total Records: ${section.data.length} · Generated: ${new Date().toLocaleString('en-GB')}</div>
+        <div class="report-title">${esc(section.title)}</div>
+        <div class="report-subtitle">Total Records: ${section.data.length} · Generated: ${esc(new Date().toLocaleString('en-GB'))}</div>
         <table>
-          <thead><tr><th style="width:30px">#</th>${section.columns.map(c => `<th>${c.label}</th>`).join('')}</tr></thead>
-          <tbody>${section.data.map((row, i) => `<tr><td style="text-align:center;color:#888;font-size:7pt">${i + 1}</td>${section.columns.map(c => `<td>${row[c.key] ?? '—'}</td>`).join('')}</tr>`).join('')}</tbody>
+          <thead><tr><th style="width:30px">#</th>${section.columns.map(c => `<th>${esc(c.label)}</th>`).join('')}</tr></thead>
+          <tbody>${section.data.map((row, i) => `<tr><td style="text-align:center;color:#888;font-size:7pt">${i + 1}</td>${section.columns.map(c => `<td>${esc(row[c.key] ?? '—')}</td>`).join('')}</tr>`).join('')}</tbody>
         </table>
-        <div class="summary-row"><span>End of ${section.title} — ${section.data.length} record(s)</span></div>
+        <div class="summary-row"><span>End of ${esc(section.title)} — ${section.data.length} record(s)</span></div>
       </div>`;
 
     const printWindow = window.open('', '_blank');
