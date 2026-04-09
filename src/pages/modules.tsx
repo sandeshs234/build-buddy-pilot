@@ -750,6 +750,7 @@ function GenericModule({ title, description, fields, guideKey }: { title: string
     <>
       <ModulePage
         title={title}
+        guideKey={guideKey || title}
         description={`${description} · ${data.length} records`}
         columns={fields.map(f => ({ key: f.key, label: f.label }))}
         data={data as { id: string }[]}
