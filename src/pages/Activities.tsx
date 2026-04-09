@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useProjectData } from '@/context/ProjectDataContext';
+import ModuleGuide from '@/components/ModuleGuide';
+import { moduleGuides } from '@/data/moduleGuides';
 import { Activity } from '@/types/construction';
 import GanttChart from '@/components/GanttChart';
 import CPMDiagram from '@/components/CPMDiagram';
