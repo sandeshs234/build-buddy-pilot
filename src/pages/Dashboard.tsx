@@ -1,4 +1,6 @@
 import { useNavigate } from 'react-router-dom';
+import ModuleGuide from '@/components/ModuleGuide';
+import { moduleGuides } from '@/data/moduleGuides';
 import StatCard from '@/components/StatCard';
 import { useProjectData } from '@/context/ProjectDataContext';
 import { useAuth } from '@/context/AuthContext';
@@ -71,7 +73,7 @@ export default function Dashboard() {
 
   return (
     <div>
-      {/* Header */}
+      <ModuleGuide moduleName="Dashboard" description={moduleGuides.Dashboard.description} steps={moduleGuides.Dashboard.steps} />
       <div className="page-header flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">{projectInfo.name}</h1>

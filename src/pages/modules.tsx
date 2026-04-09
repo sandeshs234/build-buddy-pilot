@@ -147,7 +147,7 @@ export function InventoryPage() {
         ) : null;
       })()}
       <ModulePage
-        title="Inventory"
+        title="Inventory" guideKey="Inventory"
         description={`Track stock levels, receipts, and issues · ${data.length} items`}
         columns={[
           { key: 'code', label: 'Code', render: i => <span className="font-mono text-xs font-medium">{i.code}</span> },
@@ -235,7 +235,7 @@ export function ManpowerPage() {
   return (
     <>
       <ModulePage
-        title="Daily Manpower"
+        title="Daily Manpower" guideKey="Daily Manpower"
         description={`Track labor by trade and location · ${data.length} entries`}
         columns={[
           { key: 'date', label: 'Date' },
@@ -321,7 +321,7 @@ export function EquipmentPage() {
   return (
     <>
       <ModulePage
-        title="Equipment Log"
+        title="Equipment Log" guideKey="Equipment"
         description={`Record equipment usage, hours, fuel · ${data.length} entries`}
         columns={[
           { key: 'date', label: 'Date' },
@@ -420,7 +420,7 @@ export function SafetyPage() {
   return (
     <>
       <ModulePage
-        title="Safety Incidents"
+        title="Safety Incidents" guideKey="Safety"
         description={`Record incidents, near-misses, and observations · ${data.length} records`}
         columns={[
           { key: 'date', label: 'Date' },
@@ -493,7 +493,7 @@ export function DelaysPage() {
   return (
     <>
       <ModulePage
-        title="Delays Register"
+        title="Delays Register" guideKey="Delays"
         description={`Track delays, causes, and recovery · ${data.length} entries`}
         columns={[
           { key: 'date', label: 'Date' },
@@ -633,7 +633,7 @@ export function PurchaseOrdersPage() {
   return (
     <>
       <ModulePage
-        title="Purchase Orders"
+        title="Purchase Orders" guideKey="Purchase Orders"
         description={`Track POs, suppliers, and delivery · ${data.length} orders`}
         columns={[
           { key: 'poNo', label: 'PO No.', render: i => <span className="font-mono text-xs font-medium">{i.poNo}</span> },
@@ -713,7 +713,7 @@ export function PurchaseOrdersPage() {
 }
 
 // ─── Generic Module (for remaining tabs) ───
-function GenericModule({ title, description, fields }: { title: string; description: string; fields: { key: string; label: string; type?: string; options?: { value: string; label: string }[] }[] }) {
+function GenericModule({ title, description, fields, guideKey }: { title: string; description: string; fields: { key: string; label: string; type?: string; options?: { value: string; label: string }[] }[]; guideKey?: string }) {
   const [data, setData] = useState<Record<string, any>[]>([]);
   const [history, setHistory] = useState<Record<string, any>[][]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -750,6 +750,7 @@ function GenericModule({ title, description, fields }: { title: string; descript
     <>
       <ModulePage
         title={title}
+        guideKey={guideKey || title}
         description={`${description} · ${data.length} records`}
         columns={fields.map(f => ({ key: f.key, label: f.label }))}
         data={data as { id: string }[]}
@@ -794,7 +795,7 @@ function GenericModule({ title, description, fields }: { title: string; descript
 // ─── Daily Quantity (linked to BOQ) ───
 export function DailyQuantityPage() {
   const { boqItems } = useProjectData();
-  return <GenericModule title="Daily Quantity" description="Enter executed quantities per BOQ item" fields={[
+  return <GenericModule title="Daily Quantity" guideKey="Daily Quantity" description="Enter executed quantities per BOQ item" fields={[
     { key: 'date', label: 'Date', type: 'date' },
     { key: 'boqCode', label: 'BOQ Code', options: boqItems.map(b => ({ value: b.code, label: `${b.code} – ${b.description}` })) },
     { key: 'description', label: 'Description' },
@@ -810,7 +811,7 @@ export function FuelLogPage() {
   const { equipment } = useProjectData();
   const equipmentOptions = equipment.map(e => ({ value: `${e.eqId} - ${e.equipmentName}`, label: `${e.eqId} - ${e.equipmentName}` }));
 
-  return <GenericModule title="Fuel Log" description="Track fuel receipts, issues, and balance" fields={[
+  return <GenericModule title="Fuel Log" guideKey="Fuel Log" description="Track fuel receipts, issues, and balance" fields={[
     { key: 'date', label: 'Date', type: 'date' },
     { key: 'type', label: 'Fuel Type', options: [{ value: 'diesel', label: 'Diesel' }, { value: 'petrol', label: 'Petrol' }, { value: 'lpg', label: 'LPG' }] },
     { key: 'receipt', label: 'Receipt (L)', type: 'number' },
@@ -821,19 +822,19 @@ export function FuelLogPage() {
   ]} />;
 }
 
-export const BillsPage = () => <GenericModule title="Bills" description="Record supplier bills with payment status" fields={[
+export const BillsPage = () => <GenericModule title="Bills" guideKey="Bills" description="Record supplier bills with payment status" fields={[
   { key: 'billNo', label: 'Bill No.' }, { key: 'date', label: 'Date', type: 'date' }, { key: 'supplier', label: 'Supplier' },
   { key: 'poRef', label: 'PO Ref' }, { key: 'amount', label: 'Amount', type: 'number' },
   { key: 'status', label: 'Status', options: [{ value: 'pending', label: 'Pending' }, { value: 'approved', label: 'Approved' }, { value: 'paid', label: 'Paid' }, { value: 'rejected', label: 'Rejected' }] },
   { key: 'remarks', label: 'Remarks' },
 ]} />;
 
-export const StaffPage = () => <GenericModule title="Key Staff" description="Project personnel – engineers, managers, accountants" fields={[
+export const StaffPage = () => <GenericModule title="Key Staff" guideKey="Key Staff" description="Project personnel – engineers, managers, accountants" fields={[
   { key: 'name', label: 'Name' }, { key: 'role', label: 'Role' }, { key: 'contact', label: 'Contact' },
   { key: 'department', label: 'Department' }, { key: 'responsibility', label: 'Responsibility' }, { key: 'joinDate', label: 'Join Date', type: 'date' },
 ]} />;
 
-export const QualityPage = () => <GenericModule title="Quality (ITP/NCR)" description="Inspection test plans and non-conformance reports" fields={[
+export const QualityPage = () => <GenericModule title="Quality (ITP/NCR)" guideKey="Quality (ITP/NCR)" description="Inspection test plans and non-conformance reports" fields={[
   { key: 'testId', label: 'Test ID' }, { key: 'date', label: 'Date', type: 'date' }, { key: 'location', label: 'Location' },
   { key: 'type', label: 'Type', options: [{ value: 'ITP', label: 'ITP' }, { value: 'NCR', label: 'NCR' }, { value: 'MIR', label: 'MIR' }] },
   { key: 'spec', label: 'Specification' },
@@ -842,7 +843,7 @@ export const QualityPage = () => <GenericModule title="Quality (ITP/NCR)" descri
   { key: 'testedBy', label: 'Tested By' },
 ]} />;
 
-export const ConcreteLogPage = () => <GenericModule title="Concrete Pour" description="Daily pour cards with slump, cubes, weather" fields={[
+export const ConcreteLogPage = () => <GenericModule title="Concrete Pour" guideKey="Concrete Pour" description="Daily pour cards with slump, cubes, weather" fields={[
   { key: 'date', label: 'Date', type: 'date' },
   { key: 'location', label: 'Location' },
   { key: 'grade', label: 'Concrete Grade', options: CONCRETE_GRADES.map(g => ({ value: g, label: g })) },
@@ -864,7 +865,7 @@ export const ConcreteLogPage = () => <GenericModule title="Concrete Pour" descri
   { key: 'supervisor', label: 'Supervisor' },
 ]} />;
 
-export const WeldingPage = () => <GenericModule title="Welding Log" description="Daily welding reports with NDT results" fields={[
+export const WeldingPage = () => <GenericModule title="Welding Log" guideKey="Welding" description="Daily welding reports with NDT results" fields={[
   { key: 'date', label: 'Date', type: 'date' }, { key: 'location', label: 'Location' }, { key: 'welderName', label: 'Welder' },
   { key: 'welderId', label: 'Welder ID' }, { key: 'joints', label: 'Joint Type' }, { key: 'numJoints', label: 'No. Joints', type: 'number' },
   { key: 'ndtReq', label: 'NDT Required', options: [{ value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }] },
@@ -872,13 +873,13 @@ export const WeldingPage = () => <GenericModule title="Welding Log" description=
   { key: 'inspector', label: 'Inspector' },
 ]} />;
 
-export const ToolsPage = () => <GenericModule title="Tools" description="Tool issuance, return tracking, and condition" fields={[
+export const ToolsPage = () => <GenericModule title="Tools" guideKey="Tools" description="Tool issuance, return tracking, and condition" fields={[
   { key: 'toolId', label: 'Tool ID' }, { key: 'description', label: 'Description' }, { key: 'issuedTo', label: 'Issued To' },
   { key: 'dateIssued', label: 'Date Issued', type: 'date' }, { key: 'expReturn', label: 'Expected Return', type: 'date' }, { key: 'actReturn', label: 'Actual Return', type: 'date' },
   { key: 'condition', label: 'Condition', options: [{ value: 'good', label: 'Good' }, { value: 'fair', label: 'Fair' }, { value: 'poor', label: 'Poor' }, { value: 'damaged', label: 'Damaged' }] },
 ]} />;
 
-export const SubcontractorsPage = () => <GenericModule title="Subcontractors" description="Track daily progress and cumulative completion" fields={[
+export const SubcontractorsPage = () => <GenericModule title="Subcontractors" guideKey="Subcontractors" description="Track daily progress and cumulative completion" fields={[
   { key: 'name', label: 'Name' }, { key: 'scope', label: 'Scope' }, { key: 'contractValue', label: 'Contract Value', type: 'number' },
   { key: 'date', label: 'Date', type: 'date' }, { key: 'manpower', label: 'Manpower', type: 'number' }, { key: 'progress', label: 'Daily Progress' },
   { key: 'cumulative', label: 'Cumulative %', type: 'number' }, { key: 'supervisor', label: 'Supervisor' },

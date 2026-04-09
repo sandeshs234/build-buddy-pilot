@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useProjectData } from '@/context/ProjectDataContext';
+import ModuleGuide from '@/components/ModuleGuide';
+import { moduleGuides } from '@/data/moduleGuides';
 import { Activity } from '@/types/construction';
 import GanttChart from '@/components/GanttChart';
 import CPMDiagram from '@/components/CPMDiagram';
@@ -75,6 +77,7 @@ export default function Activities() {
 
   return (
     <div>
+      <ModuleGuide moduleName="Activities" description={moduleGuides.Activities.description} steps={moduleGuides.Activities.steps} />
       <div className="page-header flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Activities (CPM)</h1>

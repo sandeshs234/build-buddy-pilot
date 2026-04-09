@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Pencil, Trash2, Plus, Download } from 'lucide-react';
 import * as XLSX from '@e965/xlsx';
 import { toast } from '@/hooks/use-toast';
+import ModuleGuide from '@/components/ModuleGuide';
+import { moduleGuides } from '@/data/moduleGuides';
 
 interface Column<T> {
   key: string;
@@ -21,11 +23,13 @@ interface ModulePageProps<T> {
   onDelete?: (item: T) => void;
   fileName?: string;
   extraToolbar?: React.ReactNode;
+  guideKey?: string;
 }
 
 export default function ModulePage<T extends { id: string }>({
-  title, description, columns, data, emptyMessage, onAdd, onEdit, onDelete, fileName, extraToolbar,
+  title, description, columns, data, emptyMessage, onAdd, onEdit, onDelete, fileName, extraToolbar, guideKey,
 }: ModulePageProps<T>) {
+  const guide = guideKey ? moduleGuides[guideKey] : undefined;
 
   const handleExport = () => {
     const wsData = data.map(row =>
@@ -40,6 +44,9 @@ export default function ModulePage<T extends { id: string }>({
 
   return (
     <div>
+      {guide && (
+        <ModuleGuide moduleName={guideKey || title} description={guide.description} steps={guide.steps} />
+      )}
       <div className="page-header flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">{title}</h1>
