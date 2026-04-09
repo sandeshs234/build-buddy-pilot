@@ -873,13 +873,13 @@ export const WeldingPage = () => <GenericModule title="Welding Log" guideKey="We
   { key: 'inspector', label: 'Inspector' },
 ]} />;
 
-export const ToolsPage = () => <GenericModule title="Tools" description="Tool issuance, return tracking, and condition" fields={[
+export const ToolsPage = () => <GenericModule title="Tools" guideKey="Tools" description="Tool issuance, return tracking, and condition" fields={[
   { key: 'toolId', label: 'Tool ID' }, { key: 'description', label: 'Description' }, { key: 'issuedTo', label: 'Issued To' },
   { key: 'dateIssued', label: 'Date Issued', type: 'date' }, { key: 'expReturn', label: 'Expected Return', type: 'date' }, { key: 'actReturn', label: 'Actual Return', type: 'date' },
   { key: 'condition', label: 'Condition', options: [{ value: 'good', label: 'Good' }, { value: 'fair', label: 'Fair' }, { value: 'poor', label: 'Poor' }, { value: 'damaged', label: 'Damaged' }] },
 ]} />;
 
-export const SubcontractorsPage = () => <GenericModule title="Subcontractors" description="Track daily progress and cumulative completion" fields={[
+export const SubcontractorsPage = () => <GenericModule title="Subcontractors" guideKey="Subcontractors" description="Track daily progress and cumulative completion" fields={[
   { key: 'name', label: 'Name' }, { key: 'scope', label: 'Scope' }, { key: 'contractValue', label: 'Contract Value', type: 'number' },
   { key: 'date', label: 'Date', type: 'date' }, { key: 'manpower', label: 'Manpower', type: 'number' }, { key: 'progress', label: 'Daily Progress' },
   { key: 'cumulative', label: 'Cumulative %', type: 'number' }, { key: 'supervisor', label: 'Supervisor' },
