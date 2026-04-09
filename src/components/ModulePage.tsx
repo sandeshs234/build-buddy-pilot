@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Pencil, Trash2, Plus, Download } from 'lucide-react';
 import * as XLSX from '@e965/xlsx';
 import { toast } from '@/hooks/use-toast';
+import ModuleGuide from '@/components/ModuleGuide';
+import { moduleGuides } from '@/data/moduleGuides';
 
 interface Column<T> {
   key: string;
@@ -21,6 +23,7 @@ interface ModulePageProps<T> {
   onDelete?: (item: T) => void;
   fileName?: string;
   extraToolbar?: React.ReactNode;
+  guideKey?: string;
 }
 
 export default function ModulePage<T extends { id: string }>({
