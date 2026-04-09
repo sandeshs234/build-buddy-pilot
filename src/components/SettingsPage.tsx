@@ -109,12 +109,18 @@ export default function SettingsPage() {
 
   return (
     <div>
+      <ModuleGuide moduleName="Settings" description={moduleGuides.Settings.description} steps={moduleGuides.Settings.steps} />
       <div className="page-header flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Project Settings</h1>
           <p className="text-sm text-muted-foreground mt-1">Company details, client/contractor info, logos and stamps</p>
         </div>
-        <Button onClick={save}><Save size={14} className="mr-1.5" /> Save Settings</Button>
+        <div className="flex items-center gap-2">
+          <Button variant="destructive" size="sm" onClick={() => setFreshStartOpen(true)}>
+            <Trash2 size={14} className="mr-1.5" /> Fresh Start
+          </Button>
+          <Button onClick={save}><Save size={14} className="mr-1.5" /> Save Settings</Button>
+        </div>
       </div>
 
       <Tabs defaultValue="company" className="space-y-4">
