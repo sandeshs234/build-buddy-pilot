@@ -184,7 +184,7 @@ export function InventoryPage() {
         fileName="Inventory"
         extraToolbar={
           <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
-            printBtn={<PrintableReport title="Inventory" guideKey="Inventory" columns={[
+            printBtn={<PrintableReport title="Inventory" columns={[
               { key: 'code', label: 'Code' }, { key: 'description', label: 'Description' }, { key: 'unit', label: 'Unit' },
               { key: 'opening', label: 'Opening' }, { key: 'receipts', label: 'Receipts' }, { key: 'issues', label: 'Issues' },
               { key: 'balance', label: 'Balance' }, { key: 'minLevel', label: 'Min Level' }, { key: 'location', label: 'Location' },
@@ -258,7 +258,7 @@ export function ManpowerPage() {
         fileName="Manpower"
         extraToolbar={
           <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
-            printBtn={<PrintableReport title="Daily Manpower" guideKey="Daily Manpower" columns={[
+            printBtn={<PrintableReport title="Daily Manpower" columns={[
               { key: 'date', label: 'Date' }, { key: 'location', label: 'Location' },
               { key: 'tradesText', label: 'Trades & Count' }, { key: 'total', label: 'Total' }, { key: 'supervisor', label: 'Supervisor' },
             ]} data={data.map(i => ({
@@ -348,7 +348,7 @@ export function EquipmentPage() {
         fileName="Equipment"
         extraToolbar={
           <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
-            printBtn={<PrintableReport title="Equipment Log" guideKey="Equipment" columns={[
+            printBtn={<PrintableReport title="Equipment Log" columns={[
               { key: 'date', label: 'Date' }, { key: 'eqId', label: 'Eq ID' }, { key: 'equipmentName', label: 'Equipment' },
               { key: 'operator', label: 'Operator' }, { key: 'ownership', label: 'Ownership' },
               { key: 'billingBasis', label: 'Billing' }, { key: 'rate', label: 'Rate' },
@@ -442,7 +442,7 @@ export function SafetyPage() {
         fileName="Safety"
         extraToolbar={
           <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
-            printBtn={<PrintableReport title="Safety Incidents" guideKey="Safety" columns={[
+            printBtn={<PrintableReport title="Safety Incidents" columns={[
               { key: 'date', label: 'Date' }, { key: 'type', label: 'Type' }, { key: 'location', label: 'Location' },
               { key: 'description', label: 'Description' }, { key: 'cause', label: 'Root Cause' },
               { key: 'preventive', label: 'Preventive Action' }, { key: 'reporter', label: 'Reporter' },
@@ -516,7 +516,7 @@ export function DelaysPage() {
         fileName="Delays"
         extraToolbar={
           <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
-            printBtn={<PrintableReport title="Delays Register" guideKey="Delays" columns={[
+            printBtn={<PrintableReport title="Delays Register" columns={[
               { key: 'date', label: 'Date' }, { key: 'activity', label: 'Activity' }, { key: 'description', label: 'Description' },
               { key: 'cause', label: 'Cause' }, { key: 'duration', label: 'Days' }, { key: 'impact', label: 'Impact' },
               { key: 'recovery', label: 'Recovery' }, { key: 'status', label: 'Status' },
@@ -661,7 +661,7 @@ export function PurchaseOrdersPage() {
               {generating ? <><RefreshCw size={14} className="mr-1 animate-spin" /> Generating...</> : <><ArrowDownToLine size={14} className="mr-1" /> Generate from Shortages</>}
             </Button>
             <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
-              printBtn={<PrintableReport title="Purchase Orders" guideKey="Purchase Orders" columns={[
+              printBtn={<PrintableReport title="Purchase Orders" columns={[
                 { key: 'poNo', label: 'PO No.' }, { key: 'date', label: 'Date' }, { key: 'supplier', label: 'Supplier' },
                 { key: 'itemCode', label: 'Item Code' }, { key: 'qty', label: 'Qty' }, { key: 'price', label: 'Amount' },
                 { key: 'status', label: 'Status' }, { key: 'remarks', label: 'Remarks' },
