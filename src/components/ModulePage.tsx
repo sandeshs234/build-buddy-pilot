@@ -44,6 +44,9 @@ export default function ModulePage<T extends { id: string }>({
 
   return (
     <div>
+      {guide && (
+        <ModuleGuide moduleName={guideKey || title} description={guide.description} steps={guide.steps} />
+      )}
       <div className="page-header flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">{title}</h1>
