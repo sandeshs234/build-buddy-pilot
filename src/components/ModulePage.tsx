@@ -27,8 +27,9 @@ interface ModulePageProps<T> {
 }
 
 export default function ModulePage<T extends { id: string }>({
-  title, description, columns, data, emptyMessage, onAdd, onEdit, onDelete, fileName, extraToolbar,
+  title, description, columns, data, emptyMessage, onAdd, onEdit, onDelete, fileName, extraToolbar, guideKey,
 }: ModulePageProps<T>) {
+  const guide = guideKey ? moduleGuides[guideKey] : undefined;
 
   const handleExport = () => {
     const wsData = data.map(row =>
