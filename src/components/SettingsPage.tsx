@@ -72,6 +72,7 @@ const defaultSettings: ProjectSettings = {
 };
 
 export default function SettingsPage() {
+  const [freshStartOpen, setFreshStartOpen] = useState(false);
   const [settings, setSettings] = useState<ProjectSettings>(() => {
     const saved = localStorage.getItem('buildforge-settings');
     return saved ? { ...defaultSettings, ...JSON.parse(saved) } : defaultSettings;
