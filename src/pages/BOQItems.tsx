@@ -182,6 +182,7 @@ export default function BOQItems() {
 
   return (
     <div>
+      <ModuleGuide moduleName="BOQ / Items" description={moduleGuides['BOQ / Items'].description} steps={moduleGuides['BOQ / Items'].steps} />
       <div className="page-header flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">BOQ / Item Master</h1>

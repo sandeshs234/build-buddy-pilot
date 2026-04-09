@@ -73,7 +73,7 @@ export default function Dashboard() {
 
   return (
     <div>
-      {/* Header */}
+      <ModuleGuide moduleName="Dashboard" description={moduleGuides.Dashboard.description} steps={moduleGuides.Dashboard.steps} />
       <div className="page-header flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">{projectInfo.name}</h1>
