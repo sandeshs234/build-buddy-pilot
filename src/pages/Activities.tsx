@@ -78,6 +78,7 @@ export default function Activities() {
   return (
     <div>
       <ModuleGuide moduleName="Activities" description={moduleGuides.Activities.description} steps={moduleGuides.Activities.steps} />
+      <div className="page-header flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Activities (CPM)</h1>
           <p className="text-sm text-muted-foreground mt-1">
