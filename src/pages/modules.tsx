@@ -713,7 +713,7 @@ export function PurchaseOrdersPage() {
 }
 
 // ─── Generic Module (for remaining tabs) ───
-function GenericModule({ title, description, fields }: { title: string; description: string; fields: { key: string; label: string; type?: string; options?: { value: string; label: string }[] }[] }) {
+function GenericModule({ title, description, fields, guideKey }: { title: string; description: string; fields: { key: string; label: string; type?: string; options?: { value: string; label: string }[] }[]; guideKey?: string }) {
   const [data, setData] = useState<Record<string, any>[]>([]);
   const [history, setHistory] = useState<Record<string, any>[][]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
