@@ -269,6 +269,7 @@ export default function SettingsPage() {
           <BackupRestore />
         </TabsContent>
       </Tabs>
+      <FreshStartDialog open={freshStartOpen} onOpenChange={setFreshStartOpen} />
     </div>
   );
 }
