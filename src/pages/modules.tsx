@@ -147,7 +147,7 @@ export function InventoryPage() {
         ) : null;
       })()}
       <ModulePage
-        title="Inventory"
+        title="Inventory" guideKey="Inventory"
         description={`Track stock levels, receipts, and issues · ${data.length} items`}
         columns={[
           { key: 'code', label: 'Code', render: i => <span className="font-mono text-xs font-medium">{i.code}</span> },
@@ -184,7 +184,7 @@ export function InventoryPage() {
         fileName="Inventory"
         extraToolbar={
           <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
-            printBtn={<PrintableReport title="Inventory" columns={[
+            printBtn={<PrintableReport title="Inventory" guideKey="Inventory" columns={[
               { key: 'code', label: 'Code' }, { key: 'description', label: 'Description' }, { key: 'unit', label: 'Unit' },
               { key: 'opening', label: 'Opening' }, { key: 'receipts', label: 'Receipts' }, { key: 'issues', label: 'Issues' },
               { key: 'balance', label: 'Balance' }, { key: 'minLevel', label: 'Min Level' }, { key: 'location', label: 'Location' },
@@ -235,7 +235,7 @@ export function ManpowerPage() {
   return (
     <>
       <ModulePage
-        title="Daily Manpower"
+        title="Daily Manpower" guideKey="Daily Manpower"
         description={`Track labor by trade and location · ${data.length} entries`}
         columns={[
           { key: 'date', label: 'Date' },
@@ -258,7 +258,7 @@ export function ManpowerPage() {
         fileName="Manpower"
         extraToolbar={
           <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
-            printBtn={<PrintableReport title="Daily Manpower" columns={[
+            printBtn={<PrintableReport title="Daily Manpower" guideKey="Daily Manpower" columns={[
               { key: 'date', label: 'Date' }, { key: 'location', label: 'Location' },
               { key: 'tradesText', label: 'Trades & Count' }, { key: 'total', label: 'Total' }, { key: 'supervisor', label: 'Supervisor' },
             ]} data={data.map(i => ({
@@ -321,7 +321,7 @@ export function EquipmentPage() {
   return (
     <>
       <ModulePage
-        title="Equipment Log"
+        title="Equipment Log" guideKey="Equipment"
         description={`Record equipment usage, hours, fuel · ${data.length} entries`}
         columns={[
           { key: 'date', label: 'Date' },
@@ -348,7 +348,7 @@ export function EquipmentPage() {
         fileName="Equipment"
         extraToolbar={
           <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
-            printBtn={<PrintableReport title="Equipment Log" columns={[
+            printBtn={<PrintableReport title="Equipment Log" guideKey="Equipment" columns={[
               { key: 'date', label: 'Date' }, { key: 'eqId', label: 'Eq ID' }, { key: 'equipmentName', label: 'Equipment' },
               { key: 'operator', label: 'Operator' }, { key: 'ownership', label: 'Ownership' },
               { key: 'billingBasis', label: 'Billing' }, { key: 'rate', label: 'Rate' },
@@ -420,7 +420,7 @@ export function SafetyPage() {
   return (
     <>
       <ModulePage
-        title="Safety Incidents"
+        title="Safety Incidents" guideKey="Safety"
         description={`Record incidents, near-misses, and observations · ${data.length} records`}
         columns={[
           { key: 'date', label: 'Date' },
@@ -442,7 +442,7 @@ export function SafetyPage() {
         fileName="Safety"
         extraToolbar={
           <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
-            printBtn={<PrintableReport title="Safety Incidents" columns={[
+            printBtn={<PrintableReport title="Safety Incidents" guideKey="Safety" columns={[
               { key: 'date', label: 'Date' }, { key: 'type', label: 'Type' }, { key: 'location', label: 'Location' },
               { key: 'description', label: 'Description' }, { key: 'cause', label: 'Root Cause' },
               { key: 'preventive', label: 'Preventive Action' }, { key: 'reporter', label: 'Reporter' },
@@ -493,7 +493,7 @@ export function DelaysPage() {
   return (
     <>
       <ModulePage
-        title="Delays Register"
+        title="Delays Register" guideKey="Delays"
         description={`Track delays, causes, and recovery · ${data.length} entries`}
         columns={[
           { key: 'date', label: 'Date' },
@@ -516,7 +516,7 @@ export function DelaysPage() {
         fileName="Delays"
         extraToolbar={
           <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
-            printBtn={<PrintableReport title="Delays Register" columns={[
+            printBtn={<PrintableReport title="Delays Register" guideKey="Delays" columns={[
               { key: 'date', label: 'Date' }, { key: 'activity', label: 'Activity' }, { key: 'description', label: 'Description' },
               { key: 'cause', label: 'Cause' }, { key: 'duration', label: 'Days' }, { key: 'impact', label: 'Impact' },
               { key: 'recovery', label: 'Recovery' }, { key: 'status', label: 'Status' },
@@ -633,7 +633,7 @@ export function PurchaseOrdersPage() {
   return (
     <>
       <ModulePage
-        title="Purchase Orders"
+        title="Purchase Orders" guideKey="Purchase Orders"
         description={`Track POs, suppliers, and delivery · ${data.length} orders`}
         columns={[
           { key: 'poNo', label: 'PO No.', render: i => <span className="font-mono text-xs font-medium">{i.poNo}</span> },
@@ -661,7 +661,7 @@ export function PurchaseOrdersPage() {
               {generating ? <><RefreshCw size={14} className="mr-1 animate-spin" /> Generating...</> : <><ArrowDownToLine size={14} className="mr-1" /> Generate from Shortages</>}
             </Button>
             <CrudToolbar canUndo={ops.canUndo} onUndo={ops.undo} onClear={ops.clearAll} dataLength={data.length}
-              printBtn={<PrintableReport title="Purchase Orders" columns={[
+              printBtn={<PrintableReport title="Purchase Orders" guideKey="Purchase Orders" columns={[
                 { key: 'poNo', label: 'PO No.' }, { key: 'date', label: 'Date' }, { key: 'supplier', label: 'Supplier' },
                 { key: 'itemCode', label: 'Item Code' }, { key: 'qty', label: 'Qty' }, { key: 'price', label: 'Amount' },
                 { key: 'status', label: 'Status' }, { key: 'remarks', label: 'Remarks' },
