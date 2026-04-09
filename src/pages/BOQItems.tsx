@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ModuleGuide from '@/components/ModuleGuide';
+import { moduleGuides } from '@/data/moduleGuides';
 import { useProjectData } from '@/context/ProjectDataContext';
 import { BOQItem } from '@/types/construction';
 import PrintableReport from '@/components/PrintableReport';
