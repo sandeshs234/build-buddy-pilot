@@ -4,10 +4,12 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Copy, Users, Shield, ShieldCheck, UserPlus, Check, X, Crown } from 'lucide-react';
+import { Plus, Copy, Users, Shield, ShieldCheck, UserPlus, Check, X, Crown, Pencil, Trash2 } from 'lucide-react';
+import ModuleGuide from '@/components/ModuleGuide';
+import { moduleGuides } from '@/data/moduleGuides';
 
 interface Project {
   id: string;
@@ -41,6 +43,9 @@ export default function ProjectManagement() {
   const [members, setMembers] = useState<Record<string, Member[]>>({});
   const [createOpen, setCreateOpen] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [editProject, setEditProject] = useState<Project | null>(null);
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [joinCode, setJoinCode] = useState('');
@@ -48,42 +53,25 @@ export default function ProjectManagement() {
 
   const fetchProjects = async () => {
     if (!user) return;
-    // Get projects where user is creator or member
     const { data: memberRows } = await (supabase as any)
-      .from('project_members')
-      .select('project_id')
-      .eq('user_id', user.id);
-
+      .from('project_members').select('project_id').eq('user_id', user.id);
     const projectIds = memberRows?.map((m: any) => m.project_id) || [];
-
     const { data: createdProjects } = await (supabase as any)
-      .from('projects')
-      .select('*')
-      .eq('created_by', user.id);
-
+      .from('projects').select('*').eq('created_by', user.id);
     const { data: memberProjects } = projectIds.length > 0
       ? await (supabase as any).from('projects').select('*').in('id', projectIds)
       : { data: [] };
-
     const all = [...(createdProjects || []), ...(memberProjects || [])];
     const unique = Array.from(new Map(all.map((p: Project) => [p.id, p])).values());
     setProjects(unique);
 
-    // Fetch members for each project
     for (const p of unique) {
       const { data: mems } = await (supabase as any)
-        .from('project_members')
-        .select('*')
-        .eq('project_id', p.id);
-
+        .from('project_members').select('*').eq('project_id', p.id);
       if (mems) {
-        // Fetch profiles for each member
         const userIds = mems.map((m: any) => m.user_id);
         const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, full_name, email')
-          .in('id', userIds);
-
+          .from('profiles').select('id, full_name, email').in('id', userIds);
         const enriched = mems.map((m: any) => ({
           ...m,
           profile: profiles?.find((pr) => pr.id === m.user_id),
@@ -102,17 +90,13 @@ export default function ProjectManagement() {
     const { data, error } = await (supabase as any)
       .from('projects')
       .insert({ name: newName, description: newDesc, connection_code: code, created_by: user.id })
-      .select()
-      .single();
-
+      .select().single();
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } else {
-      // Add creator as admin member
       await (supabase as any)
         .from('project_members')
         .insert({ project_id: data.id, user_id: user.id, role: 'admin', status: 'approved' });
-
       toast({ title: 'Project created!', description: `Connection code: ${code}` });
       setCreateOpen(false);
       setNewName('');
@@ -127,40 +111,28 @@ export default function ProjectManagement() {
     if (!user || !joinCode.trim()) return;
     setLoading(true);
     const { data: project } = await (supabase as any)
-      .from('projects')
-      .select('*')
-      .eq('connection_code', joinCode.toUpperCase().trim())
-      .single();
-
+      .from('projects').select('*').eq('connection_code', joinCode.toUpperCase().trim()).single();
     if (!project) {
       toast({ title: 'Invalid code', description: 'No project found with this code.', variant: 'destructive' });
     } else {
       const { error } = await (supabase as any)
         .from('project_members')
         .insert({ project_id: project.id, user_id: user.id, role: 'member', status: 'pending' });
-
       if (error?.code === '23505') {
         toast({ title: 'Already joined', description: 'You are already a member of this project.' });
       } else if (error) {
         toast({ title: 'Error', description: error.message, variant: 'destructive' });
       } else {
-        // Notify project admins about new join request
         const { data: adminMembers } = await (supabase as any)
-          .from('project_members')
-          .select('user_id')
-          .eq('project_id', project.id)
-          .in('role', ['admin', 'co_admin'])
-          .eq('status', 'approved');
-
+          .from('project_members').select('user_id')
+          .eq('project_id', project.id).in('role', ['admin', 'co_admin']).eq('status', 'approved');
         const userName = profile?.full_name || user.email || 'Someone';
         if (adminMembers) {
           for (const admin of adminMembers) {
             await (supabase as any).from('notifications').insert({
-              user_id: admin.user_id,
-              title: 'New Join Request',
+              user_id: admin.user_id, title: 'New Join Request',
               message: `${userName} requested to join "${project.name}"`,
-              type: 'join_request',
-              project_id: project.id,
+              type: 'join_request', project_id: project.id,
             });
           }
         }
@@ -173,15 +145,51 @@ export default function ProjectManagement() {
     setLoading(false);
   };
 
+  const handleEditProject = async () => {
+    if (!editProject || !newName.trim()) return;
+    setLoading(true);
+    const { error } = await (supabase as any)
+      .from('projects')
+      .update({ name: newName, description: newDesc })
+      .eq('id', editProject.id);
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Project updated' });
+      setEditOpen(false);
+      setEditProject(null);
+      await refreshMemberships();
+      fetchProjects();
+    }
+    setLoading(false);
+  };
+
+  const handleDeleteProject = async () => {
+    if (!editProject) return;
+    setLoading(true);
+    // Delete members first, then project
+    await (supabase as any).from('project_members').delete().eq('project_id', editProject.id);
+    await (supabase as any).from('data_changes').delete().eq('project_id', editProject.id);
+    await (supabase as any).from('notifications').delete().eq('project_id', editProject.id);
+    const { error } = await (supabase as any).from('projects').delete().eq('id', editProject.id);
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Project deleted', description: `"${editProject.name}" has been removed.` });
+      setDeleteOpen(false);
+      setEditProject(null);
+      await refreshMemberships();
+      fetchProjects();
+    }
+    setLoading(false);
+  };
+
   const approveMember = async (member: Member, projectName: string) => {
     await (supabase as any).from('project_members').update({ status: 'approved' }).eq('id', member.id);
-    // Notify the member
     await (supabase as any).from('notifications').insert({
-      user_id: member.user_id,
-      title: 'Request Approved ✅',
+      user_id: member.user_id, title: 'Request Approved ✅',
       message: `Your request to join "${projectName}" has been approved!`,
-      type: 'approved',
-      project_id: member.project_id,
+      type: 'approved', project_id: member.project_id,
     });
     toast({ title: 'Member approved' });
     fetchProjects();
@@ -189,13 +197,10 @@ export default function ProjectManagement() {
 
   const rejectMember = async (member: Member, projectName: string) => {
     await (supabase as any).from('project_members').update({ status: 'rejected' }).eq('id', member.id);
-    // Notify the member
     await (supabase as any).from('notifications').insert({
-      user_id: member.user_id,
-      title: 'Request Rejected',
+      user_id: member.user_id, title: 'Request Rejected',
       message: `Your request to join "${projectName}" was declined.`,
-      type: 'rejected',
-      project_id: member.project_id,
+      type: 'rejected', project_id: member.project_id,
     });
     toast({ title: 'Member rejected' });
     fetchProjects();
@@ -204,12 +209,10 @@ export default function ProjectManagement() {
   const toggleCoAdmin = async (member: Member, projectId: string) => {
     const projectMembers = members[projectId] || [];
     const coAdminCount = projectMembers.filter(m => m.role === 'co_admin').length;
-
     if (member.role === 'member' && coAdminCount >= 3) {
       toast({ title: 'Limit reached', description: 'Maximum 3 co-admins allowed.', variant: 'destructive' });
       return;
     }
-
     const newRole = member.role === 'co_admin' ? 'member' : 'co_admin';
     await (supabase as any).from('project_members').update({ role: newRole }).eq('id', member.id);
     toast({ title: `Role updated to ${newRole.replace('_', '-')}` });
@@ -229,8 +232,11 @@ export default function ProjectManagement() {
     }
   };
 
+  const guide = moduleGuides.Projects || { description: 'Create, edit, and manage your construction projects. Invite team members with connection codes.', steps: ['Create a new project or join an existing one with a connection code', 'Share the connection code with team members to invite them', 'Approve or reject pending join requests', 'Promote members to Co-Admin role (max 3 per project)', 'Edit project name/description or delete projects you created'] };
+
   return (
     <div className="space-y-6">
+      <ModuleGuide moduleName="Projects" description={guide.description} steps={guide.steps} />
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Projects</h1>
@@ -269,17 +275,36 @@ export default function ProjectManagement() {
                   <h3 className="text-lg font-semibold text-foreground">{project.name}</h3>
                   {project.description && <p className="text-sm text-muted-foreground mt-1">{project.description}</p>}
                 </div>
-                {(isAdmin || isCoAdmin) && (
-                  <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-1.5">
-                    <code className="text-sm font-mono font-bold text-foreground">{project.connection_code}</code>
-                    <button onClick={() => copyCode(project.connection_code)} className="text-muted-foreground hover:text-foreground">
-                      <Copy size={14} />
-                    </button>
-                  </div>
-                )}
+                <div className="flex items-center gap-2">
+                  {isAdmin && (
+                    <>
+                      <Button size="sm" variant="ghost" onClick={() => {
+                        setEditProject(project);
+                        setNewName(project.name);
+                        setNewDesc(project.description || '');
+                        setEditOpen(true);
+                      }}>
+                        <Pencil size={14} />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => {
+                        setEditProject(project);
+                        setDeleteOpen(true);
+                      }}>
+                        <Trash2 size={14} />
+                      </Button>
+                    </>
+                  )}
+                  {(isAdmin || isCoAdmin) && (
+                    <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-1.5">
+                      <code className="text-sm font-mono font-bold text-foreground">{project.connection_code}</code>
+                      <button onClick={() => copyCode(project.connection_code)} className="text-muted-foreground hover:text-foreground">
+                        <Copy size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Pending approvals */}
               {(isAdmin || isCoAdmin) && pendingMembers.length > 0 && (
                 <div className="bg-amber-500/10 border border-amber-300/30 rounded-lg p-3 space-y-2">
                   <h4 className="text-sm font-medium text-amber-700">Pending Approval ({pendingMembers.length})</h4>
@@ -302,7 +327,6 @@ export default function ProjectManagement() {
                 </div>
               )}
 
-              {/* Members */}
               <div className="space-y-2">
                 <h4 className="text-sm font-medium text-muted-foreground">Team Members ({approvedMembers.length})</h4>
                 <div className="grid gap-1.5">
@@ -337,24 +361,14 @@ export default function ProjectManagement() {
       {/* Create Project Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Create New Project</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Create New Project</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label>Project Name</Label>
-              <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Tower Block A" className="mt-1.5" />
-            </div>
-            <div>
-              <Label>Description (optional)</Label>
-              <Input value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="Brief description" className="mt-1.5" />
-            </div>
+            <div><Label>Project Name</Label><Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="e.g. Tower Block A" className="mt-1.5" /></div>
+            <div><Label>Description (optional)</Label><Input value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="Brief description" className="mt-1.5" /></div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
-            <Button onClick={createProject} disabled={loading || !newName.trim()}>
-              {loading ? 'Creating...' : 'Create Project'}
-            </Button>
+            <Button onClick={createProject} disabled={loading || !newName.trim()}>{loading ? 'Creating...' : 'Create Project'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -362,25 +376,46 @@ export default function ProjectManagement() {
       {/* Join Project Dialog */}
       <Dialog open={joinOpen} onOpenChange={setJoinOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Join a Project</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Join a Project</DialogTitle></DialogHeader>
           <div>
             <Label>Connection Code</Label>
-            <Input
-              value={joinCode}
-              onChange={e => setJoinCode(e.target.value.toUpperCase())}
-              placeholder="Enter 8-character code"
-              className="mt-1.5 font-mono text-center text-lg tracking-widest"
-              maxLength={8}
-            />
+            <Input value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase())} placeholder="Enter 8-character code" className="mt-1.5 font-mono text-center text-lg tracking-widest" maxLength={8} />
             <p className="text-xs text-muted-foreground mt-2">Ask your project admin for the connection code.</p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setJoinOpen(false)}>Cancel</Button>
-            <Button onClick={joinProject} disabled={loading || joinCode.length < 8}>
-              {loading ? 'Joining...' : 'Request to Join'}
-            </Button>
+            <Button onClick={joinProject} disabled={loading || joinCode.length < 8}>{loading ? 'Joining...' : 'Request to Join'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Project Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit Project</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div><Label>Project Name</Label><Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Project name" className="mt-1.5" /></div>
+            <div><Label>Description</Label><Input value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="Description" className="mt-1.5" /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancel</Button>
+            <Button onClick={handleEditProject} disabled={loading || !newName.trim()}>{loading ? 'Saving...' : 'Save Changes'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Project Dialog */}
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-destructive flex items-center gap-2"><Trash2 size={18} /> Delete Project</DialogTitle>
+            <DialogDescription>
+              This will permanently delete "{editProject?.name}" and remove all team members. Module data associated with this project will remain in the database but will no longer be accessible.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteProject} disabled={loading}>{loading ? 'Deleting...' : 'Delete Project'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

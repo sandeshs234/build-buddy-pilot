@@ -1,35 +1,12 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { Activity, BOQItem, InventoryItem, EquipmentEntry, SafetyIncident, DelayEntry, PurchaseOrder } from '@/types/construction';
-import { sampleActivities, sampleBOQ, sampleInventory, sampleEquipment, sampleSafety, sampleDelays, samplePOs } from '@/data/sampleData';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { offlineGet, offlineSet, offlineClearAll, isOnline, addToSyncQueue, onConnectivityChange, getSyncQueue, clearSyncQueue } from '@/lib/offlineStorage';
 
 const CACHE_KEY = 'buildforge_offline_cache';
 const STORAGE_KEY = 'buildforge_project_data';
-
-// ── Local storage helpers ──
-function loadState(): Record<string, any[]> {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return {};
-}
-
-function saveState(key: string, data: any[]) {
-  try {
-    const current = loadState();
-    current[key] = data;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
-  } catch {}
-}
-
-function getInitial<T>(key: string, fallback: T[]): T[] {
-  const stored = loadState();
-  if (key in stored) return stored[key] as T[];
-  return fallback;
-}
 
 // ── Table name mapping ──
 const TABLE_MAP: Record<string, string> = {
@@ -66,7 +43,7 @@ function toSnakeCase(key: string, item: any, userId: string, projectId: string |
       }
       continue;
     }
-    if (k === 'project_id') continue; // already set above
+    if (k === 'project_id') continue;
     result[map[k] || k] = v;
   }
   return result;
@@ -100,6 +77,17 @@ function createCrudOps<T extends { id: string }>(
   const syncToCloud = async (newData: T[]) => {
     if (!cloudSync) return;
     const { tableName, key, userId, projectId } = cloudSync;
+
+    // Save to IndexedDB always
+    const cacheKey = `${projectId || 'default'}_${key}`;
+    offlineSet(cacheKey, newData).catch(() => {});
+
+    if (!isOnline()) {
+      // Queue for later sync
+      addToSyncQueue({ tableName, key, data: newData.map(item => toSnakeCase(key, item, userId, projectId)), userId, projectId });
+      return;
+    }
+
     let deleteQuery = (supabase as any).from(tableName).delete().eq('user_id', userId);
     if (projectId) deleteQuery = deleteQuery.eq('project_id', projectId);
     await deleteQuery;
@@ -109,7 +97,6 @@ function createCrudOps<T extends { id: string }>(
     }
   };
 
-  // Submit to approval queue instead of direct write
   const submitForApproval = async (operation: 'insert' | 'update' | 'delete', item: T) => {
     if (!approvalMode || !approvalMode.projectId) return false;
     const snakeData = toSnakeCase(approvalMode.key, item, approvalMode.userId, approvalMode.projectId);
@@ -123,7 +110,6 @@ function createCrudOps<T extends { id: string }>(
       status: 'pending',
     });
 
-    // Notify project admins/co-admins
     const { data: admins } = await (supabase as any)
       .from('project_members')
       .select('user_id')
@@ -154,28 +140,14 @@ function createCrudOps<T extends { id: string }>(
 
   return {
     add: async (item: T) => {
-      if (needsApproval) {
-        await submitForApproval('insert', item);
-        return;
-      }
+      if (needsApproval) { await submitForApproval('insert', item); return; }
       pushHistory();
-      setData(prev => {
-        const next = [...prev, item];
-        if (cloudSync) syncToCloud(next);
-        return next;
-      });
+      setData(prev => { const next = [...prev, item]; if (cloudSync) syncToCloud(next); return next; });
     },
     update: async (item: T) => {
-      if (needsApproval) {
-        await submitForApproval('update', item);
-        return;
-      }
+      if (needsApproval) { await submitForApproval('update', item); return; }
       pushHistory();
-      setData(prev => {
-        const next = prev.map(i => i.id === item.id ? item : i);
-        if (cloudSync) syncToCloud(next);
-        return next;
-      });
+      setData(prev => { const next = prev.map(i => i.id === item.id ? item : i); if (cloudSync) syncToCloud(next); return next; });
     },
     save: async (item: T) => {
       if (needsApproval) {
@@ -192,29 +164,14 @@ function createCrudOps<T extends { id: string }>(
       });
     },
     remove: async (id: string) => {
-      if (needsApproval) {
-        const item = data.find(i => i.id === id);
-        if (item) await submitForApproval('delete', item);
-        return;
-      }
+      if (needsApproval) { const item = data.find(i => i.id === id); if (item) await submitForApproval('delete', item); return; }
       pushHistory();
-      setData(prev => {
-        const next = prev.filter(i => i.id !== id);
-        if (cloudSync) syncToCloud(next);
-        return next;
-      });
+      setData(prev => { const next = prev.filter(i => i.id !== id); if (cloudSync) syncToCloud(next); return next; });
     },
     bulkAdd: async (items: T[]) => {
-      if (needsApproval) {
-        for (const item of items) await submitForApproval('insert', item);
-        return;
-      }
+      if (needsApproval) { for (const item of items) await submitForApproval('insert', item); return; }
       pushHistory();
-      setData(prev => {
-        const next = [...prev, ...items];
-        if (cloudSync) syncToCloud(next);
-        return next;
-      });
+      setData(prev => { const next = [...prev, ...items]; if (cloudSync) syncToCloud(next); return next; });
     },
     setAll: (items: T[]) => {
       pushHistory();
@@ -226,7 +183,6 @@ function createCrudOps<T extends { id: string }>(
       pushHistory();
       setData([]);
       if (cloudSync) syncToCloud([]);
-      toast({ title: 'Cleared', description: 'All data cleared. Use Undo to restore.' });
     },
     undo: () => {
       if (history.length === 0) return;
@@ -240,17 +196,18 @@ function createCrudOps<T extends { id: string }>(
   };
 }
 
-// ── Hook: state with cloud persistence + local cache for offline ──
-function useDataState<T>(key: string, fallback: T[], userId: string | null, projectId: string | null) {
+// ── Hook: state with cloud persistence + IndexedDB for offline ──
+function useDataState<T>(key: string, userId: string | null, projectId: string | null) {
   const [data, setData] = useState<T[]>([]);
   const [history, setHistory] = useState<T[][]>([]);
   const [loaded, setLoaded] = useState(false);
 
-  // Load from cloud, cache locally for offline
   useEffect(() => {
-    if (userId) {
-      const tableName = TABLE_MAP[key];
-      if (!tableName) return;
+    const tableName = TABLE_MAP[key];
+    if (!tableName) { setLoaded(true); return; }
+    const cacheKey = `${projectId || 'default'}_${key}`;
+
+    if (userId && isOnline()) {
       setLoaded(false);
       let query = (supabase as any).from(tableName).select('*');
       if (projectId) {
@@ -258,34 +215,27 @@ function useDataState<T>(key: string, fallback: T[], userId: string | null, proj
       } else {
         query = query.eq('user_id', userId).is('project_id', null);
       }
-      query.then(({ data: rows, error }: any) => {
+      query.then(async ({ data: rows, error }: any) => {
         if (rows && !error) {
           const mapped = rows.map((r: any) => toCamelCase(key, r)) as T[];
           setData(mapped);
-          // Cache for offline
-          try {
-            const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
-            cache[`${projectId || 'default'}_${key}`] = mapped;
-            localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
-          } catch {}
+          // Cache to IndexedDB
+          offlineSet(cacheKey, mapped).catch(() => {});
         } else {
-          // Offline fallback: load from cache
-          try {
-            const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
-            const cached = cache[`${projectId || 'default'}_${key}`];
-            if (cached) {
-              setData(cached as T[]);
-            } else {
-              setData([]);
-            }
-          } catch {
-            setData([]);
-          }
+          // Fallback to IndexedDB
+          const cached = await offlineGet<T[]>(cacheKey);
+          setData(cached || []);
         }
         setLoaded(true);
       });
+    } else if (userId) {
+      // Offline: load from IndexedDB
+      offlineGet<T[]>(cacheKey).then(cached => {
+        setData(cached || []);
+        setLoaded(true);
+      }).catch(() => { setData([]); setLoaded(true); });
     } else {
-      setData(getInitial(key, fallback));
+      setData([]);
       setLoaded(true);
     }
   }, [key, userId, projectId]);
@@ -318,6 +268,9 @@ interface ProjectDataContextType {
   dailyQtyOps: ReturnType<typeof createCrudOps<any>>;
   isCloudMode: boolean;
   dataLoaded: boolean;
+  isOffline: boolean;
+  pendingSyncCount: number;
+  syncNow: () => Promise<void>;
 }
 
 const ProjectDataContext = createContext<ProjectDataContextType | null>(null);
@@ -326,8 +279,49 @@ export function ProjectDataProvider({ children }: { children: ReactNode }) {
   const { user, storageMode, setStorageMode, currentProjectId, canApprove } = useAuth();
   const userId = user?.id || null;
   const projectId = currentProjectId;
+  const [offline, setOffline] = useState(!isOnline());
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
 
-  // Auto-set to cloud if not set
+  // Listen for connectivity changes
+  useEffect(() => {
+    const unsub = onConnectivityChange((online) => {
+      setOffline(!online);
+      if (online) {
+        toast({ title: '🌐 Back Online', description: 'Syncing pending changes...' });
+        syncPendingChanges();
+      } else {
+        toast({ title: '📴 Offline Mode', description: 'Changes will be saved locally and synced when connection returns.' });
+      }
+    });
+    return unsub;
+  }, []);
+
+  // Check pending sync count
+  useEffect(() => {
+    getSyncQueue().then(q => setPendingSyncCount(q.length)).catch(() => {});
+  }, [offline]);
+
+  const syncPendingChanges = async () => {
+    if (!isOnline()) return;
+    const queue = await getSyncQueue();
+    if (queue.length === 0) return;
+    for (const item of queue) {
+      try {
+        let deleteQuery = (supabase as any).from(item.tableName).delete().eq('user_id', item.userId);
+        if (item.projectId) deleteQuery = deleteQuery.eq('project_id', item.projectId);
+        await deleteQuery;
+        if (item.data.length > 0) {
+          await (supabase as any).from(item.tableName).insert(item.data);
+        }
+      } catch (e) {
+        console.error('Sync failed for', item.tableName, e);
+      }
+    }
+    await clearSyncQueue();
+    setPendingSyncCount(0);
+    toast({ title: '✅ Sync Complete', description: `${queue.length} pending changes synced to server.` });
+  };
+
   useEffect(() => {
     if (user && storageMode === null) {
       setStorageMode('cloud');
@@ -341,29 +335,22 @@ export function ProjectDataProvider({ children }: { children: ReactNode }) {
     projectId,
   }) : () => undefined;
 
-  // Non-admin/co-admin users go through approval
   const approvalInfo = (key: string) => {
     if (!userId || canApprove) return undefined;
-    return {
-      enabled: true,
-      userId,
-      projectId,
-      tableName: TABLE_MAP[key],
-      key,
-    };
+    return { enabled: true, userId, projectId, tableName: TABLE_MAP[key], key };
   };
 
-  const act = useDataState<Activity>('activities', sampleActivities, userId, projectId);
-  const boq = useDataState<BOQItem>('boqItems', sampleBOQ, userId, projectId);
-  const inv = useDataState<InventoryItem>('inventory', sampleInventory, userId, projectId);
-  const eq = useDataState<EquipmentEntry>('equipment', sampleEquipment, userId, projectId);
-  const saf = useDataState<SafetyIncident>('safety', sampleSafety, userId, projectId);
-  const del = useDataState<DelayEntry>('delays', sampleDelays, userId, projectId);
-  const po = useDataState<PurchaseOrder>('purchaseOrders', samplePOs, userId, projectId);
-  const mp = useDataState<any>('manpower', [], userId, projectId);
-  const fl = useDataState<any>('fuelLog', [], userId, projectId);
-  const cp = useDataState<any>('concretePours', [], userId, projectId);
-  const dq = useDataState<any>('dailyQty', [], userId, projectId);
+  const act = useDataState<Activity>('activities', userId, projectId);
+  const boq = useDataState<BOQItem>('boqItems', userId, projectId);
+  const inv = useDataState<InventoryItem>('inventory', userId, projectId);
+  const eq = useDataState<EquipmentEntry>('equipment', userId, projectId);
+  const saf = useDataState<SafetyIncident>('safety', userId, projectId);
+  const del = useDataState<DelayEntry>('delays', userId, projectId);
+  const po = useDataState<PurchaseOrder>('purchaseOrders', userId, projectId);
+  const mp = useDataState<any>('manpower', userId, projectId);
+  const fl = useDataState<any>('fuelLog', userId, projectId);
+  const cp = useDataState<any>('concretePours', userId, projectId);
+  const dq = useDataState<any>('dailyQty', userId, projectId);
 
   const dataLoaded = act.loaded && boq.loaded;
 
@@ -392,6 +379,9 @@ export function ProjectDataProvider({ children }: { children: ReactNode }) {
     dailyQtyOps: createCrudOps(dq.data, dq.setData, dq.history, dq.setHistory, cloudSync('dailyQty'), approvalInfo('dailyQty')),
     isCloudMode: true,
     dataLoaded,
+    isOffline: offline,
+    pendingSyncCount,
+    syncNow: syncPendingChanges,
   };
 
   return (
