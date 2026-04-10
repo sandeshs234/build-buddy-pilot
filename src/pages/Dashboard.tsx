@@ -4,13 +4,14 @@ import { moduleGuides } from '@/data/moduleGuides';
 import StatCard from '@/components/StatCard';
 import { useProjectData } from '@/context/ProjectDataContext';
 import { useAuth } from '@/context/AuthContext';
-import { projectInfo } from '@/data/sampleData';
-import { CalendarClock, Users, AlertTriangle, TrendingUp, ShoppingCart, Package, Truck, CheckCircle2, Clock } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, CartesianGrid, Legend } from 'recharts';
+import { CalendarClock, Users, AlertTriangle, TrendingUp, ShoppingCart, Package, Truck, CheckCircle2, Clock, WifiOff, RefreshCw } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import DataApproval from '@/components/DataApproval';
 import MyPendingChanges from '@/components/MyPendingChanges';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 interface ProcTrackingItem {
   status: string;
@@ -21,18 +22,33 @@ interface ProcTrackingItem {
 }
 
 export default function Dashboard() {
-  const { activities, boqItems, manpower, delays, equipment, purchaseOrders } = useProjectData();
-  const { canApprove, currentProjectId } = useAuth();
+  const { activities, boqItems, manpower, delays, equipment, purchaseOrders, isOffline, pendingSyncCount, syncNow } = useProjectData();
+  const { canApprove, currentProjectId, projectMemberships } = useAuth();
   const navigate = useNavigate();
   const [procItems, setProcItems] = useState<ProcTrackingItem[]>([]);
+  const [currentProject, setCurrentProject] = useState<{ name: string; description: string } | null>(null);
+
+  // Get current project info
+  useEffect(() => {
+    if (!currentProjectId) {
+      setCurrentProject(null);
+      return;
+    }
+    const membership = projectMemberships.find(m => m.project_id === currentProjectId);
+    if (membership) {
+      setCurrentProject({ name: membership.project_name || 'Untitled Project', description: '' });
+    }
+    // Also fetch full project details
+    supabase.from('projects').select('name, description').eq('id', currentProjectId).single()
+      .then(({ data }) => {
+        if (data) setCurrentProject({ name: data.name, description: data.description || '' });
+      });
+  }, [currentProjectId, projectMemberships]);
 
   useEffect(() => {
+    if (!currentProjectId) { setProcItems([]); return; }
     let query = supabase.from('procurement_tracking').select('status,total_cost,expected_delivery,actual_delivery,material_description');
-    if (currentProjectId) {
-      query = query.eq('project_id', currentProjectId);
-    } else {
-      query = query.is('project_id', null);
-    }
+    query = query.eq('project_id', currentProjectId);
     query.then(({ data }) => setProcItems((data as ProcTrackingItem[]) || []));
   }, [currentProjectId]);
 
@@ -74,15 +90,46 @@ export default function Dashboard() {
   return (
     <div>
       <ModuleGuide moduleName="Dashboard" description={moduleGuides.Dashboard.description} steps={moduleGuides.Dashboard.steps} />
+      
+      {/* Offline / Sync Banner */}
+      {(isOffline || pendingSyncCount > 0) && (
+        <div className="mb-4 flex items-center gap-3 rounded-xl border border-amber-300/30 bg-amber-500/10 px-4 py-3">
+          <WifiOff size={18} className="text-amber-600 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-medium text-foreground">
+              {isOffline ? 'You are offline' : `${pendingSyncCount} changes pending sync`}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {isOffline ? 'All changes are saved locally and will sync when you reconnect.' : 'Click sync to push local changes to the server.'}
+            </p>
+          </div>
+          {!isOffline && pendingSyncCount > 0 && (
+            <Button size="sm" variant="outline" onClick={syncNow}>
+              <RefreshCw size={14} className="mr-1.5" /> Sync Now
+            </Button>
+          )}
+        </div>
+      )}
+
       <div className="page-header flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">{projectInfo.name}</h1>
-          <p className="text-sm text-muted-foreground mt-1">{projectInfo.client} · {projectInfo.location}</p>
+          <h1 className="text-2xl font-bold text-foreground">
+            {currentProject?.name || 'No Project Selected'}
+          </h1>
+          {currentProject?.description && (
+            <p className="text-sm text-muted-foreground mt-1">{currentProject.description}</p>
+          )}
+          {!currentProjectId && (
+            <p className="text-sm text-muted-foreground mt-1">
+              Select a project from the sidebar or <button onClick={() => navigate('/projects')} className="text-primary underline">create one</button>.
+            </p>
+          )}
         </div>
-        <div className="text-right">
-          <p className="text-xs text-muted-foreground">Contract Value</p>
-          <p className="text-lg font-bold text-foreground">{projectInfo.currency} {(projectInfo.contractValue / 1000000).toFixed(0)}M</p>
-        </div>
+        {isOffline && (
+          <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-300">
+            <WifiOff size={12} className="mr-1" /> Offline
+          </Badge>
+        )}
       </div>
 
       {isEmpty && (
@@ -104,15 +151,15 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <div className="bg-card rounded-xl border shadow-sm p-5">
             <p className="text-xs text-muted-foreground mb-1">Total Budget</p>
-            <p className="text-lg font-bold text-foreground">{projectInfo.currency} {(totalBudget / 1000000).toFixed(2)}M</p>
+            <p className="text-lg font-bold text-foreground">{(totalBudget / 1000000).toFixed(2)}M</p>
           </div>
           <div className="bg-card rounded-xl border shadow-sm p-5">
             <p className="text-xs text-muted-foreground mb-1">Executed Value</p>
-            <p className="text-lg font-bold text-foreground">{projectInfo.currency} {(totalExecuted / 1000000).toFixed(2)}M</p>
+            <p className="text-lg font-bold text-foreground">{(totalExecuted / 1000000).toFixed(2)}M</p>
           </div>
           <div className="bg-card rounded-xl border shadow-sm p-5">
             <p className="text-xs text-muted-foreground mb-1">Equipment Cost</p>
-            <p className="text-lg font-bold text-foreground">{projectInfo.currency} {equipmentCost.toLocaleString()}</p>
+            <p className="text-lg font-bold text-foreground">{equipmentCost.toLocaleString()}</p>
           </div>
         </div>
       )}
@@ -137,7 +184,7 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="bg-card rounded-xl border shadow-sm p-5">
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1"><ShoppingCart size={14} /> Total PO Value</div>
-                <p className="text-lg font-bold text-foreground">{projectInfo.currency} {totalPOValue.toLocaleString()}</p>
+                <p className="text-lg font-bold text-foreground">{totalPOValue.toLocaleString()}</p>
                 <p className="text-[10px] text-muted-foreground mt-1">{purchaseOrders.length} purchase orders</p>
               </div>
               <div className="bg-card rounded-xl border shadow-sm p-5">
@@ -286,14 +333,12 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Data Approval Queue (Admin/Co-Admin only) */}
       {canApprove && currentProjectId && (
         <div className="bg-card rounded-xl border shadow-sm p-5 mt-6">
           <DataApproval projectId={currentProjectId} />
         </div>
       )}
 
-      {/* My Pending Changes (non-admin users) */}
       {!canApprove && (
         <div className="mt-6">
           <MyPendingChanges />

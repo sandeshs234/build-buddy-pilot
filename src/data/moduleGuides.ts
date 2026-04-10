@@ -1,6 +1,16 @@
 import type { GuideStep } from '@/components/ModuleGuide';
 
 export const moduleGuides: Record<string, { description: string; steps: GuideStep[] }> = {
+  Projects: {
+    description: 'Create, edit, and manage your construction projects. Invite team members with connection codes.',
+    steps: [
+      { title: 'Create a project', description: 'Click "Create Project" to start a new project with a unique connection code.' },
+      { title: 'Share connection code', description: 'Share the 8-character code with team members so they can join.' },
+      { title: 'Manage join requests', description: 'Approve or reject pending join requests from team members.' },
+      { title: 'Edit or delete', description: 'Admins can edit project details or delete projects they created.' },
+      { title: 'Assign Co-Admins', description: 'Promote members to Co-Admin role (max 3 per project) for shared management.' },
+    ],
+  },
   Dashboard: {
     description: 'Your project overview showing key metrics, charts, and pending approvals.',
     steps: [
@@ -220,15 +230,6 @@ export const moduleGuides: Record<string, { description: string; steps: GuideSte
       { title: 'View users', description: 'See all registered users with their roles and status.' },
       { title: 'Assign roles', description: 'Change user roles: Admin, Project Manager, Engineer, Viewer, Accountant, Safety Officer, Store Keeper, Surveyor.' },
       { title: 'Create users', description: 'Admin can create new user accounts directly.' },
-    ],
-  },
-  Projects: {
-    description: 'Create and manage multiple projects. Each project has isolated data.',
-    steps: [
-      { title: 'Create project', description: 'Click "Create Project" and enter the project name and description.' },
-      { title: 'Share connection code', description: 'Copy the unique 8-character code and share with team members to let them join.' },
-      { title: 'Manage members', description: 'Approve pending join requests, assign project roles (Admin, Co-Admin, Member).' },
-      { title: 'Switch projects', description: 'Use the dropdown in the sidebar to switch between your projects.', tip: 'All module data is scoped to the selected project.' },
     ],
   },
 };
