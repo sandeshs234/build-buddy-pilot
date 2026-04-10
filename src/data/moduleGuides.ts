@@ -232,13 +232,4 @@ export const moduleGuides: Record<string, { description: string; steps: GuideSte
       { title: 'Create users', description: 'Admin can create new user accounts directly.' },
     ],
   },
-  Projects: {
-    description: 'Create and manage multiple projects. Each project has isolated data.',
-    steps: [
-      { title: 'Create project', description: 'Click "Create Project" and enter the project name and description.' },
-      { title: 'Share connection code', description: 'Copy the unique 8-character code and share with team members to let them join.' },
-      { title: 'Manage members', description: 'Approve pending join requests, assign project roles (Admin, Co-Admin, Member).' },
-      { title: 'Switch projects', description: 'Use the dropdown in the sidebar to switch between your projects.', tip: 'All module data is scoped to the selected project.' },
-    ],
-  },
 };
