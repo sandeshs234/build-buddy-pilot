@@ -48,9 +48,13 @@ export default function FreshStartDialog({ open, onOpenChange }: FreshStartDialo
       concreteOps.clearAll();
       dailyQtyOps.clearAll();
 
-      // Clear local caches
+      // Clear local caches and IndexedDB
       localStorage.removeItem('buildforge_offline_cache');
       localStorage.removeItem('buildforge_project_data');
+      try {
+        const { offlineClearAll } = await import('@/lib/offlineStorage');
+        await offlineClearAll();
+      } catch {}
 
       toast({
         title: '🧹 Fresh Start Complete',

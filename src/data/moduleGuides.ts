@@ -1,6 +1,16 @@
 import type { GuideStep } from '@/components/ModuleGuide';
 
 export const moduleGuides: Record<string, { description: string; steps: GuideStep[] }> = {
+  Projects: {
+    description: 'Create, edit, and manage your construction projects. Invite team members with connection codes.',
+    steps: [
+      { title: 'Create a project', description: 'Click "Create Project" to start a new project with a unique connection code.' },
+      { title: 'Share connection code', description: 'Share the 8-character code with team members so they can join.' },
+      { title: 'Manage join requests', description: 'Approve or reject pending join requests from team members.' },
+      { title: 'Edit or delete', description: 'Admins can edit project details or delete projects they created.' },
+      { title: 'Assign Co-Admins', description: 'Promote members to Co-Admin role (max 3 per project) for shared management.' },
+    ],
+  },
   Dashboard: {
     description: 'Your project overview showing key metrics, charts, and pending approvals.',
     steps: [
